@@ -1393,7 +1393,7 @@ function parseRef(ref){
   return{book:bookId,chapter:parseInt(m[2]),startVerse:m[3]?parseInt(m[3]):null,endVerse:m[4]?parseInt(m[4]):null};
 }
 var DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/1508999899113324655/3PsMmsIdRf-6IoSVhKfmBtx0h6CJ9vSXJB9quVaNSwZTvDxaN6kWSCNOa5cl3mV1CjNl';
-var APP_SHARE_URL='https://www.archestudytools.com/public';
+var APP_SHARE_URL='https://www.archestudytools.com/pilgrim-public/';
 var SK_DIAG='bsn_diag_log';
 var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TAGS_DEL='bsn_tags_deleted_v1';
 var SK_OB='bsn_ob_done', SK_TAB_HINTS='bsn_tab_hints_shown';
@@ -4326,7 +4326,7 @@ function shareStudyLinkById(id){
     var json=JSON.stringify(copy);
     // encodeURIComponent handles non-ASCII; unescape converts to Latin-1 for btoa
     var encoded=btoa(unescape(encodeURIComponent(json)));
-    var base='https://gizmo5332.github.io/JC-Study-Tool/';
+    var base=APP_SHARE_URL;
     var url=base+'#study='+encoded;
     var title=s.title||'Bible Study';
     var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||'';
@@ -5747,7 +5747,12 @@ document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('cl
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.9.72',date:'June 15, 2026',label:'Latest',
+    version:'4.9.73',date:'June 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:['fix: consolidated share-link URLs to single APP_SHARE_URL constant (was hardcoded to old gizmo5332.github.io repo path) — GitHub migration to arche-epos']
+  },
+  {
+    version:'4.9.72',date:'June 15, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:['docs: JSDoc Sections 15 Lexicon & Word List (20) + 16 Resources & OCR (17) — 37 functions']
   },
