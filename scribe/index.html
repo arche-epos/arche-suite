@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<!-- © 2026 Jesse Caldwell. All rights reserved.
+     Arché · Scribe — part of Arché Study Tools.
+     Unauthorized copying, distribution, or modification of this file,
+     via any medium, is strictly prohibited. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b0907">
+<title>Arché · Scribe</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── Arché Design Tokens ─────────────────────────────────────────── */
+:root{
+  --bg0:#0b0907;--bg1:#120f0a;--bg2:#1b1710;--bg3:#252019;--bg4:#2f2a1f;
+  --border:#3a3022;--borderlit:#4d4430;
+  --gold:#c9a84c;--golddim:#7a6520;--goldpale:#e8ca80;
+  --crimson:#8b3535;--crimsonbright:#c05050;--sagebright:#5a9b70;
+  --txt1:#e8d5a3;--txt2:#c4a870;--txt3:#8a7550;--txt4:#5a4d35;
+  --r:8px;--rl:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100vh;background:var(--bg0);color:var(--txt1);font-family:'Crimson Pro',Georgia,serif;font-size:16px;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg0);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+input,textarea,select{outline:none;font-family:'Crimson Pro',Georgia,serif;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-size:15px;padding:10px 12px;width:100%;transition:border-color .15s;-webkit-appearance:none;appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:var(--golddim);}
+input::placeholder,textarea::placeholder{color:var(--txt4);}
+textarea{resize:vertical;line-height:1.65;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%238a7550' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+button{cursor:pointer;font-family:'Crimson Pro',Georgia,serif;}
+a{color:var(--gold);text-decoration:none;}
+
+/* ── Layout ──────────────────────────────────────────────────────── */
+#app{min-height:100vh;}
+.hidden{display:none!important;}
+.view{display:none;min-height:100vh;flex-direction:column;}
+.view.on{display:flex;}
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+.topbar{display:flex;align-items:center;gap:10px;padding:14px 20px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;}
+.topbar-brand{font-family:'EB Garamond',Georgia,serif;font-size:20px;font-weight:500;color:var(--gold);letter-spacing:.02em;}
+.topbar-sub{font-family:'EB Garamond',Georgia,serif;font-size:17px;color:var(--txt2);flex:1;}
+.topbar-right{display:flex;gap:8px;align-items:center;margin-left:auto;}
+.backbtn{display:flex;align-items:center;gap:5px;background:none;border:none;color:var(--gold);font-family:'Crimson Pro',Georgia,serif;font-size:15px;cursor:pointer;padding:4px 0;min-height:44px;}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 18px;border-radius:var(--r);font-family:'Crimson Pro',Georgia,serif;font-size:15px;font-weight:500;cursor:pointer;border:none;transition:all .15s;min-height:44px;}
+.btn-primary{background:var(--gold);color:var(--bg0);font-weight:600;}
+.btn-primary:hover{opacity:.9;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-sec{background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);}
+.btn-sec:hover{background:var(--bg4);}
+.btn-ghost{background:none;color:var(--txt2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg3);}
+.btn-danger{background:var(--crimson);color:var(--txt1);}
+.btn-danger:hover{background:var(--crimsonbright);}
+.btn-ai{background:none;color:var(--gold);border:1px solid var(--golddim);padding:9px 16px;border-radius:var(--r);font-family:'Crimson Pro',Georgia,serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;}
+.btn-ai:hover{background:color-mix(in srgb,var(--bg2),var(--golddim) 8%);}
+.btn-ai:disabled{opacity:.5;cursor:not-allowed;}
+.btn-full{width:100%;}
+.btn-sm{padding:7px 13px;font-size:13px;min-height:36px;}
+
+/* ── Cards ───────────────────────────────────────────────────────── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px;}
+.card-accent{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px 16px 16px 20px;position:relative;overflow:hidden;}
+.card-accent::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold),var(--golddim));}
+.study-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px 16px 16px 20px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s;}
+.study-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold),var(--golddim));}
+.study-card:hover{border-color:var(--borderlit);}
+
+/* ── Section label ───────────────────────────────────────────────── */
+.seclabel{font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.seclabel::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Form group ─────────────────────────────────────────────────── */
+.ig{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;}
+.ig label{font-size:10px;font-weight:500;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;}
+
+/* ── Badge ───────────────────────────────────────────────────────── */
+.ttag{display:inline-block;background:var(--bg3);color:var(--gold);border:1px solid var(--border);border-radius:3px;font-size:10px;font-weight:600;padding:1px 5px;letter-spacing:.05em;}
+.conclbadge{display:inline-block;background:var(--golddim);color:var(--goldpale);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:middle;}
+
+/* ── Modal ───────────────────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;z-index:100;}
+.overlay.on{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl) var(--rl) 0 0;padding:24px 20px;width:100%;max-width:580px;max-height:85vh;overflow-y:auto;}
+.modal::-webkit-scrollbar{display:none;}
+.modal-title{font-family:'EB Garamond',Georgia,serif;font-size:22px;color:var(--txt1);margin-bottom:14px;}
+.modal.danger{border-color:var(--crimson);}
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-90px);background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);border-radius:50px;padding:9px 20px;font-size:14px;z-index:200;transition:transform .28s ease;white-space:nowrap;pointer-events:none;font-family:'Crimson Pro',Georgia,serif;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── Progress ring ───────────────────────────────────────────────── */
+.ring-wrap{position:relative;display:inline-block;}
+.ring-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'EB Garamond',Georgia,serif;font-size:1.3rem;font-weight:600;color:var(--gold);line-height:1;}
+.ring-pct-sm{font-size:.85rem;}
+
+/* ── Progress bar ────────────────────────────────────────────────── */
+.progress-bar{background:var(--border);border-radius:9999px;height:4px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--gold);border-radius:9999px;transition:width .5s ease;}
+
+/* ── Ornament ────────────────────────────────────────────────────── */
+.ornament{color:var(--golddim);font-size:18px;text-align:center;letter-spacing:.3em;padding:4px 0;}
+
+/* ── Empty state ─────────────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:55px 20px;text-align:center;color:var(--txt3);}
+.empty-icon{font-size:2.8rem;color:var(--golddim);margin-bottom:14px;}
+.empty h3{font-family:'EB Garamond',Georgia,serif;font-size:22px;color:var(--txt2);margin-bottom:7px;}
+.empty p{font-size:14px;line-height:1.6;color:var(--txt3);}
+
+/* ── Dashboard ───────────────────────────────────────────────────── */
+.dashboard-scroll{flex:1;overflow-y:auto;padding:20px;}
+.dashboard-scroll::-webkit-scrollbar{display:none;}
+.studies-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:16px;}
+.add-card{background:transparent;border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;min-height:120px;cursor:pointer;border-radius:var(--rl);transition:border-color .2s;}
+.add-card:hover{border-color:var(--borderlit);}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;text-align:center;}
+.stat-val{font-family:'EB Garamond',Georgia,serif;font-size:2rem;font-weight:600;color:var(--gold);}
+.stat-label{color:var(--txt3);font-size:11px;margin-top:3px;text-transform:uppercase;letter-spacing:.05em;}
+.sc-ref{font-size:13px;color:var(--gold);margin-bottom:3px;}
+.sc-title{font-family:'EB Garamond',Georgia,serif;font-size:19px;color:var(--txt1);margin-bottom:3px;line-height:1.3;}
+.sc-date{font-size:11px;color:var(--txt3);margin-bottom:3px;}
+.dot-row{display:flex;gap:4px;margin-bottom:10px;}
+.dot{width:9px;height:9px;border-radius:50%;}
+.delete-btn{background:none;border:1px solid transparent;border-radius:6px;color:var(--txt4);cursor:pointer;font-size:12px;padding:3px 8px;font-family:'Crimson Pro',Georgia,serif;transition:all .2s;}
+.delete-btn:hover{color:var(--crimsonbright);border-color:var(--crimson);}
+.study-card-footer{display:flex;justify-content:space-between;align-items:center;}
+.updated-label{color:var(--txt4);font-size:11px;}
+
+/* ── Study workspace ─────────────────────────────────────────────── */
+.study-layout{display:grid;grid-template-columns:260px 1fr;flex:1;overflow:hidden;}
+.sidebar{background:var(--bg1);border-right:1px solid var(--border);padding:16px;overflow-y:auto;}
+.sidebar::-webkit-scrollbar{display:none;}
+.main-col{overflow-y:auto;display:flex;flex-direction:column;}
+.main-col::-webkit-scrollbar{display:none;}
+
+/* ── Method tabs ─────────────────────────────────────────────────── */
+.method-tabs{background:var(--bg1);border-bottom:1px solid var(--border);padding:0 16px;display:flex;overflow-x:auto;flex-shrink:0;}
+.method-tabs::-webkit-scrollbar{display:none;}
+.method-tab{padding:12px 14px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--txt4);font-family:'Crimson Pro',Georgia,serif;font-size:14px;white-space:nowrap;transition:all .2s;cursor:pointer;}
+.method-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.method-tab.done{color:var(--txt3);}
+.method-content{flex:1;padding:20px;max-width:860px;}
+
+/* ── Disciplines banner ──────────────────────────────────────────── */
+.disciplines-bar{background:var(--bg0);border-bottom:1px solid var(--border);padding:7px 20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.disc-item{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt4);padding:0 8px;font-family:'Crimson Pro',Georgia,serif;}
+.disc-item.active{color:var(--gold);border-bottom:1px solid var(--golddim);font-weight:600;}
+.disc-sep{color:var(--border);font-size:12px;}
+
+/* ── Sidebar progress tab ────────────────────────────────────────── */
+.progress-tab-row{display:flex;gap:3px;margin-bottom:14px;background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:3px;}
+.progress-tab{flex:1;padding:6px 0;border:none;border-radius:50px;background:none;color:var(--txt3);font-size:11px;cursor:pointer;font-family:'Crimson Pro',Georgia,serif;transition:all .2s;text-align:center;}
+.progress-tab.active{background:var(--bg1);color:var(--gold);border:1px solid var(--golddim);box-shadow:0 1px 6px rgba(0,0,0,.4);}
+
+/* ── Exegesis items ──────────────────────────────────────────────── */
+.exeg-item{margin-bottom:10px;}
+.exeg-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.exeg-label{font-size:13px;color:var(--txt2);}
+.exeg-label.done{color:var(--gold);}
+.exeg-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--txt4);font-size:11px;cursor:pointer;font-family:'Crimson Pro',Georgia,serif;transition:all .2s;}
+.exeg-btn.done{border-color:var(--golddim);background:color-mix(in srgb,var(--bg2),var(--golddim) 8%);color:var(--gold);}
+.exeg-textarea{width:100%;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);color:var(--txt2);padding:7px 10px;font-size:12px;font-family:'Crimson Pro',Georgia,serif;resize:vertical;box-sizing:border-box;line-height:1.6;}
+.exeg-textarea:focus{border-color:var(--golddim);}
+
+/* ── Method sidebar buttons ──────────────────────────────────────── */
+.method-sb-btn{width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r);border:1px solid transparent;background:transparent;cursor:pointer;margin-bottom:3px;text-align:left;transition:all .2s;}
+.method-sb-btn.active{border-color:var(--golddim);background:color-mix(in srgb,var(--bg2),var(--golddim) 6%);}
+.method-circle{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:var(--bg0);transition:all .2s;}
+.method-circle.done{border-color:var(--gold);background:var(--gold);}
+.method-sb-label{flex:1;color:var(--txt3);font-size:13px;font-family:'Crimson Pro',Georgia,serif;}
+.method-sb-btn.active .method-sb-label{color:var(--gold);}
+.method-sb-btn .done-label{color:var(--txt2);}
+.indicator-dots{display:flex;gap:3px;}
+.ind-dot{width:5px;height:5px;border-radius:50%;}
+
+/* ── Passage display ─────────────────────────────────────────────── */
+.passage-text{font-family:'EB Garamond',Georgia,serif;font-size:18px;line-height:1.9;color:var(--txt1);font-style:italic;}
+.passage-ref{font-family:'EB Garamond',Georgia,serif;font-size:17px;color:var(--gold);}
+.passage-sub{font-size:11px;color:var(--txt3);font-style:italic;}
+.blb-link{color:var(--gold);font-size:12px;opacity:.7;text-decoration:none;}
+.blb-link:hover{opacity:1;}
+
+/* ── AI section ──────────────────────────────────────────────────── */
+.ai-section{border-top:2px solid var(--golddim);border-top-left-radius:0;border-top-right-radius:0;}
+.ai-label{color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;}
+.ai-sub{color:var(--txt3);font-size:12px;margin-top:2px;}
+.ai-response{font-size:14px;line-height:1.75;color:var(--txt1);}
+.ai-response h3{font-family:'EB Garamond',Georgia,serif;font-size:18px;color:var(--gold);margin:18px 0 8px;font-weight:600;}
+.ai-response h4{font-family:'EB Garamond',Georgia,serif;font-size:16px;color:var(--goldpale);margin:14px 0 6px;font-weight:600;}
+.ai-response p{margin:0 0 8px;line-height:1.75;}
+.ai-response ul,.ai-response ol{margin:6px 0 10px 20px;padding:0;}
+.ai-response li{margin-bottom:4px;}
+.ai-response hr{border:none;border-top:1px solid var(--border);margin:14px 0;}
+.ai-response strong{color:var(--goldpale);}
+.ai-response code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:13px;}
+.ai-placeholder{font-size:14px;color:var(--txt4);font-style:italic;}
+.aidisclaim{font-size:11px;color:var(--txt4);font-style:italic;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+
+/* ── Guided prompts ──────────────────────────────────────────────── */
+.guided-header{font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:10px;}
+.guided-header.theological{color:var(--gold);}
+.guided-header.devotional{color:#a78bfa;}
+.prompt-item{display:flex;gap:10px;padding:10px 12px;background:var(--bg1);border-radius:var(--r);border:1px solid var(--border);margin-bottom:7px;}
+.prompt-num{color:var(--golddim);font-size:13px;flex-shrink:0;}
+.prompt-text{font-family:'Crimson Pro',Georgia,serif;font-size:14px;color:var(--txt2);line-height:1.65;}
+
+/* ── Notes section ───────────────────────────────────────────────── */
+.notes-label{color:var(--gold);font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;}
+.notes-sub{color:var(--txt3);font-size:12px;margin-top:2px;}
+.char-count{color:var(--txt4);font-size:11px;}
+.notes-textarea{background:var(--bg1);border-color:var(--border);}
+
+/* ── Memorize ────────────────────────────────────────────────────── */
+.mem-mode-row{display:flex;gap:6px;margin-bottom:14px;}
+.mem-mode-btn{flex:1;padding:9px 6px;border:1px solid var(--border);border-radius:var(--r);background:transparent;color:var(--txt3);cursor:pointer;font-family:'Crimson Pro',Georgia,serif;font-size:13px;text-align:center;transition:all .2s;}
+.mem-mode-btn.active{border-color:var(--golddim);background:color-mix(in srgb,var(--bg2),var(--golddim) 8%);color:var(--gold);}
+.mem-tab-row{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.mem-tab{flex:1;padding:10px 6px;background:transparent;border:none;color:var(--txt3);cursor:pointer;font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;transition:all .2s;letter-spacing:.03em;}
+.mem-tab.active{background:var(--bg3);color:var(--gold);}
+.gap-input{background:transparent;border:none;border-bottom:1.5px solid var(--borderlit);color:var(--txt1);font-family:'EB Garamond',Georgia,serif;font-size:17px;line-height:1;padding:0 3px 1px;outline:none;text-align:center;transition:color .15s,border-color .15s;}
+.gap-input.correct{color:var(--sagebright);border-bottom-color:var(--sagebright);}
+.gap-input.wrong{color:var(--crimsonbright);border-bottom-color:var(--crimsonbright);}
+.gap-input:read-only{cursor:default;}
+.mv-card{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px 12px 18px;display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.mv-card::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--golddim);border-radius:0 2px 2px 0;}
+.mv-status{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 8px;border-radius:50px;white-space:nowrap;flex-shrink:0;}
+.mv-status.learning{background:color-mix(in srgb,var(--bg3),var(--golddim) 25%);color:var(--gold);border:1px solid var(--golddim);}
+.mv-status.learned{background:color-mix(in srgb,var(--bg3),var(--sagebright) 20%);color:var(--sagebright);border:1px solid var(--sagebright);}
+.mv-section-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--txt4);margin:16px 0 8px;display:flex;align-items:center;gap:8px;}
+.mv-section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;border-radius:50px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:all .15s;-webkit-user-select:none;user-select:none;}
+.tag-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.tag-filter-btn{display:inline-flex;align-items:center;gap:4px;border-radius:50px;padding:4px 10px;font-size:11px;font-weight:600;background:var(--bg3);border:1px solid var(--border);color:var(--txt3);cursor:pointer;transition:all .15s;}
+.tag-filter-btn.on{border-color:var(--gold);color:var(--gold);}
+.tag-swatch{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.tag-manager-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.score-text{font-family:'EB Garamond',Georgia,serif;font-size:1.3rem;font-weight:600;}
+
+/* ── Trans note ──────────────────────────────────────────────────── */
+.trans-note{border-radius:var(--r);padding:10px 13px;margin-bottom:16px;font-size:13px;line-height:1.5;}
+.trans-note.exact{background:color-mix(in srgb,var(--bg2),var(--sagebright) 8%);border:1px solid color-mix(in srgb,var(--border),var(--sagebright) 30%);color:var(--sagebright);}
+.trans-note.approx{background:color-mix(in srgb,var(--bg2),var(--golddim) 8%);border:1px solid var(--golddim);color:var(--txt2);}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--border);text-align:center;padding-bottom:24px;}
+.footer-text{color:var(--txt4);font-family:'EB Garamond',Georgia,serif;font-size:13px;letter-spacing:.15em;}
+
+/* ── Method header row ───────────────────────────────────────── */
+.method-header-row{margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;}
+.method-title{font-family:'EB Garamond',Georgia,serif;font-size:26px;font-weight:600;color:var(--txt1);}
+.method-sub{color:var(--txt3);font-size:14px;margin-top:4px;}
+.progress-ring-center{text-align:center;margin-bottom:20px;}
+.progress-ring-label{color:var(--txt3);font-size:11px;margin-top:6px;text-transform:uppercase;letter-spacing:.08em;}
+.complete-btn-done{background:color-mix(in srgb,var(--bg2),var(--sagebright) 12%)!important;color:var(--sagebright)!important;border:1px solid color-mix(in srgb,var(--border),var(--sagebright) 40%)!important;}
+
+/* ── Sidebar stage count ─────────────────────────────────────── */
+.stage-count{font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.stage-count::after{content:'';flex:1;height:1px;background:var(--border);}
+.sidebar-progress-count{color:var(--txt4);font-size:11px;margin-top:5px;}
+
+/* ── Connection tag ──────────────────────────────────────────── */
+.conntag{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;color:var(--txt2);}
+.conndot{width:8px;height:8px;border-radius:50%;background:var(--sagebright);flex-shrink:0;}
+
+/* ── Translation modal options ───────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:16px 0;}
+
+/* ── Synthetic capstone tab ──────────────────────────────────── */
+.method-tab-synthetic{padding:12px 14px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--txt4);font-family:'Crimson Pro',Georgia,serif;font-size:14px;white-space:nowrap;transition:all .2s;cursor:pointer;border-left:1px solid var(--border);margin-left:4px;padding-left:18px;}
+.method-tab-synthetic.active{color:var(--gold);border-bottom-color:var(--gold);}
+.method-tab-synthetic.done{color:var(--txt3);}
+.synthetic-section{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;overflow:hidden;}
+.synthetic-section-header{font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.synthetic-section-header::after{content:'';flex:1;height:1px;background:var(--border);}
+.synthetic-section-body{font-size:14px;color:var(--txt2);line-height:1.7;}
+.synthetic-section-empty{font-size:13px;color:var(--txt4);font-style:italic;}
+.synthetic-capstone-badge{display:inline-block;background:color-mix(in srgb,var(--bg3),var(--golddim) 20%);color:var(--gold);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:3px 9px;border-radius:3px;border:1px solid var(--golddim);margin-left:10px;vertical-align:middle;}
+
+/* ── Desktop optimization ────────────────────────────────────── */
+@media(min-width:900px){
+  .topbar{padding:16px 32px;}
+  .dashboard-scroll{padding:28px 40px;max-width:1280px;margin:0 auto;width:100%;}
+  .studies-grid{grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+  .stat-card{padding:18px 20px;}
+  .stat-val{font-size:2.4rem;}
+  .study-layout{grid-template-columns:280px 1fr;}
+  .sidebar{padding:20px 18px;}
+  .method-content{padding:28px 32px;max-width:960px;}
+  .method-title{font-size:30px;}
+  .passage-text{font-size:19px;line-height:2;}
+  .method-tab{padding:14px 16px;font-size:15px;}
+  .method-tab-synthetic{padding:14px 16px;padding-left:20px;font-size:15px;}
+  .ai-response{font-size:15px;line-height:1.8;}
+  .notes-textarea{min-height:260px;}
+}
+@media(min-width:1300px){
+  .dashboard-scroll{padding:32px 60px;}
+  .method-content{padding:32px 48px;}
+  .sidebar{width:300px;}
+  .study-layout{grid-template-columns:300px 1fr;}
+}
+@media print{button,nav{display:none!important;}body{background:white!important;}}
+/* ── Changelog ──────────────────────────────────────────────── */
+.cl-section-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none;margin-bottom:4px;padding:4px 0}
+.cl-toggle-btn{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:4px 12px;font-size:11px;color:var(--txt3);font-family:'Crimson Pro',Georgia,serif;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:28px}
+.cl-toggle-btn:active{background:var(--bg4)}
+.cl-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.cl-version{margin-bottom:18px}
+.cl-version-hdr{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.cl-version-num{font-family:'EB Garamond',Georgia,serif;font-size:17px;color:var(--gold);font-weight:500}
+.cl-version-date{font-size:11px;color:var(--txt4)}
+.cl-version-badge{font-size:10px;font-weight:600;background:var(--golddim);color:var(--goldpale);padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em}
+.cl-chev{font-size:13px;color:var(--txt4);margin-left:auto;transition:transform .2s}
+.cl-chev.open{transform:rotate(180deg)}
+.cl-items{display:none;flex-direction:column;gap:5px;padding-left:2px}
+.cl-items.open{display:flex}
+.cl-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--txt2);line-height:1.55}
+.cl-item::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--golddim);margin-top:6px;flex-shrink:0}
+/* ── Book Picker ─────────────────────────────────────────────── */
+.bp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.bp-overlay.on{opacity:1;pointer-events:all}
+.bp-sheet{background:var(--bg1);border-radius:var(--rl) var(--rl) 0 0;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease}
+.bp-overlay.on .bp-sheet{transform:translateY(0)}
+.bp-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.bp-hdr-title{font-family:'EB Garamond',Georgia,serif;font-size:18px;color:var(--gold);font-weight:500;flex:1}
+.bp-back{background:none;border:none;color:var(--txt3);font-family:'Crimson Pro',Georgia,serif;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:var(--r);display:flex;align-items:center;gap:4px;min-height:36px}
+.bp-back:active{background:var(--bg3)}
+.bp-close{background:none;border:none;color:var(--txt4);font-size:20px;cursor:pointer;padding:4px 8px;min-height:36px;line-height:1}
+.bp-tt{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:3px;gap:3px;margin:10px 16px 6px;flex-shrink:0}
+.bp-tt-btn{flex:1;border:none;border-radius:50px;padding:6px;font-family:'Crimson Pro',Georgia,serif;font-size:13px;cursor:pointer;transition:all .2s;background:none;color:var(--txt3);font-weight:500}
+.bp-tt-btn.on{background:var(--gold);color:var(--bg0);font-weight:600}
+.bp-scroll{flex:1;overflow-y:auto;padding:10px 14px 20px;-webkit-overflow-scrolling:touch}
+.bp-scroll::-webkit-scrollbar{display:none}
+.bp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.bp-pill{border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);padding:8px 6px;font-family:'Crimson Pro',Georgia,serif;font-size:13px;color:var(--txt1);cursor:pointer;text-align:center;transition:all .15s;line-height:1.3;min-height:44px;display:flex;align-items:center;justify-content:center}
+.bp-pill:active{background:var(--bg4);border-color:var(--gold);color:var(--gold)}
+.bp-ch-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.bp-ch-pill{border:1px solid var(--border);background:var(--bg3);border-radius:var(--r);font-family:'Crimson Pro',Georgia,serif;font-size:15px;color:var(--txt1);cursor:pointer;text-align:center;transition:all .15s;min-height:44px;display:flex;align-items:center;justify-content:center}
+.bp-ch-pill:active{background:var(--bg4);border-color:var(--gold);color:var(--gold)}
+.bp-verse-area{padding:16px;display:flex;flex-direction:column;gap:12px}
+.bp-verse-label{font-size:10px;font-weight:500;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.bp-verse-hint{font-size:12px;color:var(--txt4);font-style:italic}
+.bp-stage{display:none}.bp-stage.on{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<!-- Delete Modal -->
+<div class="overlay" id="del-overlay">
+  <div class="modal danger">
+    <div class="modal-title">Delete Study?</div>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.6">Cannot be undone. All notes, AI analyses, and progress will be permanently removed.</p>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('del-overlay')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" onclick="handleDeleteConfirm()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Design tokens carried into JS ────────────────────────────────────────────
+const C = {
+  gold:'#c9a84c', golddim:'#7a6520', sagebright:'#5a9b70',
+  txt1:'#e8d5a3', txt2:'#c4a870', txt3:'#8a7550', txt4:'#5a4d35',
+  bg0:'#0b0907', bg1:'#120f0a', bg2:'#1b1710', bg3:'#252019',
+  border:'#3a3022', borderlit:'#4d4430', crimson:'#8b3535',
+};
+
+// ── ESV API ──────────────────────────────────────────────────────────────────
+const ESV_KEY = '6788a84f19616a65bf00f0edda9f45ea83486ccf';
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+const METHODS = [
+  { id:'analytical', name:'Analytical', num:1, desc:'Grammar, syntax & structural observation', aiEnabled:true, aiLabel:'Analyze Grammar & Structure',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Analytical Method of Bible study. Your role is to provide raw scholarly data only — never draw theological conclusions, never state what the text means, never apply it. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Provide the following data:
+
+1. **Grammatical Features** — list verb tenses, moods, voices, and key grammatical constructions present. State what they are, not what they mean.
+2. **Key Term Lexical Data** — for significant words list: the original Hebrew or Greek term, its transliteration, its lexical definition, and its range of meaning. Do not interpret which meaning applies.
+3. **Sentence & Clause Structure** — diagram or describe how clauses relate (main clause, subordinate clauses, participial phrases, etc.)
+4. **Structural Observations** — identify structural markers: conjunctions, repeated words, contrasts, lists, questions, commands. List them without interpretation.
+5. **Syntactical Observations** — note any unusual word order, emphatic constructions, or grammatical features that stand out.
+
+CRITICAL RULES: Do not state what the text means. Do not apply the text. Do not draw theological conclusions. List data only. All interpretation belongs to the student.` },
+
+  { id:'critical', name:'Critical', num:2, desc:'Interpretive problems, manuscripts & textual issues', aiEnabled:true, aiLabel:'Identify Critical Issues',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Critical Method of Bible study. Your role is to surface the interpretive and textual problems this passage poses — not to resolve them. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Provide the following data:
+
+1. **Key Interpretive Problems** — list the main challenges scholars face when interpreting this passage. State the problem and the range of scholarly positions. Do not state which position is correct.
+2. **Textual Variants** — list any significant manuscript variants for this passage. State what the variant is and which manuscript traditions support each reading. Do not state which reading is superior.
+3. **Manuscript Reliability Data** — note the manuscript evidence base for this book (number of manuscripts, age of earliest copies, textual consistency percentage if known).
+4. **Genre & Literary Form** — identify the literary genre and form of this passage (epistle, narrative, prophecy, poetry, apocalyptic, etc.) and note how scholars classify it.
+5. **Authorship & Dating Debates** — list any scholarly debates about authorship, date, or audience. Present the range of positions without endorsing one.
+
+CRITICAL RULES: Present all positions neutrally. Do not resolve interpretive problems. Do not state which manuscript tradition is superior. Do not draw theological conclusions. All conclusions belong to the student.` },
+
+  { id:'historical', name:'Historical', num:3, desc:'Background, culture & historical setting', aiEnabled:true, aiLabel:'Research Historical Context',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Historical Method of Bible study. Your role is to provide historical and cultural background data only — never state what that background means for interpretation. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Provide the following data:
+
+1. **Author & Audience** — who wrote this, to whom, and approximately when. State known facts and note what is debated.
+2. **Historical Setting** — describe the political, social, and religious situation at the time of writing. List conditions and events; do not state how they affect the meaning.
+3. **Cultural Practices & Customs** — identify any customs, social norms, religious practices, or cultural references in the passage. Define them; do not interpret their significance.
+4. **Geographical Data** — identify any places mentioned. Provide factual data about those locations (region, significance in the ancient world, distance, etc.)
+5. **Historical Events Referenced** — identify any historical events or persons referenced. Provide factual data about them.
+
+CRITICAL RULES: Provide factual historical data only. Do not state what the historical background means for the passage. Do not draw theological conclusions. All application of historical data belongs to the student.` },
+
+  { id:'topical', name:'Topical', num:4, desc:'Word studies & themes traced across Scripture', aiEnabled:true, aiLabel:'Trace Topics & Cross-References',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Topical Method of Bible study. Your role is to trace words, topics, and themes across Scripture — providing reference data only, never summarizing what the pattern means. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Provide the following data:
+
+1. **Key Topics & Words Identified** — list the primary topics, themes, and significant words in this passage that are worth tracing.
+2. **Concordance Data — OT Occurrences** — for the 2–3 most significant terms or topics, list the key Old Testament passages where they appear. Reference only — do not summarize or interpret.
+3. **Concordance Data — NT Occurrences** — list the key New Testament passages where the same terms or topics appear. Reference only.
+4. **Usage Summary** — for each key term, list the various ways it is used across the passages identified (e.g., used as noun/verb, literal/figurative, in different contexts). List usages without interpretation.
+5. **Related Topics** — identify related topics or words that connect to the primary theme. List them with key references.
+
+CRITICAL RULES: Provide reference lists and usage data only. Do not summarize what the pattern means. Do not state what the concordance data reveals theologically. All synthesis and conclusions belong to the student.` },
+
+  { id:'theological', name:'Theological', num:5, desc:'Doctrinal categories — AI-Free Zone', aiEnabled:false,
+    guidedPrompts:[
+      "BIBLIOLOGY — What does this passage reveal about the nature, authority, or reliability of Scripture itself?",
+      "THEOLOGY PROPER — What does this passage reveal about God the Father — His attributes, character, actions, or will?",
+      "CHRISTOLOGY — What does this passage reveal about Jesus Christ — His person, nature, work, or offices?",
+      "PNEUMATOLOGY — What does this passage reveal about the Holy Spirit — His person, presence, or work?",
+      "ANTHROPOLOGY — What does this passage reveal about humanity — our nature, dignity, condition, or purpose?",
+      "HAMARTIOLOGY — What does this passage reveal about sin — its nature, consequences, or scope?",
+      "SOTERIOLOGY — What does this passage reveal about salvation — its basis, nature, or application?",
+      "ECCLESIOLOGY — What does this passage reveal about the Church — its nature, function, or responsibilities?",
+      "ESCHATOLOGY — What does this passage reveal about last things — future events, judgment, or eternal life?",
+      "ANGELOLOGY / DEMONOLOGY — What does this passage reveal about angels, spiritual beings, or spiritual warfare?",
+      "EPISTEMOLOGY — What does this passage reveal about knowledge, truth, or how we come to know God?",
+      "COSMOLOGY — What does this passage reveal about creation, the physical world, or God's relationship to it?",
+      "CROSS-REFERENCE CHECK — Using a concordance, what other passages address the same theological topic? List the references.",
+      "SUMMARY — In one sentence, what is the primary theological assumption underlying this passage?"
+    ] },
+
+  { id:'comparative', name:'Comparative', num:6, desc:'Translation comparisons & textual parallels', aiEnabled:true, aiLabel:'Compare Translations & Parallels',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Comparative Method of Bible study. Your role is to list translation differences and parallels as data — never state which translation is best or what differences mean for interpretation. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Provide the following data:
+
+1. **Translation Comparison** — show how this passage is rendered in: NASB (word-for-word), ESV (word-for-word), KJV (word-for-word), NIV (middle), NLT (thought-for-thought). For each significant difference, list exactly what each translation says. Do not state which rendering is more accurate.
+2. **Underlying Original Language Terms** — for words where translations differ significantly, list the Hebrew or Greek term and its lexical range. Do not state which translation best captures it.
+3. **Parallel Passages** — list direct scriptural parallels to this passage (same event, same teaching, same quote). Reference only — do not interpret the relationship.
+4. **Hapax Legomena** — identify any words used only once or rarely in Scripture. State the word, where else it appears (if anywhere), and what lexicons say about its meaning range.
+5. **Ancient Near Eastern or Greco-Roman Parallels** — note any relevant parallels in ancient literature or culture. State what the parallel is; do not state what it proves.
+
+CRITICAL RULES: List translation differences and parallels as raw data only. Do not state which translation is superior. Do not state what differences mean for doctrine or interpretation. All conclusions belong to the student.` },
+
+  { id:'rhetorical', name:'Rhetorical', num:7, desc:'Literary devices & figures of speech', aiEnabled:true, aiLabel:'Identify Literary Devices',
+    aiPrompt:(p,t)=>`You are a seminary-level biblical scholar providing objective data for the Rhetorical Method of Bible study. Your role is to identify and define literary devices present in the passage — never state what they communicate or what the author intended. The student draws all conclusions.
+
+Passage: ${p}
+Text: "${t}"
+
+Scan this passage for the following devices and report only those present:
+
+**Figures of Speech:** Metaphor, Simile, Hyperbole, Allusion, Irony, Personification, Oxymoron, Euphemism, Apostrophe, Allegory, Metonymy, Synecdoche, Analogy, Idiom, Litotes, Type
+
+**Structural & Repetitive Devices:** Anaphora, Parallelism, Antithesis, Chiasmus, Epistrophe, Asyndeton, Polysyndeton, Inclusio
+
+**Appeals:** Ethos (credibility appeal), Pathos (emotional appeal), Logos (logical appeal)
+
+**Other:** Rhetorical Question, Juxtaposition
+
+For each device found, provide:
+- **Device name**
+- **The exact text where it occurs** (quote the relevant words)
+- **Definition of the device** (one sentence)
+
+Do not identify devices that are not clearly present. Do not state what the device communicates or what it reveals about the author's intent. Do not draw conclusions from the pattern of devices found. All interpretation belongs to the student.` },
+
+  { id:'devotional', name:'Devotional', num:8, desc:'Personal reflection & prayer — AI-Free Zone', aiEnabled:false,
+    guidedPrompts:[
+      "THEOLOGICAL — What does this passage teach me about God that I can affirm as true right now?",
+      "PERSONAL DEVOTION — What is God personally revealing to me through this passage in my current season of life?",
+      "EXPOSITION — If I were to teach or preach this passage, what is the one central truth I would want others to understand?",
+      "ILLUSTRATION — What life experience, story, or image does this passage bring to mind that helps make its truth concrete?",
+      "RESPONSE — What specific change in belief, attitude, or action is this passage calling me to make?",
+      "PRAYER — Write a personal prayer responding to what God has shown you through this passage."
+    ] },
+
+  { id:'synthetic', name:'Synthetic', num:9, desc:'Capstone — synthesize all methods into a whole', aiEnabled:false, isSynthetic:true },
+];
+
+
+const DISCIPLINES = ['Hear','Read','Study','Memorize','Meditate','Apply'];
+const BIBLE_ORDER = ['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
+const EXEG_STAGES = [
+  {id:'introduction', label:'Intro', desc:'Cultural, historical and literary background'},
+  {id:'observation', label:'Observe', desc:'Lexical work, translation, classification'},
+  {id:'textualCriticism', label:'Textual', desc:'What is the actual text?'},
+  {id:'exegesisProper', label:'Exegesis', desc:'What does the text say?'},
+  {id:'interpretation', label:'Interpret', desc:'What does the text mean?'},
+  {id:'homiletics', label:'Homiletics', desc:'Application, preaching and teaching'},
+];
+const TRANSLATIONS = [
+  {id:'nasb',name:'NASB',full:'New American Standard Bible',blb:'nasb95'},
+  {id:'esv',name:'ESV',full:'English Standard Version',blb:'esv'},
+  {id:'kjv',name:'KJV',full:'King James Version',blb:'kjv',free:'kjv'},
+  {id:'nkjv',name:'NKJV',full:'New King James Version',blb:'nkjv'},
+  {id:'niv',name:'NIV',full:'New International Version',blb:'niv'},
+  {id:'nlt',name:'NLT',full:'New Living Translation',blb:'nlt'},
+  {id:'web',name:'WEB',full:'World English Bible',blb:'web',free:'web'},
+  {id:'asv',name:'ASV',full:'American Standard Version',blb:'asv',free:'asv'},
+];
+const STORAGE_KEY = 'bsapp-v2-studies';
+const MEM_VERSES_KEY = 'bsapp-v2-memverses';
+const TAGS_KEY = 'bsapp-v2-tags';
+const SETT_KEY = 'bsapp-v2-settings';
+const MEM_STATUS_KEY = 'bsapp-v2-mem-status';
+
+// ── State ────────────────────────────────────────────────────────────────────
+let state = {
+  view:'dashboard', studies:[], currentStudyId:null,
+  activeMethod:'analytical', progressTab:'exegesis',
+  memTab:'practice', memMode:'read', memSid:null, memTyped:'', memChecked:false, memReturnTo:'dashboard',
+  memGapInputs:{}, memGapChecked:false,
+  memVerses:[], showAddVerse:false, newVerseRef:'', newVerseTranslation:'esv', addingVerse:false,
+  showNewStudy:false, confirmDeleteId:null,
+  newPassage:'', newTitle:'', newTranslation:'esv', creating:false,
+  searchQuery:'', libSort:'date', activeTagFilter:null,
+  showTagManager:false, tags:[], aiLoading:{}, scrFontSize:18, groqKey:'',
+};
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+function loadStudies(){try{const v=localStorage.getItem(STORAGE_KEY);if(v){state.studies=JSON.parse(v);state.studies.forEach(s=>{if(s.title===undefined)s.title='';if(!s.theologicalChart)s.theologicalChart={};});}}catch(e){}}
+function saveStudies(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state.studies));}catch(e){}}
+function getStudy(id){return state.studies.find(s=>s.id===(id||state.currentStudyId));}
+function currentStudy(){return getStudy(state.currentStudyId);}
+function loadMemVerses(){try{const v=localStorage.getItem(MEM_VERSES_KEY);if(v)state.memVerses=JSON.parse(v);}catch(e){}}
+function saveMemVerses(){try{localStorage.setItem(MEM_VERSES_KEY,JSON.stringify(state.memVerses));}catch(e){}}
+function loadTags(){try{const v=localStorage.getItem(TAGS_KEY);if(v)state.tags=JSON.parse(v);}catch(e){}}
+function saveTags(){try{localStorage.setItem(TAGS_KEY,JSON.stringify(state.tags));}catch(e){}}
+function copyAIResponse(methodId){
+  const study=currentStudy();if(!study)return;
+  const txt=study.methods[methodId]&&study.methods[methodId].aiResponse;
+  if(!txt)return;
+  navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('Copied')).catch(()=>toast('Copy failed'));
+}
+function openLexiconModal(){var ov=document.getElementById('lexicon-overlay');ov.classList.add('on');setTimeout(function(){var inp=document.getElementById('lexicon-input');if(inp)inp.focus();},200);}
+function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');}
+async function runLexiconLookup(){
+  var inp=document.getElementById('lexicon-input');var res=document.getElementById('lexicon-result');var btn=document.getElementById('lexicon-btn');
+  var query=(inp?inp.value.trim():'');if(!query)return;
+  if(!state.groqKey){res.innerHTML='<p style="color:var(--crimsonbright);">No Groq API key — add it via the AI Key button.</p>';return;}
+  btn.disabled=true;btn.textContent='Looking up\u2026';
+  res.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);padding:8px 0;"><div class="spin"></div>Searching lexicon\u2026</div>';
+  var prompt='You are a seminary-level biblical lexicographer. The user has looked up: "'+query+'". Provide a focused lexical entry with the following sections:\n\n1. **Term** \u2014 the Hebrew or Greek word, transliteration, and Strong\'s number\n2. **Part of Speech** \u2014 noun, verb, adjective, etc.\n3. **Definition** \u2014 concise lexical definition\n4. **Range of Meaning** \u2014 the full semantic range; list variant meanings\n5. **Key Occurrences** \u2014 3\u20135 significant passages where this word appears; reference only, no interpretation\n6. **Usage Notes** \u2014 any notable grammatical, syntactical, or lexical patterns\n\nProvide data only. Do not state what the word means theologically. Do not draw conclusions. All interpretation belongs to the student.';
+  try{
+    var r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.groqKey},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:700,messages:[{role:'user',content:prompt}]})});
+    var d=await r.json();
+    if(!r.ok){res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status)+'</p>';return;}
+    res.innerHTML=mdToHtml(d.choices[0].message.content);
+  }catch(e){res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(e.message)+'</p>';}
+  finally{btn.disabled=false;btn.textContent='Look up';}
+}
+
+function groqErrMsg(msg){
+  if(!msg)return'Error fetching analysis. Please try again.';
+  if(msg.toLowerCase().includes('rate')||msg.toLowerCase().includes('quota')||msg.toLowerCase().includes('429'))
+    return'Rate limit reached — the free tier allows 30 requests/min. Please wait 1–2 minutes and try again.';
+  if(msg.toLowerCase().includes('expired')||msg.toLowerCase().includes('invalid')||msg.toLowerCase().includes('api key')||msg.includes('401'))
+    return'Groq API key invalid or expired — tap "AI Key" above to update it, or get a new key at console.groq.com.';
+  return'Error: '+msg;
+}
+function loadSettings(){try{const v=localStorage.getItem(SETT_KEY);if(v){const s=JSON.parse(v);state.groqKey=s.groqKey||s.geminiKey||'';state.scrFontSize=s.scrFontSize||18;}}catch(e){}}
+function saveSettings(){try{localStorage.setItem(SETT_KEY,JSON.stringify({groqKey:state.groqKey,scrFontSize:state.scrFontSize}));}catch(e){}}
+function saveGeminiKey(){const inp=document.getElementById('gemini-key-input');if(!inp)return;const k=inp.value.trim();if(!k){toast('Please enter your API key');return;}state.groqKey=k;saveSettings();document.getElementById('api-setup-overlay').classList.remove('on');toast('API key saved — AI tools ready');}
+function skipApiSetup(){document.getElementById('api-setup-overlay').classList.remove('on');}
+function openApiSetup(){const ov=document.getElementById('api-setup-overlay');ov.classList.add('on');const inp=document.getElementById('gemini-key-input');if(inp){inp.value=state.groqKey||'';setTimeout(()=>inp.focus(),200);}}
+function checkApiSetup(){if(!state.groqKey)setTimeout(()=>document.getElementById('api-setup-overlay').classList.add('on'),600);}
+// saveApiKeyFromSettings removed
+function tagById(id){return state.tags.find(t=>t.id===id)||null;}
+const TAG_PALETTE=['#c9a84c','#5a9b70','#6a8fc8','#b06ab3','#c05050','#e89840','#7a9e7e','#8a7ab0'];
+function hexToRgba(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')';}
+function toggleStudyTag(studyId,tagId){
+  const s=state.studies.find(x=>x.id===studyId);if(!s)return;
+  if(!s.tags)s.tags=[];
+  const i=s.tags.indexOf(tagId);
+  if(i>=0)s.tags.splice(i,1);else s.tags.push(tagId);
+  saveStudies();render();
+}
+function addTag(label,color){
+  const t={id:'tag_'+Date.now(),label,color,bg:hexToRgba(color,.15)};
+  state.tags.push(t);saveTags();render();
+}
+function deleteTag(id){
+  state.tags=state.tags.filter(t=>t.id!==id);
+  state.studies.forEach(s=>{if(s.tags)s.tags=s.tags.filter(tid=>tid!==id);});
+  saveStudies();saveTags();if(state.activeTagFilter===id)state.activeTagFilter=null;render();
+}
+function saveNewTag(){
+  const inp=document.getElementById('new-tag-input');const sel=document.querySelector('.tag-swatch-btn.on');
+  if(!inp||!inp.value.trim()){toast('Enter a tag name');return;}
+  const color=sel?sel.dataset.color:TAG_PALETTE[0];
+  addTag(inp.value.trim(),color);inp.value='';toast('Tag added');
+}
+function selectTagSwatch(el){document.querySelectorAll('.tag-swatch-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+function getMemStatus(pid){try{const s=JSON.parse(localStorage.getItem(MEM_STATUS_KEY)||'{}');return s[pid]||'learning';}catch(e){return'learning';}}
+function setMemStatus(pid,status){try{const s=JSON.parse(localStorage.getItem(MEM_STATUS_KEY)||'{}');s[pid]=status;localStorage.setItem(MEM_STATUS_KEY,JSON.stringify(s));}catch(e){}}
+function getAllMemPassages(){
+  const fromStudies=state.studies.filter(s=>s.text&&s.text.trim()).map(s=>({id:'study-'+s.id,reference:s.passage,translation:s.translation,text:s.text,source:'study'}));
+  const fromVerses=state.memVerses.map(v=>({id:'mv-'+v.id,reference:v.reference,translation:v.translation,text:v.text,source:'verse',rawId:v.id}));
+  return[...fromStudies,...fromVerses];
+}
+function getMemPassage(){return getAllMemPassages().find(p=>p.id===state.memSid)||null;}
+function normalizeWord(w){return w.toLowerCase().replace(/[^a-z0-9]/g,'');}
+function memGapInput(idx,val){state.memGapInputs[idx]=val;}
+function checkGaps(){state.memGapChecked=true;render();}
+function resetGaps(){state.memGapInputs={};state.memGapChecked=false;render();}
+async function addMemVerse(){
+  if(!state.newVerseRef.trim()||state.addingVerse)return;
+  state.addingVerse=true;render();
+  try{
+    const result=await fetchPassageText(state.newVerseRef.trim(),state.newVerseTranslation);
+    const verse={id:Date.now().toString(),reference:state.newVerseRef.trim(),translation:state.newVerseTranslation,text:result.text||'',createdAt:new Date().toISOString()};
+    state.memVerses=[verse,...state.memVerses];saveMemVerses();
+    setMemStatus('mv-'+verse.id,'learning');
+    state.showAddVerse=false;state.newVerseRef='';state.addingVerse=false;
+    toast(result.text?'Verse added':'Verse added — use Paste to add scripture text');
+  }catch(e){state.addingVerse=false;toast('Something went wrong');}
+  render();
+}
+function deleteMemVerse(rawId){state.memVerses=state.memVerses.filter(v=>v.id!==rawId);saveMemVerses();if(state.memSid==='mv-'+rawId){state.memSid=getAllMemPassages()[0]?.id||null;state.memMode='read';}render();}
+function pasteMemVerse(rawId){
+  const v=state.memVerses.find(x=>x.id===rawId);if(!v)return;
+  document.getElementById('paste-overlay').classList.add('on');
+  setTimeout(()=>{const t=document.getElementById('paste-input');if(t)t.focus();},100);
+  state._pastingMemVerseId=rawId;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function isExact(tid){return tid==='kjv'||tid==='web'||tid==='asv'||tid==='esv';}
+function blbUrl(passage,tid){const t=TRANSLATIONS.find(x=>x.id===tid)||TRANSLATIONS[0];return'https://www.blueletterbible.org/'+(t.blb||'nasb95')+'/'+encodeURIComponent(passage)+'/1/0/';}
+function fmtDate(iso){return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function calcProgress(study){
+  if(!study)return{mc:0,ec:0,mPct:0,ePct:0,overall:0};
+  const mc=Object.values(study.methods).filter(m=>m.completed).length;
+  const ec=Object.values(study.exegesis).filter(s=>s.completed).length;
+  return{mc,mPct:Math.round(mc/9*100),ec,ePct:Math.round(ec/6*100),overall:Math.round((mc+ec)/15*100)};
+}
+function newStudyObj(passage,translation,text,textTranslation,title){
+  return{id:Date.now().toString(),passage:passage.trim(),title:title||'',translation,text,textTranslation:textTranslation||translation,
+    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+    methods:Object.fromEntries(METHODS.map(m=>[m.id,{notes:'',aiResponse:'',completed:false}])),
+    exegesis:Object.fromEntries(EXEG_STAGES.map(s=>[s.id,{notes:'',completed:false}])),
+    theologicalChart:{}};
+}
+function makeSVGRing(pct,size,stroke,color){
+  const sz=size||72,st=stroke||5,cl=color||C.gold,r=(sz-st*2)/2,circ=2*Math.PI*r,filled=(pct/100)*circ;
+  return `<svg width="${sz}" height="${sz}" style="transform:rotate(-90deg);display:block;"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${C.border}" stroke-width="${st}"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" fill="none" stroke="${cl}" stroke-width="${st}" stroke-dasharray="${filled} ${circ}" stroke-linecap="round" style="transition:stroke-dasharray 0.6s ease;"/></svg>`;
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function pdfSafe(str){var s=String(str),out='';for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);if((c>=32&&c<=126)||(c>=160&&c<=255)||c===9||c===10||c===13)out+=s[i];else out+=' ';}return out.replace(/\(\s*\)/g,'').replace(/  +/g,' ').trim();}
+
+async function exportStudyPDF(scope,methodId){
+  const study=currentStudy();if(!study){toast('No study to export');return;}
+  toast('Generating PDF\u2026');
+  try{
+    var jsPDF=window.jspdf.jsPDF;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
+    var mgL=20,mgR=20,mgT=20,mgB=18,footH=16,cw=pw-mgL-mgR,y=mgT;
+    var lh=function(sz){return sz*0.3528*1.55;};
+    var np=function(need){need=need||10;if(y+need>ph-mgB-footH){doc.addPage();y=mgT;}};
+    var txt=function(str,sz,style,rgb){
+      if(!str)return;doc.setFontSize(sz);doc.setFont('helvetica',style||'normal');doc.setTextColor.apply(doc,rgb||[30,25,15]);
+      var lhv=lh(sz);
+      String(str).split('\n').forEach(function(para){doc.splitTextToSize(para||' ',cw).forEach(function(line){np(lhv+1);doc.text(line,mgL,y);y+=lhv;});});
+      y+=2;
+    };
+    var section=function(title){np(22);y+=7;doc.setFillColor(140,105,30);doc.rect(mgL,y-1,cw,0.5,'F');y+=5;doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(90,65,20);doc.text(pdfSafe(title.toUpperCase()),mgL,y);y+=6;};
+    var stripMd=function(s){return s.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'').replace(/^[-*]\s/gm,'');};
+    // Header bar
+    doc.setFillColor(245,240,225);doc.rect(0,0,pw,36,'F');doc.setFillColor(140,105,30);doc.rect(0,34,pw,0.6,'F');
+    if(scope==='method'){
+      var method=METHODS.find(function(m){return m.id===methodId;});
+      var mdata=study.methods[methodId]||{};
+      doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
+      doc.text(pdfSafe((method?method.name+' Method':'Method')+' \u2014 '+study.passage),mgL,14);y=44;
+      var meta=[['Passage',study.passage],['Translation',study.translation.toUpperCase()],['Date',fmtDate(study.createdAt)]].filter(function(m){return m[1];});
+      meta.forEach(function(m){np(7);doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(60,45,20);doc.text(m[0]+':',mgL,y);doc.setFont('helvetica','normal');doc.setTextColor(30,25,15);doc.text(pdfSafe(String(m[1])),mgL+44,y);y+=6;});y+=6;
+      if(study.text&&study.text.trim()){section('Scripture Text');txt(pdfSafe(study.text.replace(/\n\n/g,'\n')),10,'italic',[45,35,20]);}
+      if(mdata.aiResponse&&mdata.aiResponse.trim()){section('AI Scholarly Analysis');txt(pdfSafe(stripMd(mdata.aiResponse)),9,'normal',[35,28,18]);}
+      if(mdata.notes&&mdata.notes.trim()){section('My Notes');txt(pdfSafe(mdata.notes),10,'normal',[30,25,15]);}
+    } else {
+      doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
+      doc.text(pdfSafe(study.passage+(study.title?' \u2014 '+study.title:'')),mgL,14);y=44;
+      var meta=[['Passage',study.passage],['Title',study.title],['Translation',study.translation.toUpperCase()],['Date',fmtDate(study.createdAt)]].filter(function(m){return m[1];});
+      meta.forEach(function(m){np(7);doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(60,45,20);doc.text(m[0]+':',mgL,y);doc.setFont('helvetica','normal');doc.setTextColor(30,25,15);doc.text(pdfSafe(String(m[1])),mgL+44,y);y+=6;});y+=6;
+      if(study.text&&study.text.trim()){section('Scripture Text');txt(pdfSafe(study.text.replace(/\n\n/g,'\n')),10,'italic',[45,35,20]);}
+      EXEG_STAGES.forEach(function(s){var n=study.exegesis[s.id]&&study.exegesis[s.id].notes;if(n&&n.trim()){section('Exegesis: '+s.label+' \u2014 '+s.desc);txt(pdfSafe(n),10,'normal',[30,25,15]);}});
+      METHODS.filter(function(m){return!m.isSynthetic;}).forEach(function(m){
+        var mdata=study.methods[m.id]||{};
+        if(mdata.aiResponse&&mdata.aiResponse.trim()){section(m.num+'. '+m.name+' \u2014 AI Analysis');txt(pdfSafe(stripMd(mdata.aiResponse)),9,'normal',[35,28,18]);}
+        if(mdata.notes&&mdata.notes.trim()){section(m.num+'. '+m.name+' \u2014 My Notes');txt(pdfSafe(mdata.notes),10,'normal',[30,25,15]);}
+      });
+      var synthNotes=study.methods['synthetic']&&study.methods['synthetic'].notes;
+      if(synthNotes&&synthNotes.trim()){section('\u2726 Synthetic \u2014 Master Synthesis');txt(pdfSafe(synthNotes),10,'normal',[30,25,15]);}
+    }
+    var total=doc.internal.getNumberOfPages();
+    for(var i=1;i<=total;i++){doc.setPage(i);doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(100,95,90);var footY=ph-8;doc.setFillColor(140,105,30);doc.rect(mgL,footY-5,cw,0.4,'F');doc.text(pdfSafe('Arche \u00b7 Scribe  \u2014  '+study.passage+'  \u2014  Page '+i+' of '+total),mgL,footY);}
+    var fname=pdfSafe((study.passage||'study').replace(/[^a-z0-9]/gi,'_'))+(scope==='full'?'_full_study':'_'+(methodId||'method'))+'.pdf';
+    doc.save(fname);toast('PDF downloaded');
+  }catch(e){toast('PDF error: '+e.message);console.error(e);}
+}
+
+function mdToHtml(md){
+  if(!md)return'';
+  function inlineM(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/`(.+?)`/g,'<code>$1</code>');
+  }
+  var lines=md.split('\n'),html='',inUl=false,inOl=false;
+  function closeLists(){if(inUl){html+='</ul>';inUl=false;}if(inOl){html+='</ol>';inOl=false;}}
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    if(/^###\s/.test(l)){closeLists();html+='<h4>'+inlineM(l.slice(4))+'</h4>';continue;}
+    if(/^##\s/.test(l)){closeLists();html+='<h3>'+inlineM(l.slice(3))+'</h3>';continue;}
+    if(/^#\s/.test(l)){closeLists();html+='<h3>'+inlineM(l.slice(2))+'</h3>';continue;}
+    if(/^---+$/.test(l.trim())){closeLists();html+='<hr>';continue;}
+    if(/^[-*]\s/.test(l)){if(!inUl){if(inOl){html+='</ol>';inOl=false;}html+='<ul>';inUl=true;}html+='<li>'+inlineM(l.slice(2))+'</li>';continue;}
+    if(/^\d+\.\s/.test(l)){if(!inOl){if(inUl){html+='</ul>';inUl=false;}html+='<ol>';inOl=true;}html+='<li>'+inlineM(l.replace(/^\d+\.\s/,''))+'</li>';continue;}
+    closeLists();
+    if(!l.trim()){html+='<div style="height:8px;"></div>';continue;}
+    html+='<p>'+inlineM(l)+'</p>';
+  }
+  closeLists();
+  return html;
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let _tt;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ── API ──────────────────────────────────────────────────────────────────────
+async function fetchPassageText(passageRef,tid){
+  // ESV — try Crossway API first, fall back to bible-api.com
+  if(tid==='esv'){
+    try{
+      const params=new URLSearchParams({q:passageRef,'include-headings':'false','include-footnotes':'false','include-verse-numbers':'true','include-short-copyright':'false','include-passage-references':'false'});
+      const r=await fetch('https://api.esv.org/v3/passage/text/?'+params,{headers:{Authorization:'Token '+ESV_KEY}});
+      if(r.ok){const d=await r.json();const txt=d.passages?d.passages.join('\n\n').trim():'';if(txt)return{text:txt,textTranslation:'esv'};}
+      else{console.warn('ESV API HTTP error:',r.status,r.statusText);}
+    }catch(e){console.warn('ESV API fetch error:',e.message);}
+    // Fallback to bible-api.com for ESV
+    try{
+      const r=await fetch('https://bible-api.com/'+encodeURIComponent(passageRef)+'?translation=esv');
+      const d=await r.json();
+      if(d.verses&&d.verses.length){const txt=d.verses.map(v=>'['+v.verse+'] '+v.text.trim()).join(' ');if(txt)return{text:txt,textTranslation:'esv'};}
+      if(d.text&&d.text.trim())return{text:d.text.trim(),textTranslation:'esv'};
+    }catch(e){console.warn('bible-api ESV fallback error:',e.message);}
+    return{text:'',textTranslation:'esv',esvError:'ESV fetch failed'};
+  }
+  // Free translations (KJV, ASV, WEB) — fetch directly
+  const t=TRANSLATIONS.find(x=>x.id===tid);
+  if(t&&t.free){try{const r=await fetch('https://bible-api.com/'+encodeURIComponent(passageRef)+'?translation='+t.free);const d=await r.json();if(d.text)return{text:d.text.trim(),textTranslation:tid};}catch(e){}}
+  // Licensed translations (NASB→ASV, others→WEB)
+  try{const fallback=tid==='nasb'?'asv':'web';const r=await fetch('https://bible-api.com/'+encodeURIComponent(passageRef)+'?translation='+fallback);const d=await r.json();if(d.text)return{text:d.text.trim(),textTranslation:fallback};}catch(e){}
+  return{text:'',textTranslation:tid};
+}
+async function callAI(methodId){
+  const study=currentStudy();if(!study)return;
+  const method=METHODS.find(m=>m.id===methodId);if(!method||!method.aiEnabled)return;
+  if(!state.groqKey){openApiSetup();return;}
+  state.aiLoading[methodId]=true;render();
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+state.groqKey},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:method.aiPrompt(study.passage,study.text)}],max_tokens:2048,temperature:0.2})});
+    const d=await r.json();
+    if(!r.ok){updateMethodField(methodId,'aiResponse',groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status));state.aiLoading[methodId]=false;render();return;}
+    const txt=d.choices?.[0]?.message?.content||'No response.';
+    updateMethodField(methodId,'aiResponse',txt);
+  }catch(e){updateMethodField(methodId,'aiResponse',groqErrMsg(e.message));}
+  state.aiLoading[methodId]=false;render();
+}
+
+// ── Mutations ────────────────────────────────────────────────────────────────
+function updateStudy(id,updater){state.studies=state.studies.map(s=>{if(s.id!==id)return s;return{...updater(s),updatedAt:new Date().toISOString()};});saveStudies();}
+function updateMethodField(methodId,field,value){const id=state.currentStudyId;updateStudy(id,s=>({...s,methods:{...s.methods,[methodId]:{...s.methods[methodId],[field]:value}}}));render();}
+function updateExegField(stageId,field,value){const id=state.currentStudyId;updateStudy(id,s=>({...s,exegesis:{...s.exegesis,[stageId]:{...s.exegesis[stageId],[field]:value}}}));render();}
+function updateTheologicalChart(rowId,colId,value){const id=state.currentStudyId;updateStudy(id,s=>{const chart={...s.theologicalChart};if(!chart[rowId])chart[rowId]={};chart[rowId][colId]=value;return{...s,theologicalChart:chart};});}
+function addTheologicalRow(){const id=state.currentStudyId;const study=currentStudy();if(!study)return;const rowId='row_'+Date.now();updateStudy(id,s=>({...s,theologicalChart:{...s.theologicalChart,[rowId]:{_ref:''}}}));render();}
+function removeTheologicalRow(rowId){const id=state.currentStudyId;updateStudy(id,s=>{const chart={...s.theologicalChart};delete chart[rowId];return{...s,theologicalChart:chart};});render();}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+async function handleCreate(){
+  if(!state.newPassage.trim()||state.creating)return;
+  state.creating=true;render();
+  try{
+    const result=await fetchPassageText(state.newPassage.trim(),state.newTranslation);
+    const study=newStudyObj(state.newPassage,state.newTranslation,result.text||'',result.textTranslation,state.newTitle.trim());
+    state.studies=[study,...state.studies];saveStudies();
+    state.currentStudyId=study.id;state.activeMethod='analytical';state.progressTab='exegesis';
+    state.creating=false;state.showNewStudy=false;state.newPassage='';state.newTitle='';state.view='study';
+    if(!result.text)toast('Scripture not loaded — use Reload or Paste Text');
+  }catch(e){
+    state.creating=false;
+    toast('Something went wrong — please try again');
+  }
+  render();
+}
+function handleDeleteConfirm(){
+  if(!state.confirmDeleteId)return;
+  state.studies=state.studies.filter(s=>s.id!==state.confirmDeleteId);
+  saveStudies();state.confirmDeleteId=null;closeOverlay('del-overlay');render();toast('Study deleted');
+}
+
+async function changeTranslation(newTid){
+  const study=currentStudy();if(!study)return;
+  toast('Loading '+newTid.toUpperCase()+'...');
+  const result=await fetchPassageText(study.passage,newTid);
+  const txt=result.text||'';
+  updateStudy(study.id,s=>({...s,translation:newTid,text:txt,textTranslation:result.textTranslation||newTid}));
+  render();
+  if(!txt){
+    if(result.esvError){console.error('ESV error detail:',result.esvError);}
+    toast(newTid.toUpperCase()+' failed - use Paste to add text manually');
+    setTimeout(()=>openPasteModal(),1200);
+  }else if(result.textTranslation!==newTid){
+    toast(newTid.toUpperCase()+' unavailable - showing '+result.textTranslation.toUpperCase());
+  }else{
+    toast(newTid.toUpperCase()+' loaded');
+  }
+}
+
+async function reloadPassage(){
+  const study=currentStudy();if(!study)return;
+  await changeTranslation(study.translation);
+}
+
+function openPasteModal(){
+  document.getElementById('paste-overlay').classList.add('on');
+  setTimeout(()=>{const t=document.getElementById('paste-input');if(t)t.focus();},100);
+}
+function closePasteModal(){document.getElementById('paste-overlay').classList.remove('on');}
+function confirmPaste(){
+  const t=document.getElementById('paste-input').value.trim();
+  if(!t)return;
+  // mem verse paste context
+  if(state._pastingMemVerseId){
+    const rawId=state._pastingMemVerseId;state._pastingMemVerseId=null;
+    state.memVerses=state.memVerses.map(v=>v.id===rawId?{...v,text:t}:v);
+    saveMemVerses();closePasteModal();render();toast('Scripture text saved');return;
+  }
+  const study=currentStudy();if(!study)return;
+  updateStudy(study.id,s=>({...s,text:t,textTranslation:s.translation}));
+  closePasteModal();render();toast('Scripture text saved');
+}
+function closeOverlay(id){document.getElementById(id).classList.remove('on');}
+
+// ── SVG Ring helper ──────────────────────────────────────────────────────────
+function renderRing(pct,size,stroke,color){return makeSVGRing(pct,size,stroke,color);}
+function renderProgressBar(pct){return`<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;}
+
+function renderDisciplinesBar(){
+  return`<div class="disciplines-bar">${DISCIPLINES.map((d,i)=>`<span class="disc-item${d==='Study'?' active':''}">${d}</span>${i<DISCIPLINES.length-1?'<span class="disc-sep">·</span>':''}`).join('')}</div>`;
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const studies=state.studies;
+  const allProgress=studies.map(s=>({...s,prog:calcProgress(s)}));
+  const avgProgress=studies.length>0?Math.round(allProgress.reduce((a,s)=>a+s.prog.overall,0)/studies.length):0;
+
+  const statsHTML=studies.length>0?`<div class="stats-grid">
+    ${[{label:'Total Studies',val:studies.length},{label:'Methods Done',val:studies.reduce((a,s)=>a+Object.values(s.methods).filter(m=>m.completed).length,0)},{label:'Exegesis Stages',val:studies.reduce((a,s)=>a+Object.values(s.exegesis).filter(e=>e.completed).length,0)},{label:'Avg. Progress',val:avgProgress+'%'}]
+    .map(stat=>`<div class="stat-card"><div class="stat-val">${stat.val}</div><div class="stat-label">${stat.label}</div></div>`).join('')}
+  </div>`:'';
+
+  const newStudyModal=state.showNewStudy?renderNewStudyModal():'';
+
+  const q=state.searchQuery.toLowerCase().trim();
+  let filtered=q?allProgress.filter(s=>(s.passage||'').toLowerCase().includes(q)||(s.title||'').toLowerCase().includes(q)):allProgress.slice();
+  function bookIdx(passage){if(!passage)return 999;var p=passage.trim();for(var i=0;i<BIBLE_ORDER.length;i++){if(p.toLowerCase().startsWith(BIBLE_ORDER[i].toLowerCase()))return i;}return 999;}
+  if(state.activeTagFilter)filtered=filtered.filter(s=>s.tags&&s.tags.includes(state.activeTagFilter));
+  if(state.libSort==='date')filtered.sort((a,b)=>(b.createdAt||'')>(a.createdAt||'')?1:-1);
+  else if(state.libSort==='ref')filtered.sort((a,b)=>bookIdx(a.passage)-bookIdx(b.passage));
+  else if(state.libSort==='modified')filtered.sort((a,b)=>(b.updatedAt||b.createdAt||'')>(a.updatedAt||a.createdAt||'')?1:-1);
+
+  const studiesHTML=studies.length===0?`<div class="card empty-state" style="margin-top:16px;">
+    <div class="empty">
+      <div class="empty-icon">✦</div>
+      <h3>Begin Your First Study</h3>
+      <p>Enter a passage and choose a translation to open the full exegetical study workspace.</p>
+      <button class="btn btn-primary" style="margin-top:20px;" onclick="state.showNewStudy=true;render()">+ New Study</button>
+    </div>
+  </div>`:`<div>
+    ${state.tags.length?`<div class="tag-filter-row">
+      <button class="tag-filter-btn${state.activeTagFilter===null?' on':''}" onclick="state.activeTagFilter=null;render()">All</button>
+      ${state.tags.map(t=>`<button class="tag-filter-btn${state.activeTagFilter===t.id?' on':''}" onclick="state.activeTagFilter=state.activeTagFilter===t.id?null:'${t.id}';render()" style="${state.activeTagFilter===t.id?'border-color:'+t.color+';color:'+t.color:''}"><span class="tag-swatch" style="background:${t.color}"></span>${escHtml(t.label)}</button>`).join('')}
+    </div>`:''}
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <input type="search" placeholder="Search by passage or title…" value="${escHtml(state.searchQuery)}" oninput="state.searchQuery=this.value;render()" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',Georgia,serif;font-size:15px;padding:10px 12px;outline:none;">
+      <select onchange="state.libSort=this.value;render()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;padding:8px 10px;min-height:44px;cursor:pointer;flex-shrink:0;">
+        <option value="date"${state.libSort==='date'?' selected':''}>Latest</option>
+        <option value="ref"${state.libSort==='ref'?' selected':''}>Reference</option>
+        <option value="modified"${state.libSort==='modified'?' selected':''}>Modified</option>
+      </select>
+    </div>
+    ${filtered.length===0?`<div style="text-align:center;padding:24px 0;color:var(--txt4);font-style:italic;font-size:14px;">No studies match "${escHtml(state.searchQuery)}"</div>`:`<div class="studies-grid">
+    ${filtered.map(item=>{
+      const methodsDone=Object.values(item.methods).filter(m=>m.completed).length;
+      const dots=METHODS.map(m=>{const done=item.methods[m.id]&&item.methods[m.id].completed,has=item.methods[m.id]&&(item.methods[m.id].notes||item.methods[m.id].aiResponse);return`<div class="dot" title="${m.name}" style="background:${done?C.gold:has?C.golddim:C.border}"></div>`;}).join('');
+      return`<div class="study-card" onclick="openStudy('${item.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <div class="sc-ref">${escHtml(item.passage)} <span class="ttag">${item.translation.toUpperCase()}</span></div>
+            <div class="sc-title">${escHtml(item.title||item.passage)}</div>
+          </div>
+          <div class="ring-wrap">${renderRing(item.prog.overall,50,4)}<div class="ring-pct ring-pct-sm">${item.prog.overall}%</div></div>
+        </div>
+        <div style="display:flex;gap:18px;margin-bottom:10px;">
+          <div><div style="color:var(--txt1);font-family:'EB Garamond',Georgia,serif;font-size:17px;font-weight:600;">${methodsDone}/9</div><div style="color:var(--txt4);font-size:11px;">Methods</div></div>
+          <div><div style="color:var(--txt1);font-family:'EB Garamond',Georgia,serif;font-size:17px;font-weight:600;">${item.prog.ec}/6</div><div style="color:var(--txt4);font-size:11px;">Exegesis</div></div>
+        </div>
+        <div class="dot-row">${dots}</div>
+        ${(item.tags&&item.tags.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">${item.tags.map(tid=>{const t=tagById(tid);return t?`<span class="tag-chip" style="background:${t.bg};color:${t.color};border-color:${t.color}40;">${escHtml(t.label)}</span>`:''}).join('')}</div>`:''}
+        <div class="study-card-footer">
+          <div class="updated-label">Updated ${fmtDate(item.updatedAt)}</div>
+          <div style="display:flex;gap:6px;">
+            <button class="delete-btn" style="background:var(--bg3);color:var(--txt3);border:1px solid var(--border);" onclick="event.stopPropagation();duplicateStudy('${item.id}')">Duplicate</button>
+            <button class="delete-btn" onclick="event.stopPropagation();state.confirmDeleteId='${item.id}';document.getElementById('del-overlay').classList.add('on');">Delete</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="add-card" onclick="state.showNewStudy=true;render()">
+      <div style="text-align:center;"><div style="color:var(--golddim);font-size:2rem;margin-bottom:6px;">+</div><div style="color:var(--txt4);font-size:13px;font-family:'Crimson Pro',Georgia,serif;">New Study</div></div>
+    </div>
+  </div>`}
+  </div>`;
+
+  return`<div class="view on" id="view-dashboard">
+    <div class="topbar">
+      <div class="topbar-brand">✦ Arché</div>
+      <div style="width:1px;height:18px;background:var(--border);margin:0 4px;"></div>
+      <div style="font-family:'Crimson Pro',Georgia,serif;font-size:12px;color:var(--txt3);letter-spacing:.1em;text-transform:uppercase;">Scribe</div>
+      <div class="topbar-right">
+        <button class="btn btn-sec btn-sm" onclick="exportData()" title="Backup all studies to JSON">Backup</button>
+        <button class="btn btn-sec btn-sm" onclick="importDataPrompt()" title="Restore from JSON backup">Restore</button>
+        <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" onchange="importDataFromFile(this)">
+        <button class="btn btn-sec btn-sm" onclick="openMemorize()">Memorize</button>
+        <button class="btn btn-ghost btn-sm" onclick="openApiSetup()" title="${state.groqKey?'AI key set ✓':'AI key not set — click to add'}" style="${state.groqKey?'color:var(--sagebright);border-color:var(--sagebright)40;':'color:var(--crimsonbright);border-color:var(--crimsonbright)40;'}">${state.groqKey?'AI ✓':'AI Key'}</button>
+        <button class="btn btn-primary btn-sm" onclick="state.showNewStudy=true;render()">+ Study</button>
+      </div>
+    </div>
+    <div class="dashboard-scroll">
+      ${newStudyModal}
+      <div style="margin-bottom:16px;padding-top:4px;">
+        <div style="font-size:11px;color:var(--txt3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px;">My Studies</div>
+        <div style="color:var(--txt3);font-size:13px;">Hear · Read · <span style="color:var(--gold);font-weight:600;">Study</span> · Memorize · Meditate · Apply</div>
+      </div>
+      ${statsHTML}
+      ${studiesHTML}
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${state.showTagManager?'12px':'0'};">
+          <div style="font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;font-weight:600;">Tags</div>
+          <button class="btn btn-ghost btn-sm" onclick="state.showTagManager=!state.showTagManager;render()">${state.showTagManager?'Hide':'Manage Tags'}</button>
+        </div>
+        ${state.showTagManager?`<div class="card" style="margin-bottom:0;">
+          ${state.tags.map(t=>`<div class="tag-manager-row">
+            <span class="tag-swatch" style="background:${t.color};width:12px;height:12px;"></span>
+            <span style="flex:1;font-size:14px;color:var(--txt1);">${escHtml(t.label)}</span>
+            <button class="btn btn-ghost btn-sm" style="color:var(--crimsonbright);" onclick="deleteTag('${t.id}')">Delete</button>
+          </div>`).join('')}
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div class="ig" style="flex:1;margin-bottom:0;"><label>New tag name</label><input id="new-tag-input" placeholder="e.g. Prophecy" style="margin-bottom:0;"></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;">${TAG_PALETTE.map((col,i)=>`<button class="tag-swatch-btn${i===0?' on':''}" data-color="${col}" onclick="selectTagSwatch(this)" style="width:22px;height:22px;border-radius:50%;background:${col};border:2px solid ${i===0?'white':'transparent'};cursor:pointer;"></button>`).join('')}</div>
+            <button class="btn btn-primary btn-sm" onclick="saveNewTag()">Add</button>
+          </div>
+        </div>`:''}
+      <div class="footer">
+        <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px;">
+          <div class="cl-section-hdr" onclick="clSectionToggle()">
+            <div style="font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;">What's New</div>
+            <button class="cl-toggle-btn" id="cl-section-btn">Show &#8964;</button>
+          </div>
+          <div class="cl-body" id="cl-body">
+            <div style="font-size:12px;color:var(--txt4);margin:6px 0 12px;font-style:italic;">Full history of changes to Arché · Scribe, newest first.</div>
+            <div id="changelog-list"></div>
+          </div>
+        </div>
+        <div class="ornament">✦ ✦ ✦</div>
+        <div class="footer-text" style="margin-top:10px;">Arché · Scribe</div>
+        <div style="font-family:'Crimson Pro',Georgia,serif;font-size:11px;color:var(--txt4);font-style:italic;margin-top:4px;letter-spacing:.05em;">Part of Arché Study Tools</div>
+        <div style="margin-top:12px;"><a href="https://www.archestudytools.com/pilgrim-public/" target="_blank" style="font-family:'Crimson Pro',Georgia,serif;font-size:12px;color:var(--golddim);text-decoration:none;letter-spacing:.05em;">Open in Arché · Pilgrim →</a></div>
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;text-align:left;">
+          <div style="font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;display:flex;align-items:center;gap:8px;">Study Resources<span style="flex:1;height:1px;background:var(--border);display:block;"></span></div>
+          <!-- Resources section 1 -->
+          <div style="margin-bottom:6px;">
+            <button onclick="var s=document.getElementById('sc-res-s1'),c=document.getElementById('sc-res-c1');var open=s.style.display!=='none';s.style.display=open?'none':'block';c.style.transform=open?'':'rotate(180deg)';" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;cursor:pointer;font-family:'Crimson Pro',Georgia,serif;">
+              <span style="font-family:'EB Garamond',Georgia,serif;font-size:16px;color:var(--txt1);">How to Study the Bible</span>
+              <svg id="sc-res-c1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13" style="color:var(--txt3);transition:transform .2s;flex-shrink:0;"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="sc-res-s1" style="display:none;background:var(--bg1);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px 18px;">
+              <div class="seclabel" style="margin-bottom:10px;">Foundational Scriptures</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">Joshua 1:8</div>
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">Ezra 7:10</div>
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">Psalm 119:9</div>
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">Acts 17:11</div>
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">2 Timothy 3:16-17</div>
+                <div style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:var(--gold);">James 3:1</div>
+              </div>
+              <div class="seclabel" style="margin-bottom:10px;">What Method Is — and Isn't</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                <div style="font-size:14px;color:var(--txt2);line-height:1.65;padding-left:12px;border-left:2px solid var(--golddim);">Method is not a course but a lifetime of study — you must practice it, not just read about it.</div>
+                <div style="font-size:14px;color:var(--txt2);line-height:1.65;padding-left:12px;border-left:2px solid var(--golddim);">Method is not a formula but a process — steps used over time become standard practice.</div>
+                <div style="font-size:14px;color:var(--txt2);line-height:1.65;padding-left:12px;border-left:2px solid var(--golddim);">Method is not a shortcut but an aid to discovery — genuine understanding takes work.</div>
+                <div style="font-size:14px;color:var(--txt2);line-height:1.65;padding-left:12px;border-left:2px solid var(--golddim);">Method is not one-size-fits-all — every tool must be made to fit you, not someone else.</div>
+              </div>
+              <div class="seclabel" style="margin-bottom:10px;">The Historical-Grammatical Approach</div>
+              <div style="font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:16px;">This method seeks to determine the meaning of the biblical text as originally understood by its writers — taking into account the historical context, grammatical meaning of the language, and cultural and literary setting in which it was written. The goal is to find the intended meaning of the text as it was originally communicated.</div>
+              <div class="seclabel" style="margin-bottom:10px;">The 9 Study Methods</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Analytical</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Critical</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Historical</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Topical</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Theological</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Comparative</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Rhetorical</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Devotional</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px;color:var(--txt2);">Synthetic</div>
+              </div>
+            </div>
+          </div>
+          <!-- Resources section 2 -->
+          <div style="margin-bottom:6px;">
+            <button onclick="var s=document.getElementById('sc-res-s2'),c=document.getElementById('sc-res-c2');var open=s.style.display!=='none';s.style.display=open?'none':'block';c.style.transform=open?'':'rotate(180deg)';" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;cursor:pointer;font-family:'Crimson Pro',Georgia,serif;">
+              <span style="font-family:'EB Garamond',Georgia,serif;font-size:16px;color:var(--txt1);">How We Got the Bible</span>
+              <svg id="sc-res-c2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13" style="color:var(--txt3);transition:transform .2s;flex-shrink:0;"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="sc-res-s2" style="display:none;background:var(--bg1);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px 18px;">
+              <div class="seclabel" style="margin-bottom:10px;">Old Testament Sources</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px;">
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Proto-Hebrew Text</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">The ancient and developing Hebrew text — the foundation</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Septuagint (LXX)</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Greek translation of the OT, 3rd–2nd centuries BC</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Samaritan Pentateuch</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Second Temple period (516 BC–70 AD)</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Dead Sea Scrolls</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Discovered 1947 — oldest known OT manuscripts</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Masoretic Hebrew Text</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Developed 7th–10th centuries AD — basis for most modern OT translations</div></div>
+              </div>
+              <div class="seclabel" style="margin-bottom:10px;">New Testament Sources</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:16px;">
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">The Originals</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Lost — we do not possess any of these</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Copies</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Nearly 6,000 copies of NT documents</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Lectionaries</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Devotional guides on the four Gospels</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Translations/Versions</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Early translations into other languages</div></div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;"><div style="font-size:13px;color:var(--gold);font-weight:600;">Patristic Quotes</div><div style="font-size:12px;color:var(--txt3);margin-top:2px;">Writings of Apostolic and Early Church Fathers</div></div>
+              </div>
+              <div class="seclabel" style="margin-bottom:10px;">Manuscript Reliability</div>
+              <div style="background:var(--bg3);border:1px solid var(--golddim);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;">
+                <div style="font-size:14px;color:var(--txt1);line-height:1.7;">The New Testament has <strong style="color:var(--gold);">5,600+ Greek manuscripts</strong> — more than any ancient writing. The earliest copy dates to within <strong style="color:var(--gold);">100 years</strong> of the originals, with <strong style="color:var(--gold);">99.5% textual accuracy</strong>. By comparison, Homer's Iliad has 643 copies with a 500-year gap. The NT also has 19,000+ copies in Syriac, Latin, Coptic, and Aramaic — total manuscript base exceeds 24,000.</div>
+              </div>
+              <div class="seclabel" style="margin-bottom:10px;">Translation Philosophy</div>
+              <div style="font-size:13px;color:var(--txt3);margin-bottom:8px;font-style:italic;">Word-for-Word &#8592;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8212;&#8594; Thought-for-Thought</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">NASB/LSB</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">AMP</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">ESV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">NKJV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">RSV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--sagebright);">KJV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gold);">NRSV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gold);">CSB</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gold);">NET</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gold);">NAB</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--gold);">NIV</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--crimsonbright);">NLT</div>
+                <div style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:12px;color:var(--crimsonbright);">MSG</div>
+              </div>
+              <div style="font-size:12px;color:var(--txt4);line-height:1.6;">Word-for-word translations prioritize the original language structure. Thought-for-thought translations prioritize readability and modern communication. Neither is superior — both serve different study purposes.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNewStudyModal(){
+  const exact=isExact(state.newTranslation);
+  const noteText=exact?state.newTranslation.toUpperCase()+' text will display exactly in-app.'
+    :state.newTranslation==='nasb'?'NASB will display as ASV in-app (closest formal equivalent). Full NASB available via Blue Letter Bible.'
+    :state.newTranslation.toUpperCase()+' will display as WEB in-app (closest freely available). Full '+state.newTranslation.toUpperCase()+' available via Blue Letter Bible.';
+  const opts=TRANSLATIONS.map(t=>`<option value="${t.id}"${t.id===state.newTranslation?' selected':''}>${t.name} — ${t.full}</option>`).join('');
+  return`<div class="overlay on" onclick="state.showNewStudy=false;render()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">New Study</div>
+      <p style="font-size:14px;color:var(--txt3);margin-bottom:18px;line-height:1.5;">Enter a passage to begin your exegetical study</p>
+      <div class="ig"><label>Title <span style="color:var(--txt4);font-weight:400;font-style:italic;">(optional)</span></label><input id="new-title-input" value="${escHtml(state.newTitle)}" placeholder="e.g. The Bread of Life" oninput="state.newTitle=this.value"></div>
+      <div class="ig"><label>Passage</label><div style="display:flex;gap:8px;align-items:center"><button type="button" onclick="bpOpen()" style="display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--borderlit);border-radius:var(--r);cursor:pointer;min-height:44px;min-width:44px;flex-shrink:0;color:var(--gold);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button><input id="new-passage-input" style="flex:1" value="${escHtml(state.newPassage)}" placeholder="e.g. John 3:16 or Romans 8:1-11" oninput="state.newPassage=this.value" onkeydown="if(event.key==='Enter')handleCreate()"></div></div>
+      <div class="ig"><label>Translation</label><div style="position:relative;"><select onchange="state.newTranslation=this.value;render()">${opts}</select></div></div>
+      <div class="trans-note ${exact?'exact':'approx'}">${noteText}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+        <button class="btn btn-sec" onclick="state.showNewStudy=false;render()">Cancel</button>
+        <button class="btn btn-primary" onclick="handleCreate()" ${state.creating||!state.newPassage.trim()?'disabled':''}>
+          ${state.creating?'Loading…':'Begin Study'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Study view ───────────────────────────────────────────────────────────────
+function renderStudy(){
+  const study=currentStudy();if(!study)return renderDashboard();
+  const prog=calcProgress(study);
+  const method=METHODS.find(m=>m.id===state.activeMethod);
+  const mData=study.methods[state.activeMethod];
+  const textAvailable=!!(study.text&&study.text.trim());
+
+  // Sidebar exegesis
+  const exegHTML=EXEG_STAGES.map(s=>{
+    const done=study.exegesis[s.id].completed,notes=study.exegesis[s.id].notes;
+    return`<div class="exeg-item">
+      <div class="exeg-row">
+        <span class="exeg-label${done?' done':''}">${s.label}</span>
+        <button class="exeg-btn${done?' done':''}" onclick="toggleExeg('${s.id}')">${done?'Done ✓':'Mark Done'}</button>
+      </div>
+      <textarea class="exeg-textarea" rows="2" placeholder="${s.desc}" oninput="updateExegNotes('${s.id}',this.value)">${escHtml(notes)}</textarea>
+      <div style="text-align:right;"><span id="wc-exeg-${s.id}" style="font-size:10px;color:var(--txt4);"></span></div>
+    </div>`;
+  }).join('');
+
+  // Sidebar methods
+  const methodsHTML=METHODS.map(m=>{
+    const done=study.methods[m.id].completed,hasNotes=study.methods[m.id].notes.length>0,hasAi=study.methods[m.id].aiResponse.length>0,active=state.activeMethod===m.id;
+    const dots=(hasAi?`<div class="ind-dot" style="background:#60a5fa;"></div>`:'')+( hasNotes?`<div class="ind-dot" style="background:${C.gold};"></div>`:'');
+    return`<button class="method-sb-btn${active?' active':''}" onclick="state.activeMethod='${m.id}';render()">
+      <div class="method-circle${done?' done':''}">${done?'✓':''}</div>
+      <div class="method-sb-label${done&&!active?' done-label':''}">${m.num}. ${m.name}</div>
+      <div class="indicator-dots">${dots}</div>
+    </button>`;
+  }).join('');
+
+  const sidebar=`<div class="sidebar">
+    <div class="progress-ring-center">
+      <div class="ring-wrap">${renderRing(prog.overall,80,6)}<div class="ring-pct">${prog.overall}%</div></div>
+      <div class="progress-ring-label">Overall Progress</div>
+    </div>
+    <div class="progress-tab-row">
+      <button class="progress-tab${state.progressTab==='exegesis'?' active':''}" onclick="state.progressTab='exegesis';render()">Exegesis</button>
+      <button class="progress-tab${state.progressTab==='methods'?' active':''}" onclick="state.progressTab='methods';render()">Methods</button>
+    </div>
+    ${state.progressTab==='exegesis'?`
+      <div class="stage-count">6 Exegetical Stages</div>
+      ${exegHTML}
+      ${renderProgressBar(prog.ePct)}
+      <div class="sidebar-progress-count">${prog.ec} of 6 complete</div>
+    `:`
+      <div class="stage-count">9 Study Methods</div>
+      ${methodsHTML}
+      <div style="margin-top:10px;">${renderProgressBar(prog.mPct)}<div class="sidebar-progress-count">${prog.mc} of 9 complete</div></div>
+    `}
+  </div>`;
+
+  const tabs=METHODS.map(m=>{
+    const done=study.methods[m.id]&&study.methods[m.id].completed,active=state.activeMethod===m.id;
+    if(m.isSynthetic){
+      return`<button class="method-tab-synthetic${active?' active':done?' done':''}" onclick="state.activeMethod='${m.id}';render()" title="Capstone: synthesizes all methods">✦ ${m.name}</button>`;
+    }
+    return`<button class="method-tab${active?' active':done?' done':''}" onclick="state.activeMethod='${m.id}';render()">${m.name}</button>`;
+  }).join('');
+
+  // Passage card
+  const tranOpts=TRANSLATIONS.map(t=>`<option value="${t.id}"${t.id===study.translation?' selected':''}>${t.name}</option>`).join('');
+  const showSubNote=study.textTranslation&&study.textTranslation!==study.translation;
+  const passageCard=`<div class="card card-accent" style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="passage-ref">${escHtml(study.passage)}</span>
+        ${showSubNote?`<span class="passage-sub">(showing ${study.textTranslation.toUpperCase()})</span>`:''}
+      </div>
+      <a class="blb-link" href="${blbUrl(study.passage,study.translation)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;">View in BLB ↗</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;flex-shrink:0;">Translation</div>
+      <div style="position:relative;width:170px;">
+        <select style="padding:6px 28px 6px 10px;font-size:13px;background:var(--bg3);border-color:var(--borderlit);" onchange="changeTranslation(this.value)">${tranOpts}</select>
+      </div>
+      ${showSubNote?`<span style="font-size:11px;color:var(--golddim);font-style:italic;">${study.translation.toUpperCase()} unavailable — displaying ${study.textTranslation.toUpperCase()}</span>`:''}
+      <div style="margin-left:auto;display:flex;gap:4px;align-items:center;">
+        <button onclick="if(state.scrFontSize>14){state.scrFontSize-=2;saveSettings();render();}" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--txt2);cursor:pointer;font-family:'Crimson Pro',Georgia,serif;font-size:13px;padding:3px 9px;min-height:32px;min-width:32px;" title="Decrease font size">A−</button>
+        <button onclick="if(state.scrFontSize<24){state.scrFontSize+=2;saveSettings();render();}" style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--txt2);cursor:pointer;font-family:'Crimson Pro',Georgia,serif;font-size:15px;padding:3px 9px;min-height:32px;min-width:32px;" title="Increase font size">A+</button>
+      </div>
+    </div>
+    ${textAvailable
+      ? `<div class="passage-text" style="font-size:${state.scrFontSize}px;">${escHtml(study.text)}</div>`
+      : `<div style="padding:4px 0;">
+           <div style="color:var(--txt3);font-size:13px;font-style:italic;margin-bottom:12px;">Scripture text not loaded.</div>
+           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+             <button class="btn btn-sec btn-sm" onclick="reloadPassage()" style="font-size:12px;">Reload ${study.translation.toUpperCase()}</button>
+             <button class="btn btn-sec btn-sm" onclick="openPasteModal()" style="font-size:12px;">Paste Text</button>
+             <a class="blb-link" style="opacity:1;font-size:13px;" href="${blbUrl(study.passage,study.translation)}" target="_blank">View in BLB ↗</a>
+           </div>
+           <div style="margin-top:10px;font-size:11px;color:var(--txt4);line-height:1.6;">If auto-load fails, use Paste Text or copy from <a href="https://www.esv.org" target="_blank" style="color:var(--golddim);">esv.org</a>. NASB, NIV, NLT, NKJV require paste (licensed).</div>
+         </div>`}
+  </div>`;
+
+  // AI section
+  let aiHTML='';
+  if(method&&method.aiEnabled){
+    const loading=!!state.aiLoading[state.activeMethod];
+    aiHTML=`<div class="card ai-section" style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+        <div><div class="ai-label">AI Scholarly Assistance</div><div class="ai-sub">Linguistic, historical, and textual data only — all conclusions are yours to draw</div></div>
+        <button class="btn-ai" onclick="callAI('${state.activeMethod}')" ${loading?'disabled':''}>${loading?'Analyzing…':method.aiLabel}</button>
+      </div>
+      ${mData.aiResponse
+        ?`<div class="ai-response">${mdToHtml(mData.aiResponse)}</div><div class="aidisclaim" style="display:flex;justify-content:space-between;align-items:center;"><span>AI provides data only. All theological conclusions belong to the student.</span><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;min-height:28px;" onclick="copyAIResponse('${state.activeMethod}')">Copy</button></div>`
+        :`<div class="ai-placeholder">Tap "${method.aiLabel}" to receive scholarly analysis.</div>`}
+    </div>`;
+  }
+
+  // Guided prompts
+  let guidedHTML='';
+  let theolChartHTML='';
+  if(method&&!method.aiEnabled&&method.guidedPrompts){
+    const isDev=state.activeMethod==='devotional';
+    guidedHTML=`<div class="card" style="margin-bottom:16px;border-top:2px solid ${isDev?'#7c6aaa':'var(--golddim)'};">
+      <div class="guided-header ${isDev?'devotional':'theological'}">${isDev?'Guided Reflection Prompts — AI-Free Zone':'Guided Study Prompts — AI-Free Zone'}</div>
+      ${method.guidedPrompts.map((p,i)=>`<div class="prompt-item"><span class="prompt-num">${i+1}.</span><span class="prompt-text">${p}</span></div>`).join('')}
+    </div>`;
+    if(state.activeMethod==='theological'){
+      const study=currentStudy();
+      const chart=study&&study.theologicalChart||{};
+      const TCOLS=['God','Bible','Christ','Salvation','Angels','Humanity','Sin','Spirit','Church','Eschatology'];
+      const rows=Object.keys(chart);
+      const colW=80;
+      const tableRows=rows.map(rowId=>{
+        const row=chart[rowId]||{};
+        const refVal=escHtml(row._ref||'');
+        const cells=TCOLS.map(col=>{
+          const val=escHtml(row[col]||'');
+          return`<td style="padding:3px 4px;border:1px solid var(--border);min-width:${colW}px;"><input type="text" value="${val}" oninput="updateTheologicalChart('${rowId}','${col}',this.value)" style="background:transparent;border:none;color:var(--txt1);font-family:'Crimson Pro',serif;font-size:12px;padding:2px 4px;width:100%;min-width:${colW-8}px;outline:none;"></td>`;
+        }).join('');
+        return`<tr><td style="padding:3px 4px;border:1px solid var(--border);white-space:nowrap;"><input type="text" value="${refVal}" placeholder="Verse…" oninput="updateTheologicalChart('${rowId}','_ref',this.value)" style="background:transparent;border:none;color:var(--gold);font-family:'EB Garamond',serif;font-size:13px;padding:2px 4px;width:110px;outline:none;"><button onclick="removeTheologicalRow('${rowId}')" style="background:none;border:none;color:var(--txt4);cursor:pointer;font-size:11px;padding:0 4px;" title="Remove row">✕</button></td>${cells}</tr>`;
+      }).join('');
+      theolChartHTML=`<div class="card" style="margin-bottom:16px;overflow-x:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div><div class="notes-label">Biblical Theology Chart <span class="conclbadge">AI-Free Zone</span></div><div class="notes-sub">Track theological categories verse by verse</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="addTheologicalRow()">+ Add Verse</button>
+        </div>
+        ${rows.length===0?`<div style="text-align:center;padding:20px 0;color:var(--txt4);font-style:italic;font-size:13px;">Tap "+ Add Verse" to begin tracking theological categories</div>`:`<div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:12px;width:100%;">
+          <thead><tr style="background:var(--bg3);">
+            <th style="padding:6px 8px;border:1px solid var(--border);text-align:left;color:var(--txt3);font-size:10px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;min-width:120px;">Text / Verse</th>
+            ${TCOLS.map(c=>`<th style="padding:6px 8px;border:1px solid var(--border);text-align:left;color:var(--txt3);font-size:10px;text-transform:uppercase;letter-spacing:.08em;min-width:${colW}px;">${c}</th>`).join('')}
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table></div>`}
+      </div>`;
+    }
+  }
+
+  // Synthetic assembled view
+  let syntheticHTML='';
+  if(method&&method.isSynthetic){
+    const otherMethods=METHODS.filter(m=>!m.isSynthetic);
+    const sections=otherMethods.map(m=>{
+      const mdata=study.methods[m.id];
+      const aiPart=mdata&&mdata.aiResponse?mdata.aiResponse.trim():'';
+      const notesPart=mdata&&mdata.notes?mdata.notes.trim():'';
+      const combined=[aiPart,notesPart].filter(Boolean).join('\n\n');
+      return`<div class="synthetic-section">
+        <div class="synthetic-section-header">${m.num}. ${m.name}${mdata&&mdata.completed?' ✓':''}</div>
+        ${combined
+          ?`<div class="synthetic-section-body">${mdToHtml(combined)}</div>`
+          :`<div class="synthetic-section-empty">No content yet — complete the ${m.name} method to populate this section.</div>`}
+      </div>`;
+    }).join('');
+    syntheticHTML=`<div style="margin-bottom:16px;">
+      <div style="font-size:13px;color:var(--txt3);line-height:1.6;margin-bottom:14px;padding:12px 14px;background:color-mix(in srgb,var(--bg1),var(--golddim) 5%);border:1px solid var(--golddim);border-radius:var(--r);">
+        <strong style="color:var(--gold);">✦ Synthetic Method</strong> — This capstone view assembles AI analyses and notes from all 8 methods. It updates automatically as you complete each method. Use the notes field below to write your master synthesis.
+      </div>
+      ${sections}
+    </div>`;
+  }
+
+  // Notes
+  const notesHTML=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+      <div><div class="notes-label">My Notes <span class="conclbadge">${method&&method.isSynthetic?'Master Synthesis — AI-Free Zone':method&&!method.aiEnabled?'AI-Free Zone':'Scholarly Record'}</span></div><div class="notes-sub">${method&&method.isSynthetic?'Write your master synthesis, final conclusions, and personal application drawn from all methods':method&&method.aiEnabled?'Record observations and conclusions from the analysis':'Record your personal reflections and insights'}</div></div>
+    </div>
+    <textarea class="notes-textarea" style="min-height:220px;" placeholder="Enter your ${method?method.name.toLowerCase():''} method notes here…" oninput="updateMethodNotes('${state.activeMethod}',this.value)">${escHtml(mData.notes)}</textarea>
+    <div style="text-align:right;margin-top:4px;"><span id="wc-method-${state.activeMethod}" style="font-size:11px;color:var(--txt4);"></span></div>
+  </div>`;
+
+  const completeBtn=`<button class="btn ${mData.completed?'complete-btn-done':'btn-primary'}" onclick="toggleMethodComplete('${state.activeMethod}')" style="${mData.completed?'':''}">
+    ${mData.completed?'✓ Complete':'Mark Complete'}
+  </button>`;
+  const pdfOnclick=method&&method.isSynthetic?`exportStudyPDF('full')`:`exportStudyPDF('method','${state.activeMethod}')`;
+  const pdfLabel=method&&method.isSynthetic?'\u2193 Full PDF':'\u2193 PDF';
+  const pdfBtnHTML=`<button onclick="${pdfOnclick}" title="Export to PDF" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--txt3);cursor:pointer;font-family:'Crimson Pro',serif;font-size:12px;padding:4px 12px;min-height:32px;white-space:nowrap;transition:border-color .15s;" onmouseover="this.style.borderColor='var(--golddim)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--txt3)'">${pdfLabel}</button>`;
+
+  return`<div class="view on" style="min-height:100vh;">
+    <div class="topbar">
+      <button class="backbtn" onclick="state.view='dashboard';render()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="17" height="17"><path d="m15 18-6-6 6-6"/></svg>Studies
+      </button>
+      <div style="flex:1;margin-left:8px;">
+        <div style="font-family:'EB Garamond',Georgia,serif;font-size:18px;color:var(--txt1);">${escHtml(study.passage)}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:1px;">
+          <span class="ttag">${study.translation.toUpperCase()}</span>
+          <span style="color:var(--txt4);font-size:11px;">Arché · Scribe</span>
+          ${state.tags.length?state.tags.map(t=>{const on=(study.tags||[]).includes(t.id);return`<button onclick="event.stopPropagation();toggleStudyTag('${study.id}','${t.id}')" class="tag-chip" style="font-size:10px;background:${on?t.bg:'transparent'};color:${on?t.color:'var(--txt4)'};border-color:${on?t.color+'60':'var(--border)'};">${escHtml(t.label)}</button>`;}).join(''):''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openMemorizeFromStudy('${study.id}')">Memorize</button>
+        <button class="btn btn-ghost btn-sm" onclick="openLexiconModal()">Lexicon</button>
+        <a class="btn btn-ghost btn-sm" href="${blbUrl(study.passage,study.translation)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">BLB ↗</a>
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">Print</button>
+      </div>
+    </div>
+    ${renderDisciplinesBar()}
+    <div class="study-layout" style="flex:1;overflow:hidden;">
+      ${sidebar}
+      <div class="main-col">
+        <div class="method-tabs">${tabs}</div>
+        <div class="method-content">
+          <div class="method-header-row">
+            <div>
+              <div class="method-title">${method?method.num+'. '+method.name+' Method':''} ${method&&method.isSynthetic?'<span class="synthetic-capstone-badge">Capstone</span>':''}</div>
+              <div class="method-sub">${method?method.desc:''}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">${pdfBtnHTML}${completeBtn}</div>
+          </div>
+          ${passageCard}${aiHTML}${guidedHTML}${theolChartHTML}${syntheticHTML}${notesHTML}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Memorize view ────────────────────────────────────────────────────────────
+function renderMemorize(){
+  const allPassages=getAllMemPassages();
+  const passage=getMemPassage();
+  const text=passage?passage.text:'';
+  const words=text.split(/\s+/).filter(Boolean);
+
+  // ── Gap indices (every 3rd word, index 1,4,7...)
+  const gapSet=new Set(words.map((_,i)=>i).filter(i=>i%3===1));
+
+  // ── Fill Gaps display
+  let fillGapsHTML='';
+  if(state.memMode==='partial'&&text){
+    const lineHTML=words.map((w,i)=>{
+      if(!gapSet.has(i))return`<span style="color:var(--txt1);">${escHtml(w)}</span>`;
+      const typed=state.memGapInputs[i]||'';
+      const sz=Math.max(Math.min(w.length,12),3);
+      let cls='gap-input';
+      if(state.memGapChecked){
+        cls+=normalizeWord(typed)===normalizeWord(w)?' correct':' wrong';
+      }
+      return`<input class="${cls}" type="text" size="${sz}" maxlength="${w.length+4}" value="${escHtml(typed)}" ${state.memGapChecked?'readonly':''} oninput="memGapInput(${i},this.value)">`;
+    }).join(' ');
+    const allFilled=Array.from(gapSet).every(i=>state.memGapInputs[i]&&state.memGapInputs[i].trim());
+    fillGapsHTML=`<div style="font-family:'EB Garamond',Georgia,serif;font-size:17px;line-height:2.1;color:var(--txt1);">${lineHTML}</div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        ${!state.memGapChecked
+          ?`<button class="btn btn-primary" onclick="checkGaps()" ${allFilled?'':'disabled'}>Check Answers</button>`
+          :`<button class="btn btn-ghost" onclick="resetGaps()">Try Again</button>`}
+        ${state.memGapChecked?`<span style="font-size:13px;color:var(--txt3);font-style:italic;">Incorrect words are shown in red — find the right word in your Bible.</span>`:''}
+      </div>`;
+  }
+
+  // ── Recite score + auto-promote
+  const getScore=()=>{
+    if(!state.memTyped||!text)return 0;
+    const typed=state.memTyped.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(Boolean);
+    const orig=text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(Boolean);
+    let matches=0;orig.forEach((w,i)=>{if(typed[i]&&typed[i]===w)matches++;});
+    return Math.round(matches/orig.length*100);
+  };
+  const scoreVal=state.memChecked?getScore():null;
+  const scoreColor=scoreVal>=85?C.sagebright:scoreVal>=60?C.gold:C.crimsonbright;
+  const scoreMsg=scoreVal>=85?'Excellent!':scoreVal>=60?'Good effort':'Keep practicing';
+
+  // ── Passage selector options (studies + standalone)
+  const opts=allPassages.map(p=>`<option value="${p.id}"${p.id===state.memSid?' selected':''}>${escHtml(p.reference)} (${p.translation.toUpperCase()})${p.source==='verse'?' ✦':''}</option>`).join('');
+
+  const modes=[{id:'read',label:'1. Read',desc:'Full text'},{id:'partial',label:'2. Fill Gaps',desc:'Type the blanks'},{id:'recall',label:'3. Recite',desc:'From memory'}];
+
+  // ── Read/partial display text
+  let displayBlock='';
+  if(state.memMode==='read'){
+    displayBlock=`<div style="font-family:'EB Garamond',Georgia,serif;font-size:17px;line-height:1.9;color:var(--txt1);">${escHtml(text)||'<em style="color:var(--txt4);">No scripture text — use Reload or Paste on the study.</em>'}</div>`;
+  } else if(state.memMode==='partial'){
+    displayBlock=fillGapsHTML;
+  }
+
+  // ── Recite block
+  const recallHTML=state.memMode==='recall'?`<div class="card" style="margin-top:14px;">
+    <div class="ig"><label>Type the passage from memory</label><textarea style="min-height:120px;background:var(--bg1);" placeholder="Begin typing…" oninput="state.memTyped=this.value;state.memChecked=false;">${escHtml(state.memTyped)}</textarea></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="doCheckRecite()">Check My Answer</button>
+      <button class="btn btn-ghost" onclick="state.memTyped='';state.memChecked=false;render()">Clear</button>
+      ${state.memChecked?`<span class="score-text" style="color:${scoreColor};">${scoreVal}% — ${scoreMsg}</span>`:''}
+    </div>
+  </div>`:'';
+
+  // ── Practice tab
+  const noPassages=allPassages.length===0;
+  const practiceContent=noPassages
+    ?`<div class="card"><div class="empty"><div class="empty-icon">✦</div><h3>No Passages Yet</h3><p>Create a study or add a verse in the Library tab to begin memorizing.</p></div></div>`
+    :`<div class="card" style="margin-bottom:14px;">
+      <div class="ig"><label>Passage</label><select onchange="state.memSid=this.value;state.memMode='read';state.memTyped='';state.memChecked=false;state.memGapInputs={};state.memGapChecked=false;render()">${opts}</select></div>
+    </div>
+    ${passage?`<div class="card" style="margin-bottom:14px;">
+      <div class="mem-mode-row">${modes.map(m=>`<button class="mem-mode-btn${state.memMode===m.id?' active':''}" onclick="setMemMode('${m.id}')"><div style="font-weight:600;">${m.label}</div><div style="font-size:11px;opacity:.7;">${m.desc}</div></button>`).join('')}</div>
+      <div style="background:var(--bg1);border-radius:var(--r);padding:16px;border:1px solid var(--border);">
+        ${state.memMode==='recall'
+          ?`<em style="color:var(--txt4);font-family:'EB Garamond',serif;font-size:16px;">Passage hidden — type from memory below.</em>`
+          :displayBlock}
+        <div style="margin-top:8px;color:var(--txt3);font-size:12px;">${escHtml(passage.reference)} · ${passage.translation.toUpperCase()}</div>
+      </div>
+    </div>${recallHTML}`:''}`;
+
+  // ── Library tab
+  const allWithStatus=allPassages.map(p=>({...p,status:getMemStatus(p.id)}));
+  const learning=allWithStatus.filter(p=>p.status==='learning');
+  const learned=allWithStatus.filter(p=>p.status==='learned');
+
+  const mvCard=(p)=>`<div class="mv-card">
+    <div style="flex:1;min-width:0;">
+      <div style="font-family:'EB Garamond',serif;font-size:16px;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(p.reference)}</div>
+      <div style="font-size:11px;color:var(--txt3);margin-top:2px;">${p.translation.toUpperCase()}${p.source==='verse'?' · Standalone':' · Study'}</div>
+    </div>
+    <span class="mv-status ${p.status}" style="cursor:pointer;" onclick="setMemStatus('${p.id}',getMemStatus('${p.id}')==='learned'?'learning':'learned');render()" title="Click to toggle status">${p.status==='learned'?'Learned ✓':'Learning'}</span>
+    <button class="btn btn-ghost btn-sm" onclick="state.memSid='${p.id}';state.memTab='practice';state.memMode='read';state.memGapInputs={};state.memGapChecked=false;state.memTyped='';state.memChecked=false;render()">Practice</button>
+    ${p.source==='verse'?`<button class="btn btn-ghost btn-sm" style="color:var(--crimsonbright);" onclick="deleteMemVerse('${p.rawId}')">✕</button>`:''}
+  </div>`;
+
+  const addVerseForm=state.showAddVerse?`<div class="card" style="margin-bottom:14px;">
+    <div style="font-size:13px;color:var(--txt2);font-weight:600;margin-bottom:12px;">Add Verse to Memorize</div>
+    <div class="ig"><label>Reference</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" onclick="bpOpen()" style="display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--borderlit);border-radius:var(--r);cursor:pointer;min-height:44px;min-width:44px;flex-shrink:0;color:var(--gold);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+        <input id="add-verse-input" style="flex:1;" value="${escHtml(state.newVerseRef)}" placeholder="e.g. John 3:16" oninput="state.newVerseRef=this.value">
+      </div>
+    </div>
+    <div class="ig"><label>Translation</label>
+      <select onchange="state.newVerseTranslation=this.value;render()">
+        ${[{id:'esv',n:'ESV'},{id:'kjv',n:'KJV'},{id:'asv',n:'ASV'},{id:'web',n:'WEB'},{id:'nasb',n:'NASB'},{id:'niv',n:'NIV'},{id:'nlt',n:'NLT'},{id:'nkjv',n:'NKJV'}].map(t=>`<option value="${t.id}"${t.id===state.newVerseTranslation?' selected':''}>${t.n}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="addMemVerse()" ${state.addingVerse||!state.newVerseRef.trim()?'disabled':''}>${state.addingVerse?'Loading…':'Add Verse'}</button>
+      <button class="btn btn-ghost" onclick="state.showAddVerse=false;render()">Cancel</button>
+    </div>
+  </div>`:'';
+
+  const libraryContent=`
+    ${addVerseForm}
+    ${!state.showAddVerse?`<button class="btn btn-sec" style="margin-bottom:16px;width:100%;" onclick="state.showAddVerse=true;render()">+ Add Verse to Memorize</button>`:''}
+    ${learning.length?`<div class="mv-section-label">Learning (${learning.length})</div>${learning.map(mvCard).join('')}`:''}
+    ${learned.length?`<div class="mv-section-label">Learned (${learned.length})</div>${learned.map(mvCard).join('')}`:''}
+    ${!learning.length&&!learned.length?`<div class="card"><div class="empty"><div class="empty-icon">✦</div><p style="color:var(--txt3);">No passages yet. Add a verse above or create a study.</p></div></div>`:''}`;
+
+  return`<div class="view on">
+    <div class="topbar">
+      <button class="backbtn" onclick="state.view=state.memReturnTo||'dashboard';render()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="17" height="17"><path d="m15 18-6-6 6-6"/></svg>${state.memReturnTo==='study'?'Back to Study':'Studies'}
+      </button>
+      <div class="topbar-brand" style="margin-left:8px;">✦ Arché</div>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 4px;"></div>
+      <div style="font-size:12px;color:var(--txt3);letter-spacing:.1em;text-transform:uppercase;">Memorize</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px;max-width:700px;margin:0 auto;width:100%;">
+      <div style="margin-bottom:20px;">
+        <div style="font-family:'EB Garamond',Georgia,serif;font-size:26px;color:var(--txt1);margin-bottom:4px;">Scripture Memorization</div>
+        <div style="color:var(--txt3);font-size:14px;">Internalize the Word through progressive concealment and recall</div>
+      </div>
+      <div class="mem-tab-row">
+        <button class="mem-tab${state.memTab==='practice'?' active':''}" onclick="state.memTab='practice';render()">Practice</button>
+        <button class="mem-tab${state.memTab==='library'?' active':''}" onclick="state.memTab='library';render()">Library <span style="font-size:11px;opacity:.6;">(${allPassages.length})</span></button>
+      </div>
+      ${state.memTab==='practice'?practiceContent:libraryContent}
+    </div>
+  </div>`;
+}
+
+// ── Main render ──────────────────────────────────────────────────────────────
+// ── CHANGELOG ────────────────────────────────────────────────
+var CHANGELOG=[
+  {version:'2.1',date:'June 18, 2026',label:'Latest',
+    items:['fix: "Open in Pilgrim" link updated to new pilgrim-public URL — GitHub migration to arche-epos']},
+  {version:'2.0',date:'March 24, 2026',label:'',
+    items:[
+      'All 6 AI method prompts rewritten from seminary curriculum source material — data-only discipline strictly enforced, no conclusions drawn by AI',
+      'Rhetorical method now scans for all 25+ named literary devices (Metaphor, Chiasmus, Anaphora, Ethos, Pathos, Logos, etc.)',
+      'Critical method reframed: surfaces interpretive problems and range of scholarly positions rather than resolving them',
+      'Comparative method lists exact translation renderings side-by-side (NASB/ESV/KJV/NIV/NLT) without stating which is superior',
+      'Theological guided prompts rewritten around 14 doctrinal categories (Bibliology, Christology, Pneumatology, Hamartiology, Soteriology, etc.)',
+      'Devotional guided prompts rewritten around Homiletics framework (Theological, Personal Devotion, Exposition, Illustration, Response, Prayer)',
+      'Biblical Theology Chart added to Theological method — fillable grid with verse rows and 10 theological category columns; saves with study',
+      'Method descriptions updated to match source curriculum language'
+    ]},
+  {version:'1.9',date:'March 24, 2026',label:'',
+    items:[
+      'AI study tools switched from Gemini to Groq (llama-3.3-70b-versatile) — free tier: 30 req/min, 14,400 req/day',
+      'Setup overlay and AI Key button updated for Groq — get a free key at console.groq.com',
+      'Import (JSON restore) now overwrites existing studies by ID — backup is always source of truth; toast shows "X added, Y updated"'
+    ]},
+  {version:'1.8',date:'March 24, 2026',label:'',
+    items:[
+      'Scripture font size A+/A− toggle added to passage card — steps 14–24px, persisted to settings',
+      'Markdown rendering in AI responses — headers, bold, italic, lists, dividers all render properly',
+      'Improved error messages for expired/invalid/rate-limited API keys — actionable instructions shown'
+    ]},
+  {version:'1.7',date:'March 24, 2026',label:'',
+    items:[
+      'AI model switched from gemini-2.5-flash (preview, tight limits) to gemini-1.5-flash (15 req/min free tier)',
+      'AI response max tokens reduced from 4,096 to 2,048 — no quality impact, significant daily quota savings'
+    ]},
+  {version:'1.6',date:'March 22, 2026',label:'',
+    items:[
+      'Memorize — Fill Gaps now uses typeable inline inputs; Check Answers locks and highlights correct (green) / incorrect (red); Try Again resets',
+      'Memorize — Recite auto-promotes passage to Learned at 100% accuracy; tap status pill to toggle Learned ↔ Learning',
+      'Memorize — Library tab: all passages grouped by Learning / Learned; Add standalone verse without a full study',
+      'Library sort — Latest, Reference, Modified dropdown on dashboard',
+      'Word count — live word count on all method and exegesis notes',
+      'Study tags — color-coded tags, assign from study view, filter library by tag',
+      'Bug fix — paste text now correctly saves to standalone mem verses',
+      'Bug fix — backup/restore now includes standalone verses and tags (backward-compatible)',
+      'Bug fix — tags section no longer renders unconditionally',
+      'Default translation changed to ESV',
+      'AI fix — Anthropic API key setup (like Pilgrim/Gemini); AI tools now work on GitHub Pages'
+    ]},
+  {version:'1.5',date:'March 22, 2026',label:'',
+    items:['ESV scripture now auto-populates on GitHub Pages — falls back to bible-api.com when Crossway API is unavailable','KJV, WEB, ASV also auto-populate; NASB, NIV, NLT, NKJV still prompt paste (licensed)']},
+  {
+    version:'1.4',date:'March 22, 2026',label:'',
+    items:[
+      'Memorize accessible from study workspace — Memorize button in study topbar launches memorization pre-loaded with the current passage',
+      'Back button in Memorize returns to the study when launched from a study, or to the dashboard when launched from there'
+    ]
+  },
+  {
+    version:'1.3',date:'March 22, 2026',
+    items:[
+      'Library search bar — filter studies by passage reference or title',
+      'Study duplication — Duplicate button on each dashboard card',
+      'Cross-app navigation — "Open in Arché · Pilgrim →" link in dashboard footer'
+    ]
+  },
+  {
+    version:'1.2',date:'March 22, 2026',
+    items:[
+      'JSON backup — Backup button exports all studies; opens native share sheet on mobile (iCloud Drive, Google Drive, etc.) with download fallback on desktop',
+      'JSON restore — Restore button imports studies from a backup file; skips duplicates',
+      'Book picker — tap the book icon in New Study to pick book, chapter, and verse(s) without typing; OT/NT toggle for quick navigation'
+    ]
+  },
+  {
+    version:'1.1',date:'March 22, 2026',
+    items:[
+      'Study title field added to New Study modal — optional name distinct from passage reference',
+      'Dashboard cards now display the study title when set; falls back to passage reference',
+      'Fixed: dashboard card no longer shows the passage reference twice',
+      'Fixed: paste modal no longer references "local file" — updated to reflect live deployment'
+    ]
+  },
+  {
+    version:'1.0',date:'March 2026',
+    items:[
+      '3-layer study architecture: Spiritual Disciplines banner, 6 Exegesis stages, 9 Study Methods',
+      'AI assists on Analytical, Critical, Historical, Topical, Comparative, and Rhetorical methods',
+      'Theological and Devotional methods are AI-free with guided prompts',
+      'Synthetic method (9th) — AI-free capstone assembled from all other methods\' notes and results',
+      'Scripture fetch with translation switcher and paste fallback',
+      'Memorization tool: Read, Fill Gaps, and Recite modes with accuracy scoring',
+      'Blue Letter Bible deep links on all passages',
+      'Progress tracking: rings, dot indicators, 15-step completion',
+      'Stats dashboard: total studies, methods done, exegesis stages, average progress',
+      'Desktop optimization with sidebar layout and wider breakpoints',
+      'Suite branding: Arché · Scribe / Part of Arché Study Tools'
+    ]
+  }
+];
+var _clOpen={};
+var _clSectionOpen=false;
+function clSectionToggle(){
+  _clSectionOpen=!_clSectionOpen;
+  var body=document.getElementById('cl-body');
+  var btn=document.getElementById('cl-section-btn');
+  if(body)body.style.maxHeight=_clSectionOpen?body.scrollHeight+'px':'0';
+  if(btn)btn.textContent=_clSectionOpen?'Hide \u2304':'Show \u2304';
+}
+function renderChangelog(){
+  var el=document.getElementById('changelog-list');if(!el)return;
+  el.innerHTML=CHANGELOG.map(function(v,i){
+    var isOpen=_clOpen.hasOwnProperty(i)?_clOpen[i]:false;
+    return '<div class="cl-version">'+
+      '<div class="cl-version-hdr" onclick="clToggle('+i+')">'+
+        '<span class="cl-version-num">v'+v.version+'</span>'+
+        '<span class="cl-version-date">'+v.date+'</span>'+
+        (v.label?'<span class="cl-version-badge">'+v.label+'</span>':'')+
+        '<span class="cl-chev'+(isOpen?' open':'')+'">&#8964;</span>'+
+      '</div>'+
+      '<div class="cl-items'+(isOpen?' open':'')+'">'+
+        v.items.map(function(item){return '<div class="cl-item">'+escHtml(item)+'</div>';}).join('')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  var body=document.getElementById('cl-body');
+  if(body)body.style.maxHeight=_clSectionOpen?body.scrollHeight+'px':'0';
+}
+function clToggle(i){
+  _clOpen[i]=!(_clOpen.hasOwnProperty(i)?_clOpen[i]:false);
+  renderChangelog();
+}
+// ── END CHANGELOG ─────────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app');
+  if(state.view==='dashboard'){app.innerHTML=renderDashboard();renderChangelog();}
+  else if(state.view==='study')app.innerHTML=renderStudy();
+  else if(state.view==='memorize')app.innerHTML=renderMemorize();
+  if(state.showNewStudy){const inp=document.getElementById('new-passage-input');if(inp){inp.focus();inp.value=state.newPassage;}}
+}
+
+// ── Global handlers ──────────────────────────────────────────────────────────
+function openStudy(id){
+  state.currentStudyId=id;
+  state.activeMethod='analytical';state.progressTab='exegesis';state.view='study';
+  // Migrate old studies that predate the synthetic method
+  const study=currentStudy();
+  if(study&&!study.methods.synthetic){
+    updateStudy(id,s=>({...s,methods:{...s.methods,synthetic:{notes:'',aiResponse:'',completed:false}}}));
+  }
+  render();
+}
+function openMemorize(){const all=getAllMemPassages();state.memSid=all[0]?all[0].id:null;state.memTab='practice';state.memMode='read';state.memTyped='';state.memChecked=false;state.memGapInputs={};state.memGapChecked=false;state.memReturnTo='dashboard';state.view='memorize';render();}
+function openMemorizeFromStudy(id){state.memSid='study-'+id;state.memTab='practice';state.memMode='read';state.memTyped='';state.memChecked=false;state.memGapInputs={};state.memGapChecked=false;state.memReturnTo='study';state.view='memorize';render();}
+function toggleExeg(stageId){const study=currentStudy();if(!study)return;updateExegField(stageId,'completed',!study.exegesis[stageId].completed);}
+function toggleMethodComplete(methodId){const study=currentStudy();if(!study)return;updateMethodField(methodId,'completed',!study.methods[methodId].completed);}
+function updateMethodNotes(methodId,val){updateMethodField(methodId,'notes',val);updateWC('wc-method-'+methodId,val);}
+function updateExegNotes(stageId,val){updateExegField(stageId,'notes',val);updateWC('wc-exeg-'+stageId,val);}
+function updateWC(id,val){var el=document.getElementById(id);if(el){var n=val.trim()?val.trim().split(/\s+/).length:0;el.textContent=n?n+' word'+(n===1?'':'s'):'';}}
+function setMemMode(mode){state.memMode=mode;state.memTyped='';state.memChecked=false;state.memGapInputs={};state.memGapChecked=false;render();}
+function doCheckRecite(){
+  state.memChecked=true;
+  const passage=getMemPassage();const text=passage?passage.text:'';
+  if(state.memTyped&&text){
+    const typed=state.memTyped.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(Boolean);
+    const orig=text.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(Boolean);
+    let matches=0;orig.forEach((w,i)=>{if(typed[i]&&typed[i]===w)matches++;});
+    if(Math.round(matches/orig.length*100)>=100&&state.memSid){setMemStatus(state.memSid,'learned');toast('100% — Marked as Learned ✓');}
+  }
+  render();
+}
+
+// ── S1: JSON BACKUP / RESTORE ─────────────────────────────────
+async function exportData(){
+  var payload={studies:state.studies,memVerses:state.memVerses,tags:state.tags};
+  var json=JSON.stringify(payload,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var fname='arche-scribe-backup.json';
+  var file=new File([blob],fname,{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:'Arché · Scribe Backup'});toast('Backup shared');return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  var url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=fname;a.click();URL.revokeObjectURL(url);toast('Backup downloaded');
+}
+function importDataPrompt(){document.getElementById('import-file-input').click();}
+function importDataFromFile(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      // Support both old format (array) and new format ({studies,memVerses,tags})
+      var importedStudies=Array.isArray(data)?data:(data.studies||[]);
+      var importedVerses=Array.isArray(data)?[]:(data.memVerses||[]);
+      var importedTags=Array.isArray(data)?[]:(data.tags||[]);
+      var added=0,updated=0;
+      importedStudies.forEach(function(s){
+        if(!s.id)return;
+        if(s.title===undefined)s.title='';
+        var exists=state.studies.findIndex(function(x){return x.id===s.id;});
+        if(exists===-1){state.studies.push(s);added++;}else{state.studies[exists]=s;updated++;}
+      });
+      importedVerses.forEach(function(v){
+        if(!v.id)return;
+        var exists=state.memVerses.findIndex(function(x){return x.id===v.id;});
+        if(exists===-1)state.memVerses.push(v);else state.memVerses[exists]=v;
+      });
+      importedTags.forEach(function(t){
+        if(!t.id)return;
+        var exists=state.tags.findIndex(function(x){return x.id===t.id;});
+        if(exists===-1)state.tags.push(t);else state.tags[exists]=t;
+      });
+      saveStudies();saveMemVerses();saveTags();render();
+      toast(added+' added, '+updated+' updated');
+    }catch(err){toast('Restore failed: invalid file');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+// ── S11: BOOK PICKER ──────────────────────────────────────────
+var BP_BOOKS={
+  OT:[
+    {n:'Genesis',c:50},{n:'Exodus',c:40},{n:'Leviticus',c:27},{n:'Numbers',c:36},{n:'Deuteronomy',c:34},
+    {n:'Joshua',c:24},{n:'Judges',c:21},{n:'Ruth',c:4},{n:'1 Samuel',c:31},{n:'2 Samuel',c:24},
+    {n:'1 Kings',c:22},{n:'2 Kings',c:25},{n:'1 Chronicles',c:29},{n:'2 Chronicles',c:36},
+    {n:'Ezra',c:10},{n:'Nehemiah',c:13},{n:'Esther',c:10},{n:'Job',c:42},{n:'Psalms',c:150},
+    {n:'Proverbs',c:31},{n:'Ecclesiastes',c:12},{n:'Song of Solomon',c:8},{n:'Isaiah',c:66},
+    {n:'Jeremiah',c:52},{n:'Lamentations',c:5},{n:'Ezekiel',c:48},{n:'Daniel',c:12},{n:'Hosea',c:14},
+    {n:'Joel',c:3},{n:'Amos',c:9},{n:'Obadiah',c:1},{n:'Jonah',c:4},{n:'Micah',c:7},
+    {n:'Nahum',c:3},{n:'Habakkuk',c:3},{n:'Zephaniah',c:3},{n:'Haggai',c:2},{n:'Zechariah',c:14},
+    {n:'Malachi',c:4}
+  ],
+  NT:[
+    {n:'Matthew',c:28},{n:'Mark',c:16},{n:'Luke',c:24},{n:'John',c:21},{n:'Acts',c:28},
+    {n:'Romans',c:16},{n:'1 Corinthians',c:16},{n:'2 Corinthians',c:13},{n:'Galatians',c:6},
+    {n:'Ephesians',c:6},{n:'Philippians',c:4},{n:'Colossians',c:4},{n:'1 Thessalonians',c:5},
+    {n:'2 Thessalonians',c:3},{n:'1 Timothy',c:6},{n:'2 Timothy',c:4},{n:'Titus',c:3},
+    {n:'Philemon',c:1},{n:'Hebrews',c:13},{n:'James',c:5},{n:'1 Peter',c:5},{n:'2 Peter',c:3},
+    {n:'1 John',c:5},{n:'2 John',c:1},{n:'3 John',c:1},{n:'Jude',c:1},{n:'Revelation',c:22}
+  ]
+};
+var _bpTestament='OT',_bpBook=null,_bpChapter=null;
+function bpOpen(){
+  _bpBook=null;_bpChapter=null;
+  bpSetTestament(_bpTestament);
+  bpGoStage(1);
+  document.getElementById('bp-overlay').classList.add('on');
+}
+function bpClose(){document.getElementById('bp-overlay').classList.remove('on');}
+function bpSetTestament(t){
+  _bpTestament=t;
+  document.getElementById('bp-ot-btn').classList.toggle('on',t==='OT');
+  document.getElementById('bp-nt-btn').classList.toggle('on',t==='NT');
+  document.getElementById('bp-book-grid').innerHTML=BP_BOOKS[t].map(function(b){
+    return '<button class="bp-pill" onclick="bpPickBook(\''+b.n.replace(/'/g,'\\\'')+'\')">'+b.n+'</button>';
+  }).join('');
+}
+function bpPickBook(name){
+  _bpBook=name;
+  var book=BP_BOOKS[_bpTestament].find(function(b){return b.n===name;});
+  document.getElementById('bp-hdr-title').textContent=name;
+  var chs=[];for(var i=1;i<=book.c;i++)chs.push(i);
+  document.getElementById('bp-ch-grid').innerHTML=chs.map(function(n){
+    return '<button class="bp-ch-pill" onclick="bpPickChapter('+n+')">'+n+'</button>';
+  }).join('');
+  bpGoStage(2);
+}
+function bpPickChapter(n){
+  _bpChapter=n;
+  document.getElementById('bp-hdr-title').textContent=_bpBook+' '+n;
+  document.getElementById('bp-sel-preview').textContent=_bpBook+' '+n+':';
+  document.getElementById('bp-verse-input').value='';
+  bpGoStage(3);
+  setTimeout(function(){document.getElementById('bp-verse-input').focus();},350);
+}
+function bpUpdatePreview(){
+  var v=document.getElementById('bp-verse-input').value.trim();
+  document.getElementById('bp-sel-preview').textContent=_bpBook+' '+_bpChapter+(v?':'+v:'');
+}
+function bpConfirm(){
+  var v=document.getElementById('bp-verse-input').value.trim();
+  if(!v){toast('Please enter a verse or range');return;}
+  var ref=_bpBook+' '+_bpChapter+':'+v;
+  var inp=document.getElementById('new-passage-input');
+  if(inp){inp.value=ref;state.newPassage=ref;}
+  var av=document.getElementById('add-verse-input');
+  if(av){av.value=ref;state.newVerseRef=ref;}
+  bpClose();
+  render();
+}
+function bpBack(){
+  if(document.getElementById('bp-stage3').classList.contains('on')){bpGoStage(2);document.getElementById('bp-hdr-title').textContent=_bpBook;}
+  else if(document.getElementById('bp-stage2').classList.contains('on')){bpGoStage(1);document.getElementById('bp-hdr-title').textContent='Choose Book';}
+}
+function bpGoStage(n){
+  [1,2,3].forEach(function(i){document.getElementById('bp-stage'+i).classList.toggle('on',i===n);});
+  document.getElementById('bp-back-btn').style.display=n===1?'none':'flex';
+}
+// ── END S11 ───────────────────────────────────────────────────
+// ── S5: DUPLICATE STUDY ───────────────────────────────────────
+function duplicateStudy(id){
+  var src=state.studies.find(function(s){return s.id===id;});
+  if(!src)return;
+  var copy=JSON.parse(JSON.stringify(src));
+  copy.id=Date.now().toString();
+  copy.title=(copy.title?copy.title+' (Copy)':copy.passage+' (Copy)');
+  copy.createdAt=new Date().toISOString();
+  copy.updatedAt=new Date().toISOString();
+  var idx=state.studies.findIndex(function(s){return s.id===id;});
+  state.studies.splice(idx+1,0,copy);
+  saveStudies();render();toast('Study duplicated');
+}
+// ── Boot ─────────────────────────────────────────────────────────────────────
+loadStudies();
+loadMemVerses();
+loadTags();
+loadSettings();
+render();
+checkApiSetup();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}
+</script>
+<!-- API Key Setup Overlay -->
+<div class="overlay" id="api-setup-overlay">
+  <div class="modal">
+    <div class="modal-title">AI Setup Required</div>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:16px;line-height:1.6;">Arché · Scribe uses Groq (Llama 3.3 70B) for AI-powered scholarly analysis — free tier with 14,400 requests/day. Enter your free Groq API key below.</p>
+    <div style="background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--txt3);line-height:1.6;">
+      Get a free API key at <a href="https://console.groq.com" target="_blank" style="color:var(--gold);">console.groq.com</a> → API Keys → Create API Key. Each user has their own independent key.
+    </div>
+    <div class="ig">
+      <label>Groq API Key</label>
+      <input id="gemini-key-input" type="password" placeholder="gsk_..." autocomplete="off" spellcheck="false">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-primary" style="flex:1" onclick="saveGeminiKey()">Save Key</button>
+      <button class="btn btn-ghost" onclick="skipApiSetup()">Skip for now</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="paste-overlay">
+  <div class="modal">
+    <div class="modal-title">Paste Scripture Text</div>
+    <p style="font-size:13px;color:var(--txt3);margin-bottom:14px;line-height:1.6;">NASB, NIV, NLT, and NKJV require manual paste (licensed translations). Paste your text from <a href="https://www.esv.org" target="_blank" style="color:var(--gold);">esv.org</a> or Blue Letter Bible.</p>
+    <div class="ig"><label>Scripture Text</label><textarea id="paste-input" rows="8" placeholder="Paste your scripture text here..."></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-sec" style="flex:1;" onclick="closePasteModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="confirmPaste()">Use This Text</button>
+    </div>
+  </div>
+</div>
+<!-- BOOK PICKER MODAL -->
+<div class="bp-overlay" id="bp-overlay">
+  <div class="bp-sheet">
+    <div class="bp-hdr">
+      <button class="bp-back" id="bp-back-btn" onclick="bpBack()" style="display:none">&#8592; Back</button>
+      <div class="bp-hdr-title" id="bp-hdr-title">Choose Book</div>
+      <button class="bp-close" onclick="bpClose()">&#215;</button>
+    </div>
+    <div class="bp-stage on" id="bp-stage1">
+      <div class="bp-tt">
+        <button class="bp-tt-btn on" id="bp-ot-btn" onclick="bpSetTestament('OT')">Old Testament</button>
+        <button class="bp-tt-btn" id="bp-nt-btn" onclick="bpSetTestament('NT')">New Testament</button>
+      </div>
+      <div class="bp-scroll"><div class="bp-grid" id="bp-book-grid"></div></div>
+    </div>
+    <div class="bp-stage" id="bp-stage2">
+      <div class="bp-scroll"><div class="bp-ch-grid" id="bp-ch-grid"></div></div>
+    </div>
+    <div class="bp-stage" id="bp-stage3">
+      <div class="bp-verse-area">
+        <div>
+          <div class="bp-verse-label">Selected</div>
+          <div id="bp-sel-preview" style="font-family:'EB Garamond',Georgia,serif;font-size:18px;color:var(--gold);margin-bottom:4px"></div>
+        </div>
+        <div>
+          <div class="bp-verse-label">Verse(s)</div>
+          <div class="bp-verse-hint">Type a single verse (e.g. 16) or a range (e.g. 16-18)</div>
+          <input type="text" id="bp-verse-input" placeholder="e.g. 16 or 16-18" inputmode="text" style="margin-bottom:0" oninput="bpUpdatePreview()">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn btn-sec" style="flex:1" onclick="bpClose()">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" onclick="bpConfirm()">Use This Passage</button>
+        </div>
+      </div>
+    </div>
+</div>
+</div>
+
+<!-- Lexicon Modal -->
+<div class="overlay" id="lexicon-overlay" onclick="if(event.target===this)closeLexiconModal()">
+  <div class="modal" style="max-width:540px;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+      <div style="font-family:'EB Garamond',serif;font-size:20px;color:var(--gold);">✦ Lexicon Lookup</div>
+      <button onclick="closeLexiconModal()" style="background:none;border:none;color:var(--txt3);font-size:20px;cursor:pointer;padding:4px 8px;min-height:36px;">&#10005;</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-shrink:0;">
+      <input id="lexicon-input" type="text" placeholder="Word or Strong&#39;s number (e.g. logos, G3056, H1254)" style="flex:1;background:var(--bg1);border:1px solid var(--borderlit);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:15px;padding:10px 14px;outline:none;" onkeydown="if(event.key==='Enter')runLexiconLookup()">
+      <button class="btn btn-primary" onclick="runLexiconLookup()" id="lexicon-btn" style="min-width:72px;">Look up</button>
+    </div>
+    <div id="lexicon-result" style="flex:1;overflow-y:auto;font-size:14px;line-height:1.7;color:var(--txt2);"></div>
+    <div style="font-size:11px;color:var(--txt4);margin-top:10px;flex-shrink:0;">AI provides lexical data only — all theological conclusions are yours to draw.</div>
+  </div>
+</div>
+</body>
+</html>
