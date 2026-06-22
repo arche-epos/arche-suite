@@ -487,6 +487,7 @@ select option{background:var(--bg2);color:var(--txt1)}
       </svg>
     </div>
     <div class="nav-version" id="nav-version-display"></div>
+    <div style="font-family:'Crimson Pro',serif;font-size:10.5px;color:var(--gold);font-style:italic;text-align:center;line-height:1.65;padding:6px 8px 0">&#8220;This book of the law shall not depart from your mouth, but you shall meditate on it day and night, so that you may be careful to do according to all that is written in it; for then you will make your way prosperous, and then you will have success.&#8221;<div style="margin-top:3px;color:var(--txt4);font-size:10px;font-style:normal;letter-spacing:.04em">&#8212; Joshua 1:8 &middot; NASB</div></div>
   </div>
   <button class="navbtn on" id="nav-library" onclick="navTo('library')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Library<span class="tab-hint">Browse &amp; manage your studies</span>
@@ -509,7 +510,10 @@ select option{background:var(--bg2);color:var(--txt1)}
 <!-- LIBRARY -->
 <div class="scr on" id="scr-library">
   <div class="topbar">
-    <div class="topbar-title">&#10022; Arch&#275; &middot; Pilgrim</div>
+    <div class="topbar-title" style="line-height:1.2">
+      <div>Pilgrim</div>
+      <div onclick="openVerseModal()" style="font-family:'Crimson Pro',serif;font-size:11px;color:var(--gold);font-style:italic;font-weight:400;letter-spacing:0;margin-top:2px;cursor:pointer">&#8220;This book of the law shall not depart from your mouth, but you shall meditate on it day and night...&#8221;</div>
+    </div>
     <div class="offbadge" id="offbadge"><div class="offdot"></div>Offline</div>
     <!-- Secondary sub-filter — hidden by default; shown inline when a filterable sort is active -->
     <div id="lib-subfilter-bar" style="display:none;align-items:center;gap:6px;flex-shrink:1;min-width:0">
@@ -648,7 +652,7 @@ select option{background:var(--bg2);color:var(--txt1)}
     <!-- Look Up Word always visible — independent of whether any words are saved -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:4px;">
       <div class="seclabel" style="margin-bottom:0;">Saved Words</div>
-      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;min-height:28px;" onclick="openLexiconModalFor('study')">✦ Look Up Word</button>
+      <button id="field-lookupword-btn" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;min-height:28px;" onclick="openLexiconModalFor('study')">✦ Look Up Word</button>
     </div>
     <div class="study-words-section" id="study-words-section" style="display:none;">
       <div id="study-word-list" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1581,23 +1585,22 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
  * @returns {string} HTML string with all styles applied inline.
  */
 function mdToHtml(md){
-  var html='',inUl=false,inOl=false;
+  var html='',inUl=false,inOl=false,olSeq=0;
   // Applies bold, italic, code, and hyperlink markdown to a single text line
   function inlineM(s){return s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;border-bottom:1px solid var(--golddim)">$1</a>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--goldpale)">$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`(.*?)`/g,'<code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:12px">$1</code>');}
-  // Emits closing </ul> or </ol> tags before any non-list block element
-  function closeLists(){if(inUl){html+='</ul>';inUl=false;}if(inOl){html+='</ol>';inOl=false;}}
+  // Emits closing tags; resetOl=true resets the OL sequence counter (on headings/paragraphs only)
+  function closeLists(resetOl){if(inUl){html+='</ul>';inUl=false;}if(inOl){html+='</ol>';inOl=false;}if(resetOl)olSeq=0;}
   String(md).split('\n').forEach(function(line){
-    if(/^#{1,3}\s/.test(line)){closeLists(); // Heading line: close open lists, render as styled div
+    if(/^#{1,6}\s/.test(line)){closeLists(true); // Heading: close lists, reset OL counter, render as styled div
     html+='<div style="font-family:\'EB Garamond\',serif;font-size:16px;color:var(--gold);margin:10px 0 4px;">'+inlineM(line.replace(/^#+\s/,''))+'</div>';return;}
-    if(/^\d+\.\s/.test(line)){if(!inOl){closeLists(); // Ordered list: open <ol> once, then close any prior list type
-    html+='<ol style="margin:6px 0 6px 18px;color:var(--txt2);">';inOl=true;}html+='<li style="margin-bottom:3px;">'+inlineM(line.replace(/^\d+\.\s/,''))+'</li>';return;}
-    if(/^[-*]\s/.test(line)){if(!inUl){closeLists(); // Unordered list: open <ul> once
-    html+='<ul style="margin:6px 0 6px 18px;color:var(--txt2);">';inUl=true;}html+='<li style="margin-bottom:3px;">'+inlineM(line.replace(/^[-*]\s/,''))+'</li>';return;}
-    closeLists(); // Non-list line: close any open list before rendering
-    // Non-empty line → paragraph; empty line → 6px vertical spacer
-    html+=line.trim()?'<p style="margin:4px 0;color:var(--txt2);line-height:1.65;">'+inlineM(line)+'</p>':'<div style="height:6px;"></div>';
+    if(/^\d+\.\s/.test(line)){if(!inOl){if(inUl){html+='</ul>';inUl=false;} // Ordered list: use start attr to continue count across bullet interruptions
+    html+='<ol'+(olSeq>0?' start="'+(olSeq+1)+'"':'')+' style="margin:6px 0 6px 18px;color:var(--txt2);">';inOl=true;}olSeq++;html+='<li style="margin-bottom:3px;">'+inlineM(line.replace(/^\d+\.\s/,''))+'</li>';return;}
+    if(/^[-*]\s/.test(line)){if(!inUl){if(inOl){html+='</ol>';inOl=false;}html+='<ul style="margin:6px 0 6px 18px;color:var(--txt2);">';inUl=true;}html+='<li style="margin-bottom:3px;">'+inlineM(line.replace(/^[-*]\s/,''))+'</li>';return;}
+    closeLists(false); // Non-list line: close lists but preserve OL counter for continuation
+    // Non-empty line → paragraph (resets OL counter); empty line → 6px vertical spacer
+    if(line.trim()){olSeq=0;html+='<p style="margin:4px 0;color:var(--txt2);line-height:1.65;">'+inlineM(line)+'</p>';}else{html+='<div style="height:6px;"></div>';}
   });
-  closeLists(); // Close any list left open by the final line
+  closeLists(true);
   return html;
 }
 /**
@@ -4369,6 +4372,12 @@ function importDataFromFile(input){
 /**
  * Shares the Pilgrim app via the Web Share API, or falls back to clipboard copy.
  */
+/**
+ * Opens the Joshua 1:8 cornerstone verse modal.
+ */
+function openVerseModal(){
+  document.getElementById('verse-overlay').classList.add('on');
+}
 function shareApp(){
   // Three-tier fallback: native share API → clipboard write → manual copy modal
   var url=APP_SHARE_URL;
@@ -4824,6 +4833,14 @@ async function syncFromGist(){
  * Shows a native confirm dialog before triggering a force pull from Gist.
  * Force pull replaces all local studies with the remote backup.
  */
+/**
+ * Opens the Joshua 1:8 verse modal triggered by the header tagline.
+ */
+function openVerseModal(){var o=document.getElementById('verse-modal');if(o)o.classList.add('on');}
+/**
+ * Closes the Joshua 1:8 verse modal.
+ */
+function closeVerseModal(){var o=document.getElementById('verse-modal');if(o)o.classList.remove('on');}
 function confirmForcePull(){if(confirm('Force Restore will replace ALL local studies with the backed-up version — any local-only changes will be lost. Continue?')){syncFromGistForce();}}
 /**
  * Force-pulls the Gist backup and replaces all local studies without merging.
@@ -5486,6 +5503,7 @@ function tourCleanupDemoData(){
 
 // ── TOUR A — "CREATE YOUR FIRST STUDY" ───────────────────────────────────
 var TOUR_A_STEPS=[
+  {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Notes, Study Tools, Progress, or Settings — to switch screens.'},
   {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
   {screen:'library',target:'#lib-sort',title:'Sorting Your Library',body:'Sort by Date, Modified, Reference, Teacher, or Series. Choosing Reference, Teacher, or Series reveals a sub-filter bar so you can narrow things down further.'},
   {screen:'library',target:'.fab',title:'Start a New Study',body:'Tap here any time to start a new study. This button only appears on the Library tab.'},
@@ -5496,14 +5514,17 @@ var TOUR_A_STEPS=[
   {screen:'field',before:function(){cur.series="How to Use Archē";populateField();},target:'#f-series',title:'Series',body:'Group related studies under a series name — handy for a sermon series or a class.'},
   {screen:'field',before:function(){cur.title='First-Time Study';populateField();},target:'#f-title',title:'Title',body:'Give your study a specific title.'},
   {screen:'field',before:function(){cur.tags=['study'];renderTagPicker();},target:'#f-tags-picker',title:'Tags',body:'Tag a study to filter and sort by it later in the Library. We selected "Study" as an example — tap any tag to toggle it.'},
-  {screen:'field',before:function(){var ar=activeRef();if(ar)ar.reference='John 3:16';var inp=document.getElementById('f-ref');if(inp)inp.value='John 3:16';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "John 3:16" directly — we\u2019ve filled it in for you.'},
-  {screen:'field',before:function(){bpOpen();},target:'#bp-overlay',title:'Or Browse for It',body:'Prefer not to type? Tap the book icon to browse Old or New Testament → Book → Chapter → Verse, then tap Load Scripture.'},
+  {screen:'field',before:function(){var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
+  {screen:'field',target:'.bp-open-btn',title:'Or Browse for It',body:'Prefer not to type? Tap this book icon to open the Reference Picker — browse by Testament, Book, Chapter, and Verse, then tap Load Scripture.'},
+  {screen:'field',before:function(){bpOpen();},target:'#bp-overlay',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
   {screen:'field',before:function(){closeOverlay('bp-overlay');var r=makeRef('secondary');r.reference='Romans 8:28';cur.refs.push(r);switchRef(cur.refs.length-1);fetchScr();},target:'.ref-pill-add',title:'Add Another Passage',body:"Tap + Add Passage to study multiple passages in one study. We've added a second one — Romans 8:28 — to show how it works."},
   {screen:'field',before:function(){switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
-  {screen:'field',before:function(){if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>God\u2019s love is the reason \u2014 not our worthiness.</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
+  {screen:'field',before:function(){if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
   {screen:'field',target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
-  {screen:'field',before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Look Up Word',body:'Search any Greek or Hebrew word \u2014 we searched "Arch\u0113," the app\u2019s own namesake. You can save a result to this study, or to the Words tab in Library for later.'},
-  {screen:'deep',before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:null,title:'Study Tools',body:'The same John 3:16 passage and your notes are already here — Study Tools is where you dig deeper with AI-assisted research.'},
+  {screen:'field',target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
+  {screen:'field',before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
+  {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#nav-deep',title:'Getting to Study Tools',body:'Tap the Study Tools tab any time to dig deeper. On mobile it’s in the top navigation bar; on a computer it’s in the left panel.'},
+  {screen:'deep',target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dig deeper with AI-assisted research.'},
   {screen:'deep',target:'#btn-lexical',title:TOOL_LABELS.lexical,body:TOOL_DESCS.lexical},
   {screen:'deep',target:'#btn-grammar',title:TOOL_LABELS.grammar,body:TOOL_DESCS.grammar},
   {screen:'deep',target:'#btn-historical',title:TOOL_LABELS.historical,body:TOOL_DESCS.historical},
@@ -5511,12 +5532,12 @@ var TOUR_A_STEPS=[
   {screen:'deep',target:'#btn-crossrefs',title:TOOL_LABELS.crossrefs,body:TOOL_DESCS.crossrefs},
   {screen:'deep',target:'#btn-geography',title:TOOL_LABELS.geography,body:TOOL_DESCS.geography},
   {screen:'deep',target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
-  {screen:'deep',target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all six tools at once instead of one at a time — a fast way to get a full picture of a passage.'},
+  {screen:'deep',target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all six tools at once — four analyze this specific passage (Word Study, Language & Structure, Cross-References, and Places & Geography) and two study the entire book (Historical Context and Cultural Context).'},
   {screen:'deep',target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
   {screen:'deep',target:'#d-conclusions-editor',title:'My Conclusions',body:'This space is entirely yours — no AI involved. Record your own theological conclusions, insights, and application.'},
   {screen:'deep',target:'[onclick*="openExportModal"]',title:'Export Study to PDF',body:'Export the whole study — scripture, notes, outline, resources, conclusions, and any AI tool results — to a shareable PDF.'},
   {screen:'deep',target:'[onclick*="shareStudyLink"]',title:'Share Study Link',body:'You can also share a study as a link — useful for sending a single study to someone without exporting a file.'},
-  {screen:'stats',before:function(){tourSeedProgressData();},target:'#stats-grid',title:'Progress',body:"This is what Progress looks like with some history behind it — streaks, word counts, AI tool usage, and your most-studied books. We've seeded a few extra example studies so you can see it fully populated; everything from this tour disappears the moment it ends."}
+  {screen:'stats',before:function(){tourSeedProgressData();},target:'#stats-grid',title:'Progress',body:"Here’s your full Progress view — current streak, total studies, words written, and AI tools run; your most-studied books as a bar chart; and your seven most recently opened studies. Everything seeded for this tour disappears the moment it ends."}
 ];
 
 // ── TOUR B — "SETTINGS WALKTHROUGH" ──────────────────────────────────────
@@ -5527,7 +5548,7 @@ var TOUR_B_STEPS=[
   {target:'#settings-sec-about-trans',title:'About Translations',body:'Tap any translation here for full detail — history, translation philosophy, producers, and intended audience — arranged from most literal to most interpretive.'},
   {target:'#settings-sec-tags',title:'Tags',body:'Add, edit, or remove the tags you use to organize studies. Deleting a tag removes it from any existing studies too.'},
   {target:'#settings-sec-share',title:'Share Archē · Pilgrim',body:'Sharing sends the Public version link, not this Private tester build — your tester access is PIN-gated and limited to the approved list only.'},
-  {target:'#settings-sec-backup',title:'Manual JSON Backup',body:'Your data already syncs automatically to this device and an offsite cloud backup — this is an additional local export, useful if you want your own copy.'},
+  {target:'#settings-sec-backup',title:'Manual JSON Backup',body:'Your data syncs automatically, but since Pilgrim is in active beta development we recommend downloading a manual backup every so often — just in case. Tap Download Backup to save a copy to your device any time.'},
   {target:'#settings-sec-changelog',title:'What\u2019s New',body:'The full history of changes to Arch\u0113 \u00b7 Pilgrim, newest first — tap to expand.'},
   {target:'#diag-settings-section',title:'Diagnostics',body:"Connection test buttons for AI tools, text extraction, sync, and the ESV API. The feedback button isn't wired up yet — reach out to Jesse directly with feedback for now."}
 ];
@@ -6319,7 +6340,15 @@ function dismissUpdateBanner(){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.12.5',date:'June 20, 2026',label:'Latest',
+    version:'4.13.0',date:'June 22, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Pilgrim header — replaced Arch\u0113 \u00b7 Pilgrim branding with Joshua 1:8 cornerstone verse; mobile shows truncated quote (tappable modal for full verse); desktop sidebar shows full verse',
+      'fix: mdToHtml — headings now render for up to 6 hash levels (was 3); ordered list counter no longer resets when bullet points interrupt a numbered sequence',
+      'feat: Tour A — scripture changed from John 3:16 to Genesis 1:1; added nav intro step, Or Browse for It icon step, Look Up Word trigger step, and Getting to Study Tools nav step; improved Snapshot and Progress descriptions',
+      'feat: Tour B — Manual JSON Backup step now includes beta build backup recommendation'
+    ]},
+  {version:'4.12.5',date:'June 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:['feat: app icon set added — browser tab favicon, iOS home screen icon, and Android install icons (including a maskable variant); italic Greek alpha (\u0391) mark rendered as self-contained vector artwork from the real glyph outline, so it never depends on a web font loading at runtime']
   },
@@ -7137,6 +7166,15 @@ var _clSectionOpen=false;
 </div>
 
 <!-- Lexicon Modal -->
+<!-- Joshua 1:8 verse modal -->
+<div class="overlay" id="verse-modal" onclick="if(event.target===this)closeVerseModal()">
+  <div class="modal" style="max-width:420px;text-align:center">
+    <div style="font-family:'EB Garamond',serif;font-size:13px;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px">Joshua 1:8 &middot; NASB</div>
+    <div style="font-family:'Crimson Pro',serif;font-size:19px;color:var(--txt1);line-height:1.75;font-style:italic;margin-bottom:20px">&#8220;This book of the law shall not depart from your mouth, but you shall meditate on it day and night, so that you may be careful to do according to all that is written in it; for then you will make your way prosperous, and then you will have success.&#8221;</div>
+    <button class="btn btn-sec btn-full" onclick="closeVerseModal()">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="lexicon-overlay" onclick="if(event.target===this)closeLexiconModal()">
   <div class="modal" style="max-width:540px;max-height:80vh;display:flex;flex-direction:column;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
