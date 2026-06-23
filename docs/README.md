@@ -38,3 +38,11 @@ Living specification documents for the Arché Study Tools suite. These files are
 ---
 
 *Maintained by Jesse Caldwell. Repo: `arche-epos/arche-suite`.*
+
+## Backlog Features (Specced, Not Yet Built)
+
+| File | Description |
+|---|---|
+| [`pilgrim-guide-spec-v1.md`](pilgrim-guide-spec-v1.md) | Pilgrim Guide mascot — Groq-powered in-app help (Phase 1–3) |
+| [`verse-memory-spec-v1.md`](verse-memory-spec-v1.md) | Verse Memory Mode — SM-2 spaced repetition, speech-to-text |
+| [`scripture-graph-spec-v1.md`](scripture-graph-spec-v1.md) | Scripture Graph — node-graph tool; dual delivery (Pilgrim + standalone) |
