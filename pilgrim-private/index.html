@@ -22,6 +22,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <style>
 :root{--bg0:#0b0907;--bg1:#120f0a;--bg2:#1b1710;--bg3:#252019;--bg4:#2f2a1f;--border:#3a3022;--borderlit:#4d4430;--gold:#c9a84c;--golddim:#7a6520;--goldpale:#e8ca80;--crimson:#8b3535;--crimsonbright:#c05050;--sagebright:#5a9b70;--txt1:#e8d5a3;--txt2:#c4a870;--txt3:#b59a68;--txt4:#8a7850;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);--r:8px;--rl:14px;--app-height:100vh;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -1676,6 +1677,7 @@ function persist(){try{localStorage.setItem(SK,JSON.stringify(studies));}catch(e
 // Conclusions, and Outline panels. Called once on app load.
 // ════════════════════════════════════════════════════════
 var _qFN=null,_qConcl=null,_qOutline=null;
+var _qFNDirty=false,_qConclDirty=false,_qOutlineDirty=false; // Dirty flags: true when user has edited since last populate/sync
 var _qlToolbar=[
   ['bold','italic','underline','strike'],
   [{'header':[1,2,3,false]}],
@@ -1692,9 +1694,11 @@ var _qlToolbar=[
 function initEditors(){
   if(typeof Quill==='undefined')return;
   _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:_qlToolbar}});
-  _qFN.on('text-change',function(){updateWordCount();});
+  _qFN.on('text-change',function(){updateWordCount();_qFNDirty=true;});
   _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:_qlToolbar}});
+  _qConcl.on('text-change',function(){_qConclDirty=true;});
   _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:_qlToolbar}});
+  _qOutline.on('text-change',function(){_qOutlineDirty=true;});
 }
 
 
@@ -2008,9 +2012,13 @@ function duplicateStudy(id){
  * @param {boolean} [force=false] - If true, syncs Conclusions and Outline regardless of panel visibility.
  */
 function syncFromInputs(force){if(!cur)return;cur.date=document.getElementById('f-date').value;cur.teacher=document.getElementById('f-teacher').value;cur.series=document.getElementById('f-series').value;cur.title=document.getElementById('f-title').value;// Only read from Quill if it has text; otherwise preserve whatever was stored (avoids overwriting on panels that haven't mounted)
-  cur.fieldNotes=(_qFN&&_qFN.getText().trim())?_qFN.root.innerHTML:(cur.fieldNotes||'');if(cur.deep){
+  // Field Notes: if user edited (dirty), always write even if empty (intentional clear); otherwise use has-text guard
+  if(_qFN){if(_qFNDirty){cur.fieldNotes=_qFN.root.innerHTML;}else{cur.fieldNotes=_qFN.getText().trim()?_qFN.root.innerHTML:(cur.fieldNotes||'');}}
+  if(cur.deep){
     // Only sync Conclusions/Outline when their panel is visible or force=true — prevents empty Quill overwriting stored content
-    var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');if(_qConcl&&(deepOn||force)){var _cHtml=_qConcl.root.innerHTML,_cTxt=_qConcl.getText().trim();if(deepOn||_cTxt)cur.deep.conclusions=_cHtml;}if(_qOutline&&(deepOn||force)){var _oHtml=_qOutline.root.innerHTML,_oTxt=_qOutline.getText().trim();if(deepOn||_oTxt)cur.deep.outline=_oHtml;}}var ar=activeRef();if(!ar)return;
+    var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');
+    if(_qConcl&&(deepOn||force)){var _cHtml=_qConcl.root.innerHTML,_cTxt=_qConcl.getText().trim();if(_qConclDirty||_cTxt)cur.deep.conclusions=_cHtml;}
+    if(_qOutline&&(deepOn||force)){var _oHtml=_qOutline.root.innerHTML,_oTxt=_qOutline.getText().trim();if(_qOutlineDirty||_oTxt)cur.deep.outline=_oHtml;}}var ar=activeRef();if(!ar)return;
   // Only read ref/translation from DOM when Field Notes is active — avoids clearing values set programmatically
   var fieldOn=document.getElementById('scr-field')&&document.getElementById('scr-field').classList.contains('on');
   if(fieldOn){ar.reference=document.getElementById('f-ref').value;ar.translation=document.getElementById('f-trans').value;}
@@ -2179,7 +2187,7 @@ function populateField(){
   document.getElementById('f-trans').value=ar?ar.translation||'esv':'esv';
   document.getElementById('f-title').value=cur.title||'';
   // dangerouslyPasteHTML preserves formatting (bold, lists, headings); setText('') would strip it
-  if(_qFN){if(cur.fieldNotes)_qFN.clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN.setText('');}
+  if(_qFN){if(cur.fieldNotes)_qFN.clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN.setText('');_qFNDirty=false;}
   renderStudyWords();
   renderTagPicker();
   updateScrModeUI();
@@ -2500,8 +2508,8 @@ function populateDeep(){
   var wc=_notesPlain.trim()?_notesPlain.trim().split(/\s+/).length:0;
   var badge=document.getElementById('fnotes-wc-badge');
   if(badge)badge.textContent=wc?'('+wc+' words)':'';
-  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');}
-  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');}
+  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');_qConclDirty=false;}
+  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');_qOutlineDirty=false;}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
   studyScope=(ar&&ar.deep&&ar.deep.studyScope)||'passage';
   renderRefPills('d-ref-pills','deep');
@@ -2945,7 +2953,7 @@ function renderAIPanelContent(ck){
   var titleEl=document.getElementById('aipanel-title');if(titleEl)titleEl.innerHTML=(TOOL_LABELS[base]||base)+sl;
   var content=aiPanelResults[ck]||(ar&&ar.deep&&ar.deep[ck])||'';
   var html=mdToHtml(content);
-  var contentEl=document.getElementById('aipanel-content');if(contentEl)contentEl.innerHTML='<div>'+html+'</div>';
+  var contentEl=document.getElementById('aipanel-content');if(contentEl)contentEl.innerHTML='<div>'+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+'</div>';
 }
 /**
  * Closes the AI results panel and clears the active tab state.
@@ -6340,7 +6348,14 @@ function dismissUpdateBanner(){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.0',date:'June 22, 2026',label:'Latest',
+    version:'4.13.1',date:'June 22, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Quill dirty-flag guard — _qFNDirty/_qConclDirty/_qOutlineDirty flags now track user edits; syncFromInputs writes empty Quill state when dirty (intentional clear now persists), preserves stored content when not dirty; flags reset on populateField/populateDeep',
+      'fix: DOMPurify added (v3.1.6 CDN) — AI panel content sanitized via DOMPurify.sanitize(mdToHtml(text)) before innerHTML injection; static template HTML untouched'
+    ]},
+  {
+    version:'4.13.0',date:'June 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Pilgrim header — replaced Arch\u0113 \u00b7 Pilgrim branding with Joshua 1:8 cornerstone verse; mobile shows truncated quote (tappable modal for full verse); desktop sidebar shows full verse',
