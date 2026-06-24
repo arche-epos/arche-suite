@@ -1456,6 +1456,14 @@ var WORKER_URL='https://arche-proxy.archestudytools.workers.dev';
 var ACTIVE_USER=null; // set by initPinGate()/activateUser() before any storage access
 var BOLLS_TRANS={nkjv:'NKJV',net:'NET',amp:'AMP',csb:'CSB17',nlt:'NLT',msg:'MSG',nasb:'NASB',niv:'NIV2011'};
 var BOLLS_BOOKS={genesis:1,gen:1,ge:1,exodus:2,exod:2,ex:2,leviticus:3,lev:3,le:3,numbers:4,num:4,nu:4,deuteronomy:5,deut:5,dt:5,joshua:6,josh:6,jos:6,judges:7,judg:7,jdg:7,ruth:8,rut:8,'1samuel':9,'1sam':9,'1sa':9,'2samuel':10,'2sam':10,'2sa':10,'1kings':11,'1kgs':11,'1ki':11,'2kings':12,'2kgs':12,'2ki':12,'1chronicles':13,'1chr':13,'1ch':13,'2chronicles':14,'2chr':14,'2ch':14,ezra:15,ezr:15,nehemiah:16,neh:16,ne:16,esther:17,esth:17,est:17,job:18,jb:18,psalms:19,psalm:19,ps:19,psa:19,proverbs:20,prov:20,pr:20,ecclesiastes:21,eccles:21,ecc:21,ec:21,'songofsolomon':22,'songofsongsofsolomon':22,'songofsolomon':22,sos:22,ss:22,isaiah:23,isa:23,jeremiah:24,jer:24,lamentations:25,lam:25,ezekiel:26,ezek:26,eze:26,daniel:27,dan:27,da:27,hosea:28,hos:28,joel:29,joe:29,amos:30,am:30,obadiah:31,obad:31,ob:31,jonah:32,jon:32,micah:33,mic:33,nahum:34,nah:34,habakkuk:35,hab:35,zephaniah:36,zeph:36,zep:36,haggai:37,hag:37,zechariah:38,zech:38,zec:38,malachi:39,mal:39,matthew:40,matt:40,mt:40,mark:41,mk:41,mr:41,luke:42,lk:42,lu:42,john:43,jn:43,joh:43,acts:44,act:44,ac:44,romans:45,rom:45,ro:45,'1corinthians':46,'1cor':46,'1co':46,'2corinthians':47,'2cor':47,'2co':47,galatians:48,gal:48,ga:48,ephesians:49,eph:49,philippians:50,phil:50,php:50,colossians:51,col:51,'1thessalonians':52,'1thess':52,'1th':52,'2thessalonians':53,'2thess':53,'2th':53,'1timothy':54,'1tim':54,'1ti':54,'2timothy':55,'2tim':55,'2ti':55,titus:56,tit:56,philemon:57,phlm:57,phm:57,hebrews:58,heb:58,james:59,jas:59,jm:59,'1peter':60,'1pet':60,'1pe':60,'2peter':61,'2pet':61,'2pe':61,'1john':62,'1jn':62,'1jo':62,'2john':63,'2jn':63,'3john':64,'3jn':64,jude:65,jud:65,revelation:66,rev:66,re:66};
+/**
+ * Parses a human-readable Bible reference string into a structured object.
+ * Accepts book aliases, chapter, and optional verse range (e.g. "Rom 1:1-3").
+ * Normalises the book name against BOLLS_BOOKS to resolve the numeric book ID.
+ * @param {string} ref - Reference string to parse.
+ * @returns {{book:number, chapter:number, startVerse:number|null, endVerse:number|null}|null}
+ *   Parsed reference object, or null if the reference is unrecognised.
+ */
 function parseRef(ref){
   var m=ref.trim().match(/^(\d?\s*[a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(\d+)(?::(\d+)(?:-(\d+))?)?/);
   if(!m)return null;
@@ -3035,6 +3043,11 @@ function ttsPlay(source,fromIdx,charOffset){
   _ttsActive=true;_ttsPaused=false;_ttsSource=source;_ttsIdx=fromIdx||0;
   var resumeOffset=charOffset||0;
   ttsUpdateBtn(source,'playing');
+  /**
+   * Speaks the next sentence in the TTS queue, advancing _ttsIdx.
+   * Handles resume-mid-sentence via resumeOffset, and stops cleanly when the queue is exhausted.
+   * Recursively calls itself via utt.onend to chain sentences until stopped or paused.
+   */
   function speakNext(){
     if(!_ttsActive||_ttsIdx>=_ttsSentences.length){_ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;}
     var sentence=_ttsSentences[_ttsIdx].trim();
@@ -4849,6 +4862,10 @@ function openVerseModal(){var o=document.getElementById('verse-modal');if(o)o.cl
  * Closes the Joshua 1:8 verse modal.
  */
 function closeVerseModal(){var o=document.getElementById('verse-modal');if(o)o.classList.remove('on');}
+/**
+ * Prompts the user to confirm a force-restore from Gist, warning that local-only changes will be lost.
+ * Calls syncFromGistForce() only if the user confirms the native dialog.
+ */
 function confirmForcePull(){if(confirm('Force Restore will replace ALL local studies with the backed-up version — any local-only changes will be lost. Continue?')){syncFromGistForce();}}
 /**
  * Force-pulls the Gist backup and replaces all local studies without merging.
@@ -5736,6 +5753,11 @@ async function runDiagnostics(){
   // runId written to Gist and read back in gist_verify to confirm round-trip integrity
   var runId='diag-'+Date.now();
   var allPass=true;
+  /**
+   * Runs a single named diagnostic test, records timing and pass/fail status, and updates the UI row.
+   * @param {string} id - DOM id of the diagnostic row to update.
+   * @param {Function} fn - Async test function; must return {pass:boolean, detail:string}.
+   */
   async function runTest(id,fn){
     diagUpdate(id,'running','Testing\u2026');
     var t0=Date.now();
@@ -6348,7 +6370,13 @@ function dismissUpdateBanner(){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.1',date:'June 22, 2026',label:'Latest',
+    version:'4.13.2',date:'June 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'chore: pre-ES-module pass — JSDoc added to parseRef, speakNext, shareApp, confirmForcePull, runTest; dead openVerseModal (targeting nonexistent verse-overlay) removed from S20; openVerseModal/closeVerseModal in S22 reassigned to ui.js module map'
+    ]},
+  {
+    version:'4.13.1',date:'June 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Quill dirty-flag guard — _qFNDirty/_qConclDirty/_qOutlineDirty flags now track user edits; syncFromInputs writes empty Quill state when dirty (intentional clear now persists), preserves stored content when not dirty; flags reset on populateField/populateDeep',
