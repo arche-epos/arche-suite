@@ -148,6 +148,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 .quiz-wrap{background:var(--bg2);border:1px solid var(--borderlit);border-radius:var(--rl);padding:16px;margin-top:8px}
 .quiz-title{font-family:'JetBrains Mono',monospace;font-size:17px;color:var(--txt1);margin-bottom:4px}
 .quiz-sub{font-size:12px;color:var(--txt4);margin-bottom:14px}
+.quiz-loading-msg{font-size:13px;color:var(--txt4);padding:20px 0;text-align:center}
 .quiz-q{font-size:14px;color:var(--txt1);margin-bottom:10px;line-height:1.6;font-weight:500}
 .quiz-opt{display:block;width:100%;text-align:left;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--txt2);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;margin-bottom:7px;transition:all .15s;line-height:1.4}
 .quiz-opt:active{background:var(--bg4)}
@@ -167,6 +168,10 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 .quiz-submit:active{background:var(--amberpale)}
 .quiz-submit:disabled{background:var(--bg4);color:var(--txt4);cursor:default}
 .quiz-grading{text-align:center;color:var(--txt4);font-style:italic;font-size:13px;padding:12px 0}
+.quiz-tutor-btn{display:block;width:100%;background:none;border:1px solid var(--amber);color:var(--amber);border-radius:8px;padding:9px 14px;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;margin-top:8px;text-align:left}
+.quiz-tutor-btn:active{background:var(--amberpale)}
+.quiz-tutor-btn:disabled{opacity:.5;cursor:default}
+.quiz-tutor-response{background:var(--bg3);border-left:3px solid var(--amber);border-radius:0 6px 6px 0;padding:12px 14px;font-size:13px;color:var(--txt2);line-height:1.6;margin-top:8px}
 .quiz-ai-fb{border-radius:8px;padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.7;color:var(--txt1)}
 .quiz-ai-fb.pass{background:rgba(0,204,136,.1);border:1px solid var(--sage)}
 .quiz-ai-fb.fail{background:rgba(255,68,68,.1);border:1px solid var(--crimson)}
@@ -426,7 +431,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.2.0<br>© 2026 Jesse Caldwell
+      Codex Arête v3.3.0<br>© 2026 Jesse Caldwell
     </div>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
@@ -586,7 +591,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.2.0';
+var CODEX_VERSION = '3.3.0';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -1573,6 +1578,8 @@ function renderModuleLessons(mod){
 
 // ── RENDER: LESSON ────────────────────────────────────────────
 var _quizState = {};
+/** Cache of Groq enrichment responses keyed by lessonId — avoids re-calling Groq on quiz retry. */
+var _quizEnrichCache = {};
 
 function renderLessonContent(sections){
   if(typeof sections === 'string') return sections;
@@ -1610,26 +1617,33 @@ function renderLesson(lesson){
   document.getElementById('lesson-content').innerHTML = html;
   injectAiBars(lesson.id);
   if(p.status==='passed') initConfidenceRating(lesson.id);
+  enrichAndRenderQuiz(lesson); // async — fires after DOM injection; falls back gracefully on error
 }
 
 function renderQuizHTML(lesson){
-  var pool = buildQuizPool(lesson);
-  _quizState = { lessonId:lesson.id, pool:pool, current:0, answers:{}, passed:false, grading:false };
+  var staticPool = buildStaticPool(lesson);
+  var target = getQuizTarget(lesson);
+  _quizState = { lessonId:lesson.id, pool:staticPool, current:0, answers:{}, passed:false, grading:false, target:target };
   return '<div class="quiz-wrap">'+
     '<div class="quiz-title">Knowledge Check</div>'+
-    '<div class="quiz-sub">Pass at 70% ('+Math.ceil(pool.length*.7)+'/'+pool.length+' correct). Questions drawn randomly — each retry is a fresh set.</div>'+
-    '<div class="quiz-progress" id="quiz-dots">'+pool.map(function(_,i){ return '<div class="quiz-dot" id="qdot-'+i+'"></div>'; }).join('')+'</div>'+
-    '<div id="quiz-question-area">'+renderQuestion(0)+'</div>'+
+    '<div id="quiz-meta-area"><div class="quiz-loading-msg">&#9203; Preparing quiz\u2026</div></div>'+
+    '<div class="quiz-progress" id="quiz-dots" style="display:none"></div>'+
+    '<div id="quiz-question-area"></div>'+
   '</div>';
 }
 
-function buildQuizPool(lesson){
+/**
+ * Builds the initial static quiz pool from the lesson bank (all questions, shuffled).
+ * No size cap — enrichAndRenderQuiz pads to target via Groq.
+ * @param {Object} lesson
+ * @returns {Array}
+ */
+function buildStaticPool(lesson){
   var bank = lesson.quiz.slice();
   // Fisher-Yates shuffle
   for(var i=bank.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=bank[i];bank[i]=bank[j];bank[j]=t; }
-  var pool = bank.slice(0,6);
-  // For MC: shuffle option order and update correct index
-  return pool.map(function(q){
+  // Shuffle MC option order and update correct index
+  return bank.map(function(q){
     if(!q.type || q.type==='mc'){
       var opts = q.opts.slice();
       var correctVal = opts[q.correct];
@@ -1638,6 +1652,26 @@ function buildQuizPool(lesson){
     }
     return q;
   });
+}
+
+/**
+ * Returns target question count for a lesson based on its pathway tier.
+ * P1–P2 (foundational) = 8 | P3–P4 (intermediate) = 10 | P5+ (advanced) = 12.
+ * @param {Object} lesson
+ * @returns {number}
+ */
+function getQuizTarget(lesson){
+  var pathIdx=-1;
+  PATHWAYS.forEach(function(p,pi){
+    p.modules.forEach(function(m){
+      m.lessons.forEach(function(l){
+        if(l.id===lesson.id) pathIdx=pi;
+      });
+    });
+  });
+  if(pathIdx<=1) return 8;
+  if(pathIdx<=3) return 10;
+  return 12;
 }
 
 function renderQuestion(idx){
@@ -1668,6 +1702,97 @@ function renderQuestion(idx){
     q.opts.map(function(opt,oi){
       return '<button class="quiz-opt" onclick="selectAnswer('+idx+','+oi+')">'+escHtml(opt)+'</button>';
     }).join('');
+}
+
+/**
+ * Async: single Groq call to improve distractors on existing MC questions
+ * and generate new questions to reach the pathway target count.
+ * Uses _quizEnrichCache to avoid re-calling Groq on quiz retry.
+ * Falls back to static pool on any error.
+ * @param {Object} lesson
+ */
+async function enrichAndRenderQuiz(lesson){
+  if(_quizState.lessonId!==lesson.id) return; // guard: lesson changed before Groq returned
+  var staticPool=_quizState.pool;
+  var target=_quizState.target;
+  var mcPool=staticPool.filter(function(q){return !q.type||q.type==='mc';});
+  var needNew=Math.max(0,target-staticPool.length);
+  // Skip Groq if nothing to do
+  if(mcPool.length===0&&needNew===0){ renderQuizReady(); return; }
+  try{
+    var enriched=_quizEnrichCache[lesson.id]||await callGroqQuizEnrich(lesson,mcPool,needNew);
+    _quizEnrichCache[lesson.id]=enriched;
+    // Apply improved distractors to MC questions in the pool
+    var newPool=staticPool.map(function(q){
+      if(!q.type||q.type==='mc'){
+        var mcIdx=mcPool.indexOf(q);
+        var imp=enriched.improved&&enriched.improved.find(function(d){return d.index===mcIdx;});
+        if(imp&&imp.newWrongOpts&&imp.newWrongOpts.length===3){
+          var correctVal=q.opts[q.correct];
+          var opts=[correctVal].concat(imp.newWrongOpts);
+          for(var k=opts.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=opts[k];opts[k]=opts[j];opts[j]=t;}
+          return Object.assign({},q,{opts:opts,correct:opts.indexOf(correctVal)});
+        }
+      }
+      return q;
+    });
+    // Append AI-generated questions to reach target
+    if(needNew>0&&enriched.newQuestions&&enriched.newQuestions.length){
+      enriched.newQuestions.slice(0,needNew).forEach(function(nq){
+        var correctVal=nq.opts[nq.correct];
+        var opts=nq.opts.slice();
+        for(var k=opts.length-1;k>0;k--){var j=Math.floor(Math.random()*(k+1));var t=opts[k];opts[k]=opts[j];opts[j]=t;}
+        newPool.push({type:'mc',q:nq.q,opts:opts,correct:opts.indexOf(correctVal),explain:nq.explain,aiGenerated:true});
+      });
+    }
+    _quizState.pool=newPool;
+  }catch(e){
+    console.warn('Quiz enrichment failed, using static pool:',e);
+  }
+  renderQuizReady();
+}
+
+/**
+ * Renders the quiz UI once the pool is finalized (post-enrichment or fallback).
+ */
+function renderQuizReady(){
+  var pool=_quizState.pool;
+  var meta=document.getElementById('quiz-meta-area');
+  var dots=document.getElementById('quiz-dots');
+  var area=document.getElementById('quiz-question-area');
+  if(!meta||!dots||!area) return;
+  meta.innerHTML='<div class="quiz-sub">Pass at 70% ('+Math.ceil(pool.length*.7)+'/'+pool.length+' correct). Questions drawn randomly — each retry is a fresh set.</div>';
+  dots.style.display='';
+  dots.innerHTML=pool.map(function(_,i){return '<div class="quiz-dot" id="qdot-'+i+'"></div>';}).join('');
+  area.innerHTML=renderQuestion(0);
+}
+
+/**
+ * Single Groq call: improves distractors on existing MC questions and
+ * generates new questions to reach the lesson target count.
+ * @param {Object} lesson
+ * @param {Array} mcQuestions - MC questions from static pool
+ * @param {number} needNew - number of additional questions to generate
+ * @returns {Promise<{improved:Array, newQuestions:Array}>}
+ */
+async function callGroqQuizEnrich(lesson,mcQuestions,needNew){
+  var qData=mcQuestions.map(function(q,i){
+    return {index:i,question:q.q,correctAnswer:q.opts[q.correct],currentWrongOptions:q.opts.filter(function(_,oi){return oi!==q.correct;})};
+  });
+  var task2=needNew>0
+    ?'TASK 2 — GENERATE NEW QUESTIONS\nGenerate exactly '+needNew+' additional MC questions on the same topic. Each must cover a DIFFERENT concept than the existing questions. 4 options each (1 correct at index 0 + 3 plausible distractors). Include a brief explanation.\n\n'
+    :'TASK 2 — not needed. Include "newQuestions":[] in your response.\n\n';
+  var sys='You are a quiz designer for a web development education platform called Codex Arête. Respond ONLY with valid JSON — no markdown, no backticks, no preamble.';
+  var prompt='Topic: '+lesson.title+'\n\n'+
+    'TASK 1 — IMPROVE DISTRACTORS\nFor each question, replace the 3 wrong options with better ones representing real misconceptions a learner who half-understands the topic might choose. Keep the correct answer exactly as-is. Distractors must be plausible — not obviously wrong, similar in length and specificity to the correct answer.\n\n'+
+    task2+
+    'Existing questions:\n'+JSON.stringify(qData)+'\n\n'+
+    'Respond with this exact JSON structure:\n{"improved":[{"index":0,"newWrongOpts":["wrong1","wrong2","wrong3"]}],"newQuestions":[{"q":"...","opts":["correct","w1","w2","w3"],"correct":0,"explain":"..."}]}';
+  var resp=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2500,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
+  if(!resp.ok) throw new Error('Groq HTTP '+resp.status);
+  var data=await resp.json();
+  var text=data.choices[0].message.content.trim().replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
+  return JSON.parse(text);
 }
 
 /**
@@ -1723,6 +1848,41 @@ function buildWrongReviewHtml(pool,answers){
     }).join('');
 }
 
+/**
+ * Creates the "Help me understand" AI Tutor button shown on wrong-answer feedback.
+ * On click: calls Groq inline with question context and renders explanation below the button.
+ * @param {Object} q - Question object
+ * @param {string} userAnswer - The student's chosen/typed answer
+ * @param {string|null} correctAnswer - Correct answer text (null for free-response)
+ * @param {string} feedbackText - Explanation already displayed to the student
+ * @returns {HTMLButtonElement}
+ */
+function makeTutorHelpBtn(q, userAnswer, correctAnswer, feedbackText){
+  var btn = document.createElement('button');
+  btn.className = 'quiz-tutor-btn';
+  btn.textContent = '\uD83E\uDD16 Help me understand';
+  btn.onclick = async function(){
+    btn.disabled = true;
+    btn.textContent = 'Asking tutor\u2026';
+    var responseEl = document.createElement('div');
+    responseEl.className = 'quiz-tutor-response';
+    responseEl.textContent = '\u2026';
+    btn.parentNode.insertBefore(responseEl, btn.nextSibling);
+    try {
+      var correctLine = correctAnswer ? 'Correct answer: "'+correctAnswer+'"\n' : '';
+      var sys = 'You are a patient, encouraging coding tutor helping a student who just got a quiz question wrong. Be specific and concrete. Keep your response under 120 words.';
+      var prompt = 'Question: '+q.q+'\n\nStudent answered: "'+userAnswer+'"\n'+correctLine+'Explanation already shown: "'+feedbackText+'"\n\nThe student still does not understand. Break it down:\n1. Why is the correct answer right? Use a concrete example or analogy if helpful.\n2. What misconception does the student\'s answer reveal?';
+      var resp = await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:250,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
+      var data = await resp.json();
+      responseEl.textContent = data.choices[0].message.content.trim();
+    } catch(e) {
+      responseEl.textContent = 'Could not reach the tutor. Try again later.';
+    }
+    btn.remove();
+  };
+  return btn;
+}
+
 function selectAnswer(qIdx, optIdx){
   if(_quizState.answers.hasOwnProperty(qIdx)||_quizState.grading) return;
   var q = _quizState.pool[qIdx];
@@ -1741,6 +1901,7 @@ function selectAnswer(qIdx, optIdx){
   fb.className='annotation';
   fb.innerHTML='<div class="ann-num">'+(correct?'&#10003; Correct':'&#10007; Incorrect')+'</div>'+escHtml(q.explain);
   area.appendChild(fb);
+  if(!correct) area.appendChild(makeTutorHelpBtn(q, q.opts[optIdx], q.opts[q.correct], q.explain));
   area.appendChild(quizNextBtn(qIdx));
 }
 
@@ -1776,6 +1937,7 @@ async function submitFitb(qIdx){
   var fb=document.createElement('div'); fb.className='quiz-ai-fb '+(correct?'pass':'fail');
   fb.innerHTML='<div class="ann-num">'+(correct?'&#10003; Correct':'&#10007; Incorrect')+'</div>'+escHtml(feedback);
   area.appendChild(fb);
+  if(!correct) area.appendChild(makeTutorHelpBtn(q, ua, q.answer||null, feedback));
   area.appendChild(quizNextBtn(qIdx));
 }
 
@@ -1799,6 +1961,7 @@ async function submitFree(qIdx){
     var fb=document.createElement('div'); fb.className='quiz-ai-fb '+(r.pass?'pass':'fail');
     fb.innerHTML='<div class="ann-num">'+(r.pass?'&#10003; Pass':'&#10007; Not Yet')+'</div>'+escHtml(r.feedback);
     area.appendChild(fb);
+    if(!r.pass) area.appendChild(makeTutorHelpBtn(q, ua, null, r.feedback));
     area.appendChild(quizNextBtn(qIdx));
   } catch(e){
     _quizState.answers[qIdx]={correct:false,userAnswer:ua};
@@ -1845,6 +2008,7 @@ function finishQuiz(lesson){
 
 function retryQuiz(){
   document.getElementById('quiz-area').innerHTML = renderQuizHTML(_activeLesson);
+  enrichAndRenderQuiz(_activeLesson);
 }
 
 function initConfidenceRating(lessonId){
