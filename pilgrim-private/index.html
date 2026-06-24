@@ -6115,7 +6115,19 @@ function clToggle(i){
 function migrateLegacyKey(legacyKey,namespacedKey){
   if(localStorage.getItem(namespacedKey)===null){
     var legacyVal=localStorage.getItem(legacyKey);
-    if(legacyVal!==null)localStorage.setItem(namespacedKey,legacyVal);
+    if(legacyVal!==null){
+      try{
+        localStorage.setItem(namespacedKey,legacyVal);
+        localStorage.removeItem(legacyKey); // move not copy — free legacy key after migration
+      }catch(e){
+        // Quota exceeded — remove legacy key first to free space, then retry
+        if(e.name==='QuotaExceededError'||e.code===22){
+          localStorage.removeItem(legacyKey);
+          try{localStorage.setItem(namespacedKey,legacyVal);}
+          catch(e2){console.warn('[Pilgrim] migrateLegacyKey: storage full, could not migrate '+legacyKey);}
+        }
+      }
+    }
   }
 }
 /**
@@ -6348,7 +6360,14 @@ function dismissUpdateBanner(){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.1',date:'June 22, 2026',label:'Latest',
+    version:'4.13.2',date:'June 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: migrateLegacyKey now moves data (copy + delete legacy key) instead of copying — prevents QuotaExceededError when storage is near capacity; on quota error, legacy key is removed first to free space before retry',
+      'fix: removed dead sw.js register call — sw.js does not exist on main; register attempt caused a 404 console error on every load'
+    ]},
+  {
+    version:'4.13.1',date:'June 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Quill dirty-flag guard — _qFNDirty/_qConclDirty/_qOutlineDirty flags now track user edits; syncFromInputs writes empty Quill state when dirty (intentional clear now persists), preserves stored content when not dirty; flags reset on populateField/populateDeep',
@@ -7068,9 +7087,7 @@ var _clSectionOpen=false;
         if(found){window.location.reload();}
       });
     }
-  } else {
-    // Version matches — safe to register the SW normally; errors are silently ignored
-    if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(function(){});}
+  // sw.js not present on this branch — registration intentionally omitted
   }
 })();
 </script>
