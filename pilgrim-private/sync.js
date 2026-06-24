@@ -43,7 +43,7 @@ var _deletedStudyIds = {};
  * Called by storage.deleteStudy() via wireCallbacks.
  * @param {string} id - Study ID to tombstone.
  */
-export function markDeleted(id) { _deletedStudyIds[id] = true; }
+function markDeleted(id) { _deletedStudyIds[id] = true; }
 
 
 // ── S27 deviation: gistFilename lives here per spec ─────────────────────────
