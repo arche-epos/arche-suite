@@ -225,8 +225,8 @@ async function syncFromGist(){
       window.DELETED_TAGS=mergedDeleted;
       if(window.persistDeletedTags)window._persistDeletedTags();
       if(window.persistTags)window._persistTags();
-      if(window.renderTagManager)window.if(window.renderTagManager)window.renderTagManager();
-      if(window.renderTagPicker)window.if(window.renderTagPicker)window.renderTagPicker();
+      if(window.renderTagManager)window.renderTagManager();
+      if(window.renderTagPicker)window.renderTagPicker();
     }
     // Merge streak — most recent lastDay wins; tie goes to higher count
     if(remote.streak&&remote.streak.lastDay){
