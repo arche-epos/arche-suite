@@ -426,12 +426,18 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
         <button onclick="cdxSetRate(1.5);cdxSyncAboutRate()"  class="cdx-rp" id="about-rp-1_5">1.5×</button>
         <button onclick="cdxSetRate(2);cdxSyncAboutRate()"    class="cdx-rp" id="about-rp-2">2×</button>
       </div>
+      <!-- Volume -->
+      <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">Volume</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <input id="about-vol-rng" type="range" min="0.1" max="1" step="0.05" oninput="cdxSetVol(this.value)" style="flex:1;accent-color:var(--amber);cursor:pointer">
+        <span id="about-vol-lbl" style="font-size:12px;color:var(--txt2);font-family:'Inter',sans-serif;width:36px;text-align:right">100%</span>
+      </div>
       <!-- Test button -->
       <button id="about-tts-test" onclick="cdxTestVoice()" style="width:100%;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-family:'Inter',sans-serif;font-size:13px;padding:8px 14px;cursor:pointer">&#9654; Test Voice</button>
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.3.0<br>© 2026 Jesse Caldwell
+      Codex Arête v3.3.2<br>© 2026 Jesse Caldwell
     </div>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
@@ -504,6 +510,11 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
         <select id="cdx-voice-sel" onchange="cdxSetVoice(this.value)" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--txt2);font-size:12px;padding:4px 6px;cursor:pointer">
           <option value="">Default</option>
         </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+        <span style="font-size:11px;color:var(--txt4);font-family:'Inter',sans-serif;width:32px">Vol</span>
+        <input id="cdx-vol-rng" type="range" min="0.1" max="1" step="0.05" oninput="cdxSetVol(this.value)" style="flex:1;accent-color:var(--amber);cursor:pointer">
+        <span id="cdx-vol-lbl" style="font-size:11px;color:var(--txt4);font-family:'Inter',sans-serif;width:32px;text-align:right">100%</span>
       </div>
     </div>
   </div>
@@ -2441,17 +2452,20 @@ var _cdxActive=false;
 var _cdxPaused=false;
 var _cdxRate=1;
 var _cdxVoice='';
+var _cdxVol=1;
 var _cdxSettOpen=false;
 
 function cdxLoadTTSSett(){
-  try{var s=JSON.parse(localStorage.getItem('bsn_tts_sett'));if(s){if(s.rate)_cdxRate=s.rate;if(s.voice)_cdxVoice=s.voice;}}catch(e){}
-  cdxUpdateRateUI();
+  try{var s=JSON.parse(localStorage.getItem('bsn_tts_sett'));if(s){if(s.rate)_cdxRate=s.rate;if(s.voice)_cdxVoice=s.voice;if(s.vol!=null)_cdxVol=s.vol;}}catch(e){}
+  cdxUpdateRateUI();cdxUpdateVolUI();
 }
 function cdxSaveTTSSett(){
-  localStorage.setItem('bsn_tts_sett',JSON.stringify({rate:_cdxRate,voice:_cdxVoice}));
+  localStorage.setItem('bsn_tts_sett',JSON.stringify({rate:_cdxRate,voice:_cdxVoice,vol:_cdxVol}));
 }
 function cdxSetRate(r){_cdxRate=r;cdxSaveTTSSett();cdxUpdateRateUI();}
 function cdxSetVoice(name){_cdxVoice=name;cdxSaveTTSSett();}
+function cdxSetVol(v){_cdxVol=parseFloat(v)||1;cdxSaveTTSSett();cdxUpdateVolUI();}
+function cdxUpdateVolUI(){['cdx-vol-rng','about-vol-rng'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=_cdxVol;});var lbl=document.getElementById('cdx-vol-lbl');if(lbl)lbl.textContent=Math.round(_cdxVol*100)+'%';var lbl2=document.getElementById('about-vol-lbl');if(lbl2)lbl2.textContent=Math.round(_cdxVol*100)+'%';}
 function cdxUpdateRateUI(){
   var lbl=document.getElementById('cdx-rate-lbl');
   if(lbl)lbl.textContent=_cdxRate+'×';
@@ -2504,7 +2518,7 @@ function cdxTestVoice(){
   var btn=document.getElementById('about-tts-test');
   if(btn&&btn.textContent.indexOf('Stop')>=0){window.speechSynthesis.cancel();btn.textContent='▶ Test Voice';return;}
   var utt=new SpeechSynthesisUtterance('HTML is the skeleton of every web page. It defines structure, not style.');
-  utt.rate=_cdxRate||1;utt.pitch=1;
+  utt.rate=_cdxRate||1;utt.pitch=1;utt.volume=_cdxVol!=null?_cdxVol:1;
   var v=cdxGetVoice();if(v)utt.voice=v;
   utt.onstart=function(){if(btn)btn.textContent='■ Stop';};
   utt.onend=function(){if(btn)btn.textContent='▶ Test Voice';};
@@ -2690,7 +2704,7 @@ function cdxPlayTrack(){
     }
     var seg=segments[segIdx];
     var utt=new SpeechSynthesisUtterance(seg.text);
-    utt.rate=_cdxRate||1;utt.pitch=1;
+    utt.rate=_cdxRate||1;utt.pitch=1;utt.volume=_cdxVol!=null?_cdxVol:1;
     var v=cdxGetVoice();if(v)utt.voice=v;
     utt.onend=function(){
       segIdx++;
