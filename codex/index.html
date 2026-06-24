@@ -2056,7 +2056,7 @@ function saveConf(){
   if(!_selectedConf) return;
   scheduleReview(_activeLesson.id, _selectedConf);
   showToast('Review scheduled &#10003;');
-  var btn=document.getElementById('conf-save'); if(btn){btn.textContent='Scheduled &#10003;';btn.disabled=true;}
+  var btn=document.getElementById('conf-save'); if(btn){btn.innerHTML='Scheduled &#10003;';btn.disabled=true;}
   renderDash();
 }
 
