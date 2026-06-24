@@ -133,7 +133,7 @@ function navTo(id){
   dismissTabHints();
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
   if(window.speechSynthesis)window.speechSynthesis.cancel();
-  _ttsActive=false;_ttsPaused=false;
+  if(window.setTtsActive)window.setTtsActive(false);if(window.setTtsPaused)window.setTtsPaused(false);
   if(cur)syncFromInputs(); // Flush any unsaved form state before leaving the current screen
   document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
   document.querySelectorAll('.navbtn').forEach(function(b){b.classList.remove('on');});
@@ -143,7 +143,7 @@ function navTo(id){
   if(id==='library')renderLib();
   if(id==='deep'){
     // Collapse the field notes flyout when entering Study Tools
-    _fnotesOpen=false;var fb=document.getElementById('fnotes-body');if(fb)fb.classList.remove('open');var fc=document.getElementById('fnotes-chev');if(fc)fc.style.transform=''; // Reset chevron to point-down (closed) state
+    if(window.setFnotesOpen)window.setFnotesOpen(false);var fb=document.getElementById('fnotes-body');if(fb)fb.classList.remove('open');var fc=document.getElementById('fnotes-chev');if(fc)fc.style.transform=''; // Reset chevron to point-down (closed) state
     populateDeep();}
   if(id==='field'&&cur)populateField();
   if(id==='stats')renderStats();

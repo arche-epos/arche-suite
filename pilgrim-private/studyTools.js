@@ -31,6 +31,7 @@ function _updateWordCount(){ if(window.updateWordCount)window.updateWordCount();
 // ── studyTools state ────────────────────────────────────────────────────────
 // S12 — panel toggle state
 export var _fnotesOpen  = false;
+export function setFnotesOpen(v) { _fnotesOpen = v; }
 export var _outlineOpen = false;
 export var _deepScrOpen = false;
 // S13 — AI panel state
