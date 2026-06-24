@@ -97,11 +97,7 @@ setInterval(autoSave, 30000);
         if (found) { window.location.reload(); }
       });
     }
-  } else {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(function() {});
-    }
-  }
+  } // sw.js not present on dev branch — register omitted
 })();
 
 // ── startPilgrim ─────────────────────────────────────────────────────────────

@@ -419,9 +419,9 @@ function updateBarRefLabel(){var ref=document.getElementById('f-ref')?document.g
 function loadTags(){
   try{
     var saved=JSON.parse(localStorage.getItem(SK_TAGS));
-    if(Array.isArray(saved)&&saved.length){TAGS=saved;}
-    else{TAGS=DEFAULT_TAGS.slice();}
-  }catch(e){TAGS=DEFAULT_TAGS.slice();}
+    if(Array.isArray(saved)&&saved.length){setTags(saved);}
+    else{setTags(DEFAULT_TAGS.slice());}
+  }catch(e){setTags(DEFAULT_TAGS.slice());}
   // Migrate: repair any tag with missing, NaN, or non-hex color/bg value
   var dirty=false;
   TAGS.forEach(function(t){
@@ -610,7 +610,7 @@ function confirmDeleteTag(){
   // Clear the pending ID immediately to prevent double-fire
   _pendingDeleteTagId=null;
   // Remove the tag from the live TAGS array
-  TAGS=TAGS.filter(function(t){return t.id!==id;});
+  setTags(TAGS.filter(function(t){return t.id!==id;}));
   // Push a tombstone so other devices know this deletion was intentional
   DELETED_TAGS.push({id:id,deletedAt:new Date().toISOString()});
   persistDeletedTags();
