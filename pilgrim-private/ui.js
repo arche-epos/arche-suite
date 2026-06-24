@@ -53,7 +53,7 @@ import {
   snapshotIntent, runSnapshot, showAIPanel, renderAITabs,
   switchAITab, renderAIPanelContent, closeAIPanel,
   updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,
-  switchLibTab, renderWordList, wlView, wlRemove, renderStudyWords, swView, swRemove,
+  libTab, switchLibTab, renderWordList, wlView, wlRemove, renderStudyWords, swView, swRemove,
   showWordDetail, showWordDetailCur, _showWordOverlay,
   openLexSaveSheet, toggleLexCb, saveLexWord, removeWordGlobal, removeWordStudy,
   openLexiconModal, openLexiconModalFor, closeLexiconModal, runLexiconLookup, renderLexiconEntry,
