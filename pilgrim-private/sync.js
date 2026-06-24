@@ -238,7 +238,7 @@ async function syncFromGist(){
       else{winner={lastDay:localSk.lastDay,streak:Math.max(localSk.streak||0,remoteSk.streak||0)};}
       localStorage.setItem(SK_STREAK,JSON.stringify(winner));
     }
-    if(window.renderLib)window.if(window.renderLib)window.renderLib();
+    if(window.renderLib)window.renderLib();
     // If a study is currently open and was updated by the pull, refresh cur + Quill editors
     if(cur){
       var pulledCur=studies.find(function(s){return s.id===cur.id;});
@@ -247,7 +247,7 @@ async function syncFromGist(){
         if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}
         if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}
         if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}
-        if(window.renderRefs)window.if(window.renderRefs)window.renderRefs();
+        if(window.renderRefs)window.renderRefs();
       }
     }
     // Count what actually changed
@@ -296,9 +296,9 @@ async function syncFromGistForce(){
     if(!remote.studies||!Array.isArray(remote.studies))throw new Error('Invalid Gist format');
     setStudies(remote.studies.map(function(s){migrateStudy(s);return s;}))
     persist();
-    if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)window.if(window.persistTags)window._persistTags();}
-    if(cur){var fc=studies.find(function(s){return s.id===cur.id;});if(fc){setCur(fc);if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}if(window.renderRefs)window.if(window.renderRefs)window.renderRefs();}}
-    if(window.renderLib)window.if(window.renderLib)window.renderLib();
+    if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)window._persistTags();}
+    if(cur){var fc=studies.find(function(s){return s.id===cur.id;});if(fc){setCur(fc);if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}if(window.renderRefs)window.renderRefs();}}
+    if(window.renderLib)window.renderLib();
     gistSetStatus('Force pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
     toast('Force restore complete — local data replaced with backup');
   }catch(e){
