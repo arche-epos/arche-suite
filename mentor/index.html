@@ -187,6 +187,17 @@
     .assign-overlay { position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:flex-end;justify-content:center; }
     .assign-sheet { background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;border-top:1px solid var(--border);padding:24px;width:100%;max-width:600px; }
     .assign-title { font-family:'EB Garamond',Georgia,serif; font-weight:700;color:var(--txt1);margin-bottom:16px;font-size:1.1rem; }
+    /* ── Dev Mode + Settings ── */
+    .tab-bar { overflow-x: auto; white-space: nowrap; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .toggle-label { color: var(--txt1); font-size: .95rem; }
+    .toggle-sub { color: var(--txt3); font-size: .8rem; margin-top: 2px; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: var(--bg4); border-radius: 24px; cursor: pointer; transition: background .2s; }
+    .toggle-slider:before { content: \'\'; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: var(--sagebright); }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
     /* ── User Management (Admin → Users tab) ── */
     .btn-danger { background: var(--crimsonbright); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size:.9rem; cursor: pointer; }
     .btn-danger:hover { opacity: .85; }
@@ -343,10 +354,26 @@
       <button class="tab active" onclick="adminTab('pairs',this)">Active Pairs</button>
       <button class="tab" onclick="adminTab('waiting',this)">Unassigned Students</button>
       <button class="tab" onclick="adminTab('users',this)">Users</button>
+      <button class="tab" onclick="adminTab('settings',this)">Settings</button>
     </div>
     <div id="admin-pairs"></div>
     <div id="admin-waiting" style="display:none"></div>
     <div id="admin-users" style="display:none"></div>
+    <div id="admin-settings" style="display:none"></div>
+  </div>
+</div>
+
+<!-- DEV MODE BANNER -->
+<div id="dev-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#b45309;color:#fff;text-align:center;padding:8px 16px;font-size:.82rem;font-weight:600;display:none;align-items:center;justify-content:center;gap:12px">
+  <span>⚙ Dev Mode — All lessons unlocked</span>
+  <button onclick="toggleDevMode()" style="background:rgba(0,0,0,.3);color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:.78rem;cursor:pointer">Turn Off</button>
+</div>
+
+<!-- LESSON PREVIEW MODAL (Admin) -->
+<div class="modal-overlay" id="lesson-preview-modal" onclick="closeAdminLessonPreview(event)">
+  <div class="modal-sheet" style="max-height:85dvh">
+    <div class="modal-handle"></div>
+    <div id="lesson-preview-content"><div style="color:var(--txt3);font-size:.9rem">Loading\u2026</div></div>
   </div>
 </div>
 
@@ -369,7 +396,7 @@
 
 // ── 01. CONFIG ───────────────────────────────────────────────────────────
 var PROXY = 'https://arche-proxy.archestudytools.workers.dev';
-var VERSION = '0.2.0';
+var VERSION = '0.3.0';
 var PHASE1_KEYS = ['lesson_1','lesson_2a','lesson_2b','lesson_3','lesson_4a','lesson_4b',
                    'lesson_5','lesson_6','lesson_7','lesson_8','lesson_9','lesson_10'];
 
@@ -966,6 +993,7 @@ var allUsers = null;
 var adminActiveTab = 'pairs';
 var notesSaveTimer = null;
 var pinBuffer = '';
+var DEV_MODE = !!localStorage.getItem('mtr_dev_mode');
 
 // ── 04. BIBLE API ────────────────────────────────────────────────────────
 
@@ -1142,6 +1170,7 @@ function logout() {
   currentUser = null; activeRole = null; viewingStudentId = null;
   viewingStudent = null; activeLessonId = null; allUsers = null;
   pinBuffer = ''; updatePinDots(); setAuthError(''); showScreen('auth');
+  updateDevBanner();
 }
 
 // ── 07. ROUTER ───────────────────────────────────────────────────────────
@@ -1155,7 +1184,7 @@ function showScreen(name) {
 
 /** Route to the correct view based on activeRole. */
 function routeToRole() {
-  if (activeRole === 'admin') { showScreen('admin'); loadAdminView(); }
+  if (activeRole === 'admin') { showScreen('admin'); loadAdminView(); updateDevBanner(); }
   else if (activeRole === 'teacher') { showScreen('teacher'); loadTeacherView(); }
   else { showScreen('student'); loadStudentView(); }
 }
@@ -1232,7 +1261,7 @@ function renderLessonList() {
   container.innerHTML = LESSONS.map(function(lesson, idx) {
     var state = progress[lesson.id] || {};
     var complete = !!state.complete;
-    var unlocked = idx === 0 || !!(progress[LESSONS[idx - 1].id] && progress[LESSONS[idx - 1].id].complete);
+    var unlocked = DEV_MODE || idx === 0 || !!(progress[LESSONS[idx - 1].id] && progress[LESSONS[idx - 1].id].complete);
     var cls = 'lesson-card' + (complete ? ' complete' : '') + (!unlocked ? ' locked' : '');
     var icon = complete ? '\u2713' : (unlocked ? lesson.num : '\uD83D\uDD12');
     var badge = complete ? '<span class="badge badge-complete">Complete</span>' : (!unlocked ? '<span class="badge badge-pending">Locked</span>' : '');
@@ -1463,7 +1492,7 @@ function adminTab(tab, el) {
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
   adminActiveTab = tab;
-  ['pairs','waiting','users'].forEach(function(t) {
+  ['pairs','waiting','users','settings'].forEach(function(t) {
     document.getElementById('admin-' + t).style.display = t === tab ? '' : 'none';
   });
   renderAdminTab(tab);
@@ -1474,6 +1503,7 @@ function renderAdminTab(tab) {
   if (tab === 'pairs') renderAdminPairs();
   else if (tab === 'waiting') renderAdminWaiting();
   else if (tab === 'users') renderAdminUsers();
+  else if (tab === 'settings') renderAdminSettings();
 }
 
 /** Render active teacher→student pairs. */
@@ -1730,7 +1760,9 @@ function renderUserEditBody(user, teachers) {
     var btn = complete
       ? '<button class="btn btn-ghost btn-sm" onclick="adminResetLesson(\'' + uid + '\',\'' + key + '\')">Reopen</button>'
       : '<button class="btn btn-ghost btn-sm" onclick="adminMarkComplete(\'' + uid + '\',\'' + key + '\')">Mark Complete</button>';
-    var lessonLabel = lesson ? 'L' + lesson.num + ': ' + lesson.title : key;
+    var lessonLabel = lesson
+      ? '<a style="color:var(--gold);text-decoration:underline;cursor:pointer" onclick="adminPreviewLesson(\'' + uid + '\',\'' + key + '\')">L' + lesson.num + ': ' + lesson.title + '</a>'
+      : key;
     return '<div class="progress-row"><span>' + lessonLabel + '</span>' + badge + btn + '</div>';
   }).join('');
 
@@ -1881,6 +1913,133 @@ async function adminMarkComplete(uid, lessonId) {
     if (body) body.innerHTML = '<div style="padding:12px 0;color:var(--txt3);font-size:.85rem">Loading\u2026</div>';
     adminToggleUser(uid);
   } catch(e) { showToast('Failed: ' + e.message); }
+}
+
+/** Render the Settings tab. */
+function renderAdminSettings() {
+  document.getElementById('admin-settings').innerHTML =
+    '<div class="card">' +
+    '<h3 style="font-family:\'EB Garamond\',Georgia,serif;font-weight:700;color:var(--txt1);margin-bottom:4px">Settings</h3>' +
+    '<p style="color:var(--txt3);font-size:.85rem;margin-bottom:16px">Admin-only configuration for Arché · Mentor.</p>' +
+    '<div class="toggle-row">' +
+      '<div><div class="toggle-label">\u2699\ufe0f Dev Mode</div>' +
+      '<div class="toggle-sub">Unlocks all lessons for testing. Banner shown while active.</div></div>' +
+      '<label class="toggle-switch">' +
+        '<input type="checkbox" id="dev-mode-toggle"' + (DEV_MODE ? ' checked' : '') + ' onchange="toggleDevMode()">' +
+        '<span class="toggle-slider"></span>' +
+      '</label>' +
+    '</div>' +
+    '</div>';
+}
+
+/**
+ * Toggle dev mode on/off.
+ * Persists to localStorage, updates global, refreshes banner.
+ */
+function toggleDevMode() {
+  DEV_MODE = !DEV_MODE;
+  if (DEV_MODE) {
+    localStorage.setItem('mtr_dev_mode', '1');
+  } else {
+    localStorage.removeItem('mtr_dev_mode');
+  }
+  // Sync toggle checkbox state if settings tab is visible
+  var cb = document.getElementById('dev-mode-toggle');
+  if (cb) cb.checked = DEV_MODE;
+  updateDevBanner();
+}
+
+/**
+ * Show or hide the dev mode banner.
+ * Only shows when admin is logged in AND dev mode is active.
+ */
+function updateDevBanner() {
+  var banner = document.getElementById('dev-banner');
+  if (!banner) return;
+  var isAdmin = currentUser && currentUser.roles && currentUser.roles.includes('admin');
+  banner.style.display = (isAdmin && DEV_MODE) ? 'flex' : 'none';
+}
+
+/**
+ * Open the admin lesson preview modal for a specific student + lesson.
+ * Fetches full student record (with notes) and renders read-only lesson view.
+ * @param {string} uid  - Student user ID
+ * @param {string} lessonId
+ */
+async function adminPreviewLesson(uid, lessonId) {
+  var lesson = LESSONS.find(function(l) { return l.id === lessonId; });
+  if (!lesson) return;
+  var modal = document.getElementById('lesson-preview-modal');
+  var content = document.getElementById('lesson-preview-content');
+  if (!modal || !content) return;
+  content.innerHTML = '<div style="color:var(--txt3);font-size:.9rem;padding:8px 0">Loading\u2026</div>';
+  modal.classList.add('active');
+  try {
+    var student = await apiGetUser(uid);
+    var studentName = student.name || ((allUsers || []).find(function(u) { return u.id === uid; }) || {}).name || 'Student';
+    content.innerHTML = renderAdminLessonPreviewContent(lesson, student, studentName);
+  } catch(e) {
+    content.innerHTML = '<div style="color:var(--crimsonbright)">Failed to load lesson data.</div>';
+  }
+}
+
+/** Close the admin lesson preview modal. */
+function closeAdminLessonPreview(e) {
+  if (!e || e.target === document.getElementById('lesson-preview-modal')) {
+    document.getElementById('lesson-preview-modal').classList.remove('active');
+  }
+}
+
+/**
+ * Render full read-only lesson content for admin preview.
+ * Shows lesson outline, key point, Q&A, discussion, memory verses, and student notes.
+ * @param {object} lesson
+ * @param {object} student - Full student record (with notes, progress)
+ * @param {string} studentName
+ * @returns {string} HTML
+ */
+function renderAdminLessonPreviewContent(lesson, student, studentName) {
+  var notes = (student.notes && student.notes[lesson.id]) || '';
+  var isComplete = !!(student.progress && student.progress[lesson.id] && student.progress[lesson.id].complete);
+  var html = '<div style="padding:4px 0 12px;color:var(--txt3);font-size:.8rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);margin-bottom:14px">' +
+    '\uD83D\uDC41 Admin preview \u00b7 <strong style="color:var(--txt1)">' + escHtml(studentName) + '</strong>' +
+    (isComplete ? ' \u00b7 <span style="color:var(--sagebright)">\u2713 Complete</span>' : ' \u00b7 <span style="color:var(--txt3)">In Progress</span>') +
+    '</div>';
+
+  // Title / subtitle
+  html += '<div style="margin-bottom:12px">' +
+    '<div style="font-family:\'EB Garamond\',Georgia,serif;font-size:1.3rem;font-weight:600;color:var(--txt1)">Lesson ' + lesson.num + ': ' + lesson.title + '</div>' +
+    '<div style="color:var(--txt3);font-style:italic;font-size:.9rem">' + lesson.subtitle + '</div></div>';
+
+  // Intro
+  html += '<h3>Introduction</h3><p style="font-size:.9rem;line-height:1.7;color:var(--txt1);margin-bottom:14px">' + lesson.intro + '</p>';
+
+  // Outline
+  html += '<h3>Outline</h3>';
+  lesson.outline.forEach(function(point) {
+    html += '<div class="outline-block"><div class="roman">' + point.roman + '. ' + point.text + '</div><div class="outline-sub">';
+    point.subs.forEach(function(sub) {
+      html += '<div style="margin-bottom:4px;font-size:.88rem;color:var(--txt2)">' + sub.text +
+        ' <span class="scripture-ref" onclick="openScriptureModal(\'' + sub.ref + '\')">' + sub.ref + '</span></div>';
+    });
+    html += '</div></div>';
+  });
+
+  // Key point
+  html += '<h3 style="margin-top:14px">Key Point</h3><div class="key-point" style="margin-bottom:14px">' + lesson.keyPoint + '</div>';
+
+  // Memory verses
+  html += '<h3>Memory Verses <span style="font-size:.75rem;color:var(--txt3);font-weight:400">(KJV)</span></h3>';
+  lesson.memoryVerses.forEach(function(mv) {
+    html += '<div class="mv-item"><div class="mv-ref">' + mv.ref + '</div><div class="mv-text">' + mv.text + '</div></div>';
+  });
+  if (!lesson.memoryVerses.length) html += '<div style="color:var(--txt4);font-size:.85rem;margin-bottom:10px">No memory verses recorded for this lesson.</div>';
+
+  // Student notes
+  html += '<h3 style="margin-top:14px">Student Notes</h3>';
+  html += '<div class="notes-readonly">' + (notes ? escHtml(notes) : '<span style="color:var(--txt4);font-style:italic">No notes yet.</span>') + '</div>';
+
+  return html;
 }
 
 // ── 13. SCRIPTURE MODAL ──────────────────────────────────────────────────
