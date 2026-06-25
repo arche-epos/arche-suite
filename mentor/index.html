@@ -187,6 +187,19 @@
     .assign-overlay { position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:flex-end;justify-content:center; }
     .assign-sheet { background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;border-top:1px solid var(--border);padding:24px;width:100%;max-width:600px; }
     .assign-title { font-family:'EB Garamond',Georgia,serif; font-weight:700;color:var(--txt1);margin-bottom:16px;font-size:1.1rem; }
+    /* ── TTS Player Bar ── */
+    .tts-bar { background: var(--bg2); border-top: 1px solid var(--border); padding: 8px 12px; position: sticky; bottom: 52px; z-index: 9; }
+    .tts-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tts-row1 { margin-bottom: 6px; }
+    .tts-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--txt1); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: .85rem; line-height: 1; }
+    .tts-btn:hover { background: var(--bg4); }
+    .tts-btn.play-active { background: var(--gold); color: #000; border-color: var(--gold); }
+    .tts-track-name { color: var(--txt2); font-size: .82rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Crimson Pro', serif; font-style: italic; }
+    .tts-speed { background: var(--bg3); border: 1px solid var(--border); color: var(--txt3); border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: .75rem; }
+    .tts-speed.on { background: var(--sagebright); color: #000; border-color: var(--sagebright); }
+    .tts-label { color: var(--txt4); font-size: .75rem; }
+    .tts-vol { width: 70px; accent-color: var(--gold); }
+    .tts-voice { background: var(--bg3); border: 1px solid var(--border); color: var(--txt2); border-radius: 4px; padding: 2px 4px; font-size: .75rem; max-width: 120px; }
   </style>
 </head>
 <body>
@@ -274,6 +287,7 @@
       <div style="font-size:.85rem;color:var(--txt3)" id="ld-lesson-label"></div>
     </header>
     <div class="content" id="lesson-content"></div>
+    <div id="tts-bar" class="tts-bar" style="display:none;"></div>
     <div class="complete-area" id="complete-area"></div>
   </div>
 </div>
@@ -339,7 +353,7 @@
 
 // ── 01. CONFIG ───────────────────────────────────────────────────────────
 var PROXY = 'https://arche-proxy.archestudytools.workers.dev';
-var VERSION = '0.1.1';
+var VERSION = '0.2.0';
 var PHASE1_KEYS = ['lesson_1','lesson_2a','lesson_2b','lesson_3','lesson_4a','lesson_4b',
                    'lesson_5','lesson_6','lesson_7','lesson_8','lesson_9','lesson_10'];
 
@@ -360,105 +374,568 @@ var LESSONS = [
     id: 'lesson_1', num: '1',
     title: 'The Word of God',
     subtitle: 'Is the Bible Reliable and Relevant in My Life?',
-    intro: 'The Bible is the foundation of the Christian life. It is not merely a collection of ancient writings, but the living Word of God — breathed out by the Holy Spirit through human authors, without error, and applicable to every situation we face. Understanding what the Bible is and how to use it is the essential first step for every disciple.',
+    intro: 'One of the things that separates true Bible Christianity from many of the religions of the world is its claim to a single written authority from God. Many religions will rely on several different authorities. The authority of the written word of God is essential to a Christian\'s growth in the grace and knowledge of Jesus Christ. The principles by which we are to govern our lives are found in the pages of the Word of God.',
     outline: [
-      { roman: 'I', text: 'The Bible Is the Word of God', subs: [
-        { text: 'It was breathed out by God', ref: '2Tim 3:16-17' },
-        { text: 'Holy men wrote as moved by the Spirit', ref: '2Pet 1:21' }
+      { roman: 'I', text: 'The Word of God is infallible, without error and absolutely reliable', subs: [
+        { text: 'Individual words inspired as penned by man — God is author, man is publisher', ref: '2Pet 1:20-21' },
+        { text: 'Preserved through history, given in your language', ref: 'Ps 12:6-7' },
+        { text: 'The Bible does not just contain truth — it IS truth', ref: 'John 17:17' },
+        { text: 'The words of God are not to be changed by man', ref: 'Rev 22:18-19' }
       ]},
-      { roman: 'II', text: 'The Bible Is Living and Active', subs: [
-        { text: 'It penetrates to the heart', ref: 'Heb 4:12' },
-        { text: 'It is a lamp to guide our path', ref: 'Ps 119:105' }
+      { roman: 'II', text: 'The Word of God was active in your salvation', subs: [
+        { text: 'Agent which brought about your new birth', ref: '1Pet 1:23' },
+        { text: 'Salvation begins with God sending his word; faith in the word opens grace', ref: 'Rom 10:17' },
+        { text: 'The gospel: Christ died for sins, was buried, rose again — all according to scriptures', ref: '1Cor 15:1-4' }
       ]},
-      { roman: 'III', text: 'The Bible Equips Us for Life', subs: [
-        { text: 'For every good work', ref: '2Tim 3:17' },
-        { text: 'For guarding our way', ref: 'Ps 119:11' }
+      { roman: 'III', text: 'The Word of God is your guidebook for life', subs: [
+        { text: 'Your Bible is the owner\'s manual for life, written by the author and designer of life', ref: 'Ps 119:105' },
+        { text: 'Do not lean on your own understanding — acknowledge God in all your ways', ref: 'Prov 3:5-6' }
+      ]},
+      { roman: 'IV', text: 'The Word of God applies to your life in four basic areas (2 Tim 3:16-17)', subs: [
+        { text: 'Doctrine — teaches what God wants you to know', ref: '2Tim 3:16-17' },
+        { text: 'Reproof — points out what is wrong', ref: '2Tim 3:16-17' },
+        { text: 'Correction — establishes what is right', ref: '2Tim 3:16-17' },
+        { text: 'Instruction in righteousness — shows how to maintain what is right', ref: '2Tim 3:16-17' }
+      ]},
+      { roman: 'V', text: 'The Word of God has many practical purposes', subs: [
+        { text: 'Equips you to serve God — gives knowledge, wisdom, understanding', ref: '1Cor 2:16' },
+        { text: 'Helps you overcome spiritual opposition', ref: 'Eph 6:10-18' },
+        { text: 'Spiritual food — seven types: milk, fruit, honey, corn, water, bread, meat', ref: 'Job 23:12' },
+        { text: 'Cleanses you to serve God', ref: 'John 15:3' }
+      ]},
+      { roman: 'VI', text: 'The Word of God is spiritually discerned — learned by revelation, not human reason', subs: [
+        { text: 'Spiritual things are spiritually discerned, not understood by the natural man', ref: '1Cor 2:9-16' }
       ]}
     ],
-    keyPoint: 'The Word of God is not optional equipment for the Christian life — it is the foundation itself. Without it, we build on sand.',
+    keyPoint: 'The word of God is the absolute authority for the entire Universe, and governs everything in it. Therefore, it is the final authority in your life as a believer.',
     questions: [
-      { q: 'What does "God-breathed" mean for the reliability of Scripture?', a: 'It means the Scriptures originate from God Himself, making them fully trustworthy and authoritative.' },
-      { q: 'In what ways is the Bible relevant to your life today?', a: 'Discussion — personal application expected.' },
-      { q: 'What are the four uses of Scripture listed in 2 Tim 3:16?', a: 'Teaching, rebuking, correcting, and training in righteousness.' }
+      { q: 'Where should I start reading?', a: 'Read the word of God daily — for the rest of your life. Determine a time and place. Develop a reading plan. Start a journal of what God shows you. Begin in the New Testament with the Gospel of John, then the Epistles. Three chapters per day gets you through the Bible in a year.' },
+      { q: 'What if I find something I don\'t understand?', a: 'Don\'t get frustrated. No one has ever mastered the Bible nor ever will. It is far more important that you live what you do know. God will not give you more understanding if you are not faithful with what you have now.' }
     ],
     discussion: [
-      'What habit could you build this week to spend more time in God\'s Word?',
-      'Is there a passage of Scripture that has shaped your life? Share it.'
+      'Many people believe the Bible is just a religious book written by men. Why is this not true?',
+      'How can the Bible be understood by people other than the clergy?',
+      'What are some of the things the Bible can do for you as a Christian?',
+      'Why is it not enough to just bring a Bible to church on Sundays?'
     ],
     memoryVerses: [
-      { ref: '2 Tim 3:16', text: 'All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness.' },
-      { ref: 'Ps 119:11', text: 'Thy word have I hid in mine heart, that I might not sin against thee.' },
-      { ref: 'Heb 4:12', text: 'For the word of God is quick, and powerful, and sharper than any twoedged sword, piercing even to the dividing asunder of soul and spirit, and of the joints and marrow, and is a discerner of the thoughts and intents of the heart.' }
+      { ref: '2Pet 1:21', text: 'For the prophecy came not in old time by the will of man: but holy men of God spake as they were moved by the Holy Ghost.' },
+      { ref: 'Ps 119:9', text: 'Wherewithal shall a young man cleanse his way? by taking heed thereto according to thy word.' },
+      { ref: '2Tim 3:16-17', text: 'All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness: That the man of God may be perfect, thoroughly furnished unto all good works.' }
     ]
   },
   {
     id: 'lesson_2a', num: '2a',
     title: 'Salvation',
-    subtitle: 'How Can I Know I Am Saved?',
-    intro: 'Salvation is the most important matter in a person\'s life. Many people carry doubt about whether they are truly saved. God\'s Word gives us a sure and certain foundation — salvation is not based on our feelings or our works, but on the finished work of Jesus Christ received through faith.',
+    subtitle: 'What Does It Mean To Be Born Again, And How Does Salvation Affect My Relationship To God?',
+    intro: 'Receiving Jesus Christ as your personal Saviour is the most important decision you will ever make in life. An eternity with God in heaven as opposed to an eternity in hell apart from him is of infinitely more value than anything during this life. It is a simple decision of childlike faith, yet carries profound significance far beyond our natural understanding.',
     outline: [
-      { roman: 'I', text: 'What We Were Without Christ', subs: [
-        { text: 'All have sinned and fall short', ref: 'Rom 3:23' },
-        { text: 'The wages of sin is death', ref: 'Rom 6:23' }
+      { roman: 'I', text: 'All people on earth live in one of two spiritual families', subs: [
+        { text: 'Born into this world as a sinner without any relationship with God', ref: 'Rom 3:10-12' },
+        { text: 'Descended from Adam — born in the image of a fallen sinner', ref: 'Gen 5:3' },
+        { text: 'Inherited sinful nature — your responsibility to do something about it', ref: 'Rom 5:12' },
+        { text: 'As a result of sin, sentenced to die', ref: 'Rom 6:23' },
+        { text: 'Spiritual birth puts you into God\'s family', ref: 'John 3:3-7' },
+        { text: 'New birth described: as many as received him, to them gave he power to become sons of God', ref: 'John 1:12-13' },
+        { text: 'Inherited God\'s divine nature — you NOW possess eternal life', ref: 'John 6:47' }
       ]},
-      { roman: 'II', text: 'What God Did Through Christ', subs: [
-        { text: 'God so loved the world', ref: 'John 3:16' },
-        { text: 'Christ died for us while we were sinners', ref: 'Rom 5:8' }
+      { roman: 'II', text: 'Being in God\'s family separates you from the devil\'s family', subs: [
+        { text: 'Your body is now the temple of the Holy Spirit — God\'s Spirit lives inside you', ref: '1Cor 6:19-20' },
+        { text: 'New life perfectly summarized: if any man be in Christ, he is a new creature', ref: '2Cor 5:17-18' },
+        { text: 'The Bible commands you to maintain a difference between yourself and the lost', ref: '2Cor 6:14-18' }
       ]},
-      { roman: 'III', text: 'How We Receive Salvation', subs: [
-        { text: 'Confess and believe', ref: 'Rom 10:9-10' },
-        { text: 'By grace through faith — not works', ref: 'Eph 2:8-9' }
+      { roman: 'III', text: 'Being in God\'s family has given you a new relationship with God', subs: [
+        { text: 'God is your Father, and you are his child', ref: '1John 2:1' },
+        { text: 'A good father helps his child', ref: 'Ps 46:1' },
+        { text: 'A good father feeds and guides his child', ref: 'Matt 4:4' },
+        { text: 'A good father has a plan and provides for his child', ref: 'Rom 8:28-30' },
+        { text: 'A good father disciplines his child', ref: 'Heb 12:5-11' },
+        { text: 'A good father loves and cares for his child', ref: '1Pet 5:7' }
       ]}
     ],
-    keyPoint: 'Salvation is a gift from God, received by faith. It cannot be earned, lost, or revoked by human effort. If you have believed in Christ, you are saved.',
+    keyPoint: 'A good father will NEVER do anything to purposely hurt his child. He will only do those things which will help his child grow and mature. Your Heavenly Father operates in the same way, only his ways are perfect. Unlike earthly fathers who often err, God never makes a mistake in his dealings with his children.',
     questions: [
-      { q: 'According to Romans 10:9, what two things are required for salvation?', a: 'Confessing with your mouth that Jesus is Lord, and believing in your heart that God raised Him from the dead.' },
-      { q: 'Why does Ephesians 2:8-9 say salvation cannot be from works?', a: 'So that no man can boast — salvation is entirely a gift from God to prevent pride.' },
-      { q: 'Can you share when and how you received Christ?', a: 'Personal testimony — discussion.' }
+      { q: 'Will I sin after I am saved?', a: 'Yes. Even though you have received a new nature, your old nature remains and will still draw you into sin as long as you are alive.' },
+      { q: 'How does my sin affect my relationship with my Heavenly Father?', a: 'God will not kick you out of his family, but he will discipline you as his child. The nature of your relationship will not change, but the quality of it will.' },
+      { q: 'What should I do when I sin?', a: 'Confess it to God, and trust the blood of Jesus Christ to cleanse you. Repent, and ask God for the power to help you stop committing that sin.' }
     ],
     discussion: [
-      'How would you explain the gospel to someone who had never heard it?',
-      'What doubts have you had about your salvation, and what Scripture helped you?'
+      'Why is it that we are NOT all God\'s children and part of one large family of God?',
+      'Some people claim they are good enough to earn salvation. Why is this not true?',
+      'When a person sins after he is born again, how does it affect his relationship with God?',
+      'How would you answer someone who says there are many ways to get to heaven?'
     ],
     memoryVerses: [
-      { ref: 'John 3:16', text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.' },
-      { ref: 'Rom 10:9', text: 'That if thou shalt confess with thy mouth the Lord Jesus, and shalt believe in thine heart that God hath raised him from the dead, thou shalt be saved.' },
-      { ref: 'Eph 2:8-9', text: 'For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast.' }
+      { ref: 'Rom 5:12', text: 'Wherefore, as by one man sin entered into the world, and death by sin; and so death passed upon all men, for that all have sinned.' },
+      { ref: 'John 3:3', text: 'Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.' },
+      { ref: '1John 1:9', text: 'If we confess our sins, he is faithful and just to forgive us our sins, and to cleanse us from all unrighteousness.' }
     ]
   },
   {
     id: 'lesson_2b', num: '2b',
     title: 'Works of Faith',
-    subtitle: 'How Does My Faith Show Up in Daily Life?',
-    intro: 'Salvation is by faith alone — but genuine saving faith does not remain alone. It produces fruit. The works we do are not the root of our salvation but the fruit of it. A disciple who is truly saved will show that salvation through the way they live, love, and serve.',
+    subtitle: 'What Am I Doing with My Life as a Christian? And Why?',
+    intro: 'The association between faith and works is one that has been misunderstood, misinterpreted and inappropriately taught for generations. While the Old Testament laws called for sacrifice and repentance, what we will see in this lesson is not just the works of the believer but the difference between self-righteous works and works that are a result of salvation.',
     outline: [
-      { roman: 'I', text: 'Faith Without Works Is Dead', subs: [
-        { text: 'Faith proved by what we do', ref: 'Jas 2:17-18' },
-        { text: 'Abraham\'s faith was completed by his works', ref: 'Jas 2:22' }
+      { roman: 'I', text: 'When you got saved, you were given a new heart and received the Holy Spirit', subs: [
+        { text: 'A new heart given at salvation — changes the way you feel about things of the world', ref: 'Ezek 36:26' },
+        { text: 'Spiritual fruit is evidence of the presence and power of the Holy Spirit', ref: 'Gal 5:22-23' }
       ]},
-      { roman: 'II', text: 'We Were Created for Good Works', subs: [
-        { text: 'Created in Christ Jesus for good works', ref: 'Eph 2:10' },
-        { text: 'Zealous for good works', ref: 'Titus 2:14' }
+      { roman: 'II', text: 'Salvation cannot be attained or maintained by works, traditions, or sacraments', subs: [
+        { text: 'No standard of life can earn or maintain salvation', ref: 'Eph 2:8-9' },
+        { text: 'It is not enough to merely believe in God — faith is more than intellectual belief', ref: 'Jas 2:19' }
       ]},
-      { roman: 'III', text: 'Fruit Is the Evidence of Life', subs: [
-        { text: 'You will know them by their fruits', ref: 'Matt 7:20' },
-        { text: 'The fruit of the Spirit', ref: 'Gal 5:22-23' }
+      { roman: 'III', text: 'Faith vs. belief — putting faith in Jesus compels you to trust him more', subs: [
+        { text: 'Abraham\'s example: faith completed by works through trust in trials', ref: 'Jas 2:20-23' },
+        { text: 'Faith grows through trusting God through obstacles, doubts, and tribulations', ref: 'Ps 23:4' }
+      ]},
+      { roman: 'IV', text: 'What faith is NOT', subs: [
+        { text: 'Faith is not carelessness — wisdom considers all things', ref: 'Prov 9:10' },
+        { text: 'Following Christ is a commitment that must first be seriously considered', ref: 'Luke 14:25-33' },
+        { text: 'Faith does not give you a license to sin', ref: '1John 1:6' }
+      ]},
+      { roman: 'V', text: 'How and why faith works', subs: [
+        { text: 'True faith in Christ\'s sovereignty overcomes the burdens of this life', ref: '1John 5:4' },
+        { text: 'Trials allowed by God purify your faith to result in the glorification of God', ref: '1Pet 1:6-7' },
+        { text: 'Genuine faith is the only way to truly resist Satan', ref: '1Pet 5:9-10' }
+      ]},
+      { roman: 'VI', text: 'Why works? — We are saved for the purpose of God\'s glory', subs: [
+        { text: 'We are saved not just for salvation but for the purpose of God\'s glory', ref: '2Tim 1:9' }
+      ]},
+      { roman: 'VII', text: 'Judgment of works — not earned by works, but received according to works', subs: [
+        { text: 'Eternal life is a free gift, but rendered according to works as corroborating evidence of faith', ref: 'Rom 2:6-8' }
       ]}
     ],
-    keyPoint: 'Good works do not save us, but they demonstrate and strengthen our salvation. A tree is known by its fruit — what fruit is visible in your life?',
+    keyPoint: 'Good works do not save us, but they demonstrate and confirm our salvation. Works serve as corroborating evidence that we did indeed put our trust in Christ. Therefore when we are welcomed into the kingdom it will not be earned by works but it will be according to works.',
     questions: [
-      { q: 'What is the relationship between faith and works according to James 2?', a: 'Works are the outward evidence of genuine inward faith. Faith without works is dead — it is not saving faith.' },
-      { q: 'According to Ephesians 2:10, what were we created to do?', a: 'Walk in good works that God prepared beforehand for us.' },
-      { q: 'What is one "good work" God has placed in front of you this week?', a: 'Personal application — discussion.' }
+      { q: 'Why can\'t we count on our good deeds to put us in right standing with God?', a: 'Salvation is by grace through faith — no standard of human works can earn or maintain it. Counting on good works renders the crucifixion of Christ meaningless.' },
+      { q: 'Since we are saved by grace, does that make it ok to continue in sin?', a: 'Absolutely not. Faith without works is dead. Genuine saving faith produces fruit — a changed life is the evidence of true salvation.' },
+      { q: 'How can you identify a born again believer?', a: 'By their fruit. The Holy Spirit produces spiritual fruit as evidence of his presence and power in a life.' }
     ],
     discussion: [
-      'How do you balance knowing that works don\'t save you, while also taking good works seriously?',
-      'What is the fruit of the Spirit (Gal 5:22-23), and which one do you need most right now?'
+      'Does faith make it ok to just fly by the seat of your pants?',
+      'How does a believer prepare for decision making?',
+      'When you experience trials in life, does that mean God has abandoned you?',
+      'What happens when you trust God through the trials in life?',
+      'What is the main purpose for your works as a believer?',
+      'What is the most important element to consider of your deeds as a Christian?',
+      'As a Christian, will we be judged? On what terms?'
     ],
     memoryVerses: [
-      { ref: 'Jas 2:17', text: 'Even so faith, if it hath not works, is dead, being alone.' },
-      { ref: 'Eph 2:10', text: 'For we are his workmanship, created in Christ Jesus unto good works, which God hath before ordained that we should walk in them.' },
-      { ref: 'Titus 2:14', text: 'Who gave himself for us, that he might redeem us from all iniquity, and purify unto himself a peculiar people, zealous of good works.' }
+      { ref: 'Jas 2:17', text: 'Even so faith, if it hath not works, is dead, being alone.' }
+    ]
+  },
+  {
+    id: 'lesson_3', num: '3',
+    title: 'Eternal Security',
+    subtitle: 'Now That I Am Saved, Can I Ever Lose My Salvation?',
+    intro: 'In the previous lesson, you learned that there are only two spiritual families in the world — God\'s and Satan\'s. You learned that you were born into the devil\'s family at the time of your physical birth, and born again into God\'s family when you received Jesus Christ as your Saviour. In this lesson, we will discuss the eternal nature of your relationship in God\'s family.',
+    outline: [
+      { roman: 'I', text: 'The Bible declares that you cannot lose your salvation', subs: [
+        { text: 'Jesus promised he would never cast out anyone who comes to him', ref: 'John 6:37' },
+        { text: 'Jesus lives in you and has promised to keep you secure', ref: '2Tim 1:12' },
+        { text: 'God promised eternal life, and God cannot lie', ref: 'Titus 1:2' },
+        { text: 'No man can take your salvation from you', ref: 'John 10:27-29' },
+        { text: 'Salvation is a free gift by grace — no man can lose what no man can earn', ref: 'Eph 2:8-9' },
+        { text: 'NOTHING can separate you from the love of God in Christ Jesus', ref: 'Rom 8:38-39' }
+      ]},
+      { roman: 'II', text: 'The Bible declares WHY your salvation is that secure', subs: [
+        { text: 'Your relationship with God is now as a father and son by birth', ref: 'John 1:12-13' },
+        { text: 'A record was made in heaven — your spiritual birth certificate', ref: '1John 5:11-13' },
+        { text: 'Your spiritual birth is sealed by the Holy Spirit of God', ref: 'Eph 1:13-14' }
+      ]}
+    ],
+    keyPoint: 'Birth is irreversible. You will always be your biological father\'s child because you were born of his seed. The same is true of your Heavenly Father. You can never be unborn. Your birth is fixed forever — both physically and spiritually — and even God himself cannot change that fact!',
+    questions: [
+      { q: 'What if I am still unsure of my salvation?', a: 'If you can point to a specific time you acknowledged you were a sinner and called upon the name of the Lord Jesus Christ to save you, you are saved. Write that time down as a constant reminder. If you cannot, consider whether you have truly been born again — settle the issue today.' },
+      { q: 'What if later on I don\'t feel saved?', a: 'Your salvation is not based on feelings, but on the truth of the word of God. Read 1 John, which was written specifically that you may KNOW you have eternal life. God knows you are saved even when you have doubts, and he wants you to know it more than you want to know it.' }
+    ],
+    discussion: [
+      'Why is it not possible or necessary for a Christian to work to keep his salvation?',
+      'When a person sins after he is born again, how does it affect his relationship with God?',
+      'Are there any other things you can think of that might cause a person to lose salvation?',
+      'What if a Christian chooses to deny Jesus and turn his back on God?'
+    ],
+    memoryVerses: [
+      { ref: '1John 2:25', text: 'And this is the promise that he hath promised us, even eternal life.' },
+      { ref: '1John 5:13', text: 'These things have I written unto you that believe on the name of the Son of God; that ye may know that ye have eternal life, and that ye may believe on the name of the Son of God.' },
+      { ref: 'Eph 2:8-9', text: 'For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast.' }
+    ]
+  },
+  {
+    id: 'lesson_4a', num: '4a',
+    title: 'Baptism and The Lord\'s Supper',
+    subtitle: 'As a Christian, What is the Importance of Baptism and the Lord\'s Supper in My Life?',
+    intro: 'The New Testament establishes two ordinances: Baptism and the Lord\'s Supper. The ordinances of the local church commemorate the death, burial and resurrection of the Lord Jesus Christ. Ordinances are not sacraments. There is no special grace received in an ordinance; however, Jesus left us these memorials to keep before us a reminder of his sacrifice on the cross for our sins, and our identification with him.',
+    outline: [
+      { roman: 'I', text: 'Baptism is NOT essential for salvation', subs: [
+        { text: 'Salvation is by grace through faith in the sacrifice of Jesus Christ', ref: 'Eph 2:8-9' },
+        { text: 'The Ethiopian eunuch confessed faith BEFORE baptism', ref: 'Acts 8:26-39' },
+        { text: 'Bible examples: all baptisms occurred AFTER salvation', ref: 'Acts 8:12' }
+      ]},
+      { roman: 'II', text: 'Baptism IS essential for your spiritual growth', subs: [
+        { text: 'Jesus himself submitted to baptism before his ministry began', ref: 'Matt 3:13-17' },
+        { text: 'Growth will be hindered if you will not obey — Great Commission makes baptism integral', ref: 'Matt 28:19-20' }
+      ]},
+      { roman: 'III', text: 'Baptism has a clear purpose in your life', subs: [
+        { text: 'Public testimony of your faith in Jesus Christ', ref: 'Rom 1:16' },
+        { text: 'Pictures the death, burial and resurrection of Jesus Christ', ref: 'Rom 6:1-7' }
+      ]},
+      { roman: 'IV', text: 'The Biblical method of baptism is complete immersion', subs: [
+        { text: 'Every Bible example was by immersion: Jesus came up out of the water', ref: 'Matt 3:16' },
+        { text: 'Associated with being buried and raised — immersion pictures death, burial, resurrection', ref: 'Col 2:12' }
+      ]},
+      { roman: 'V', text: 'As a believer, you are to participate in the Lord\'s Supper', subs: [
+        { text: 'Jesus instituted it saying, this do in remembrance of me', ref: 'Luke 22:14-20' },
+        { text: 'Paul confirms observance for the New Testament church', ref: '1Cor 11:20-34' }
+      ]},
+      { roman: 'VI', text: 'The Lord\'s Supper is a picture of the suffering of Jesus Christ', subs: [
+        { text: 'The bread — Jesus\' body broken for your sins', ref: '1Cor 11:24' },
+        { text: 'The cup — blood of Jesus Christ shed for your sins', ref: 'Matt 26:26-29' }
+      ]},
+      { roman: 'VII', text: 'The Lord\'s Supper is important — three specific views', subs: [
+        { text: 'Past tense — what Jesus did to pay for your sins', ref: '1Cor 11:26' },
+        { text: 'Present tense — judge your own sins, confess, stay clean', ref: '1Cor 11:27-32' },
+        { text: 'Future tense — anticipate his second coming', ref: '1Cor 11:26' }
+      ]},
+      { roman: 'VIII', text: 'The elements are a symbol, not his literal body and blood', subs: [
+        { text: 'Literal body and blood would violate the law of God', ref: 'Gen 9:4' },
+        { text: 'Unleavened bread and unfermented grape juice represent his purity and his blood', ref: '1Cor 5:6-9' }
+      ]}
+    ],
+    keyPoint: '<strong>Baptism:</strong> Baptism is the first act of obedience for a believer. Before you can be taught to follow Jesus Christ, you must be willing to submit to the first thing God requires of you. Any believer can be baptized — it only requires obedience.<br><br><strong>Lord\'s Supper:</strong> The most important events in history are the death, burial and resurrection of Jesus Christ, and his return to earth. The Lord\'s Supper is to be observed as a memorial by the church of the sacrifice of Jesus Christ for your sins, and to remind you he will come again soon.',
+    questions: [
+      { q: 'Where should I be baptized?', a: 'Since baptism is a public profession of faith and an ordinance of the local church, most baptisms are done publicly at the church. But any public body of water large enough for immersion will suffice. The place matters less than the public testimony.' },
+      { q: 'How often should we partake of the Lord\'s Supper?', a: 'As often as you will. Each church decides frequency. Frequent enough to maintain a proper reminder of Christ\'s sacrifice, but not so often it becomes a ritual and loses its meaning.' },
+      { q: 'Who is qualified to perform baptisms or serve the Lord\'s Supper?', a: 'As an ordinance of the local church, it is the responsibility of the pastors and/or deacons.' }
+    ],
+    discussion: [
+      'Why don\'t people have to be baptized in order to be saved?',
+      'Why isn\'t baptism by sprinkling just as valid as immersion?',
+      'Why is it not proper to baptize babies into God\'s family or the church?',
+      'What are the personal benefits of participating in a regular observance of the Lord\'s Supper?',
+      'Why is it not required to observe the Lord\'s Supper at every church service?'
+    ],
+    memoryVerses: [
+      { ref: 'Rom 6:4', text: 'Therefore we are buried with him by baptism into death: that like as Christ was raised up from the dead by the glory of the Father, even so we also should walk in newness of life.' },
+      { ref: 'Acts 8:37', text: 'And Philip said, If thou believest with all thine heart, thou mayest. And he answered and said, I believe that Jesus Christ is the Son of God.' },
+      { ref: '1Cor 11:26', text: 'For as often as ye eat this bread, and drink this cup, ye do shew the Lord\'s death till he come.' }
+    ]
+  },
+  {
+    id: 'lesson_4b', num: '4b',
+    title: 'The Local Church',
+    subtitle: 'What Does the Local Church Provide Me That Nothing Else Can?',
+    intro: 'God has established three major institutions on earth: the family, civil government, and the local church. All three provide something that no other organization is able to give you. The local church has been commissioned by God to carry out his purposes in reaching the lost and perfecting the saved. The local church is a spiritual authority in your life, and God\'s plan for your life can only be fulfilled when connected to a local church.',
+    outline: [
+      { roman: 'I', text: 'People have many misconceptions about a church', subs: [
+        { text: 'A church is NOT a building — it is a body of people', ref: 'Acts 14:27' },
+        { text: 'A church is NOT a denominational group — NT churches were individual groups of believers', ref: 'Rom 16:5' },
+        { text: 'Many substitutes exist (TV church, parachurch) — good things, but they cannot replace a local church', ref: '1Cor 3:9' }
+      ]},
+      { roman: 'II', text: 'Defining a local church', subs: [
+        { text: 'An assembly of saved people called by God to serve him together in a specific location', ref: 'Col 1:1-2' },
+        { text: 'Illustrated in the Bible as a flock, a building, and a bride', ref: 'Acts 20:28' }
+      ]},
+      { roman: 'III', text: 'A local church is designed to function in specific ways', subs: [
+        { text: 'The first local church in Jerusalem had eight purposes: teaching, fellowship, prayer, ordinances, testifying, mutual assistance, outreach, glorifying God', ref: 'Acts 2:41-47' },
+        { text: 'Church body likened to a human body — each member different function, each contribution vital', ref: '1Cor 12:12-27' },
+        { text: 'Two offices: pastors and deacons — led from within its own membership', ref: '1Tim 3:1-7' }
+      ]},
+      { roman: 'IV', text: 'Your role in the local church is vital — three stages', subs: [
+        { text: 'Be perfected as a saint — observe and learn; submit to teaching and leadership', ref: 'Heb 13:7' },
+        { text: 'Do the work of the ministry — participate in established ministries', ref: 'Matt 4:19' },
+        { text: 'Edify the body of Christ — minister to others as others have ministered to you', ref: '2Tim 2:2' }
+      ]}
+    ],
+    keyPoint: 'The local church is the only institution ordained by God that can fulfill the Great Commission. The design of the local church is to educate, equip, and edify the saints for the work of the ministry. The local church is established with spiritual leadership and exists to prepare each believer to live for God, and to fulfill his individual role in the Great Commission.',
+    questions: [
+      { q: 'If God moves me to another location, how do I find a good local church?', a: 'Pray — ask God to direct you. Look at spiritual qualities, not external matters like location, building, or music style. A good church: the gospel is the main emphasis and people are being saved; the Bible is taught as the pure word of God; members are encouraged to study the Bible; people genuinely care and minister to needs; the church supports and sends out missionaries.' }
+    ],
+    discussion: [
+      'If the church is likened to a flock, what is the role of the shepherd?',
+      'What are the main ways a healthy church body operates?'
+    ],
+    memoryVerses: [
+      { ref: 'Eph 4:11-12', text: 'And he gave some, apostles; and some, prophets; and some, evangelists; and some, pastors and teachers; For the perfecting of the saints, for the work of the ministry, for the edifying of the body of Christ.' },
+      { ref: '1Cor 12:27', text: 'Now ye are the body of Christ, and members in particular.' }
+      // TODO: confirm verse 3 with Pastor
+    ]
+  },
+  {
+    id: 'lesson_5', num: '5',
+    title: 'The Holy Spirit',
+    subtitle: 'What is the Role and Function of the Holy Spirit in My Life?',
+    intro: 'The day you received the Lord Jesus Christ as your personal Saviour, the Holy Spirit of God took up permanent residency inside your body. The Holy Spirit is God\'s personal presence in your life, and desires to produce a godly change as you learn to walk with him. This third person of the trinity has often been misunderstood and ignored in Christianity.',
+    outline: [
+      { roman: 'I', text: 'The Holy Spirit has a specific residence on earth today', subs: [
+        { text: 'You received the Spirit by the hearing of faith — at the same moment as trusting Christ', ref: 'Gal 3:2' },
+        { text: 'Your body is the temple of the Holy Spirit', ref: '1Cor 6:19-20' },
+        { text: 'God gives his Spirit to dwell in you', ref: 'Gal 4:6' }
+      ]},
+      { roman: 'II', text: 'The Holy Spirit has specific functions in your life', subs: [
+        { text: 'Made you a new creature in Christ and sealed your soul so it is secure', ref: '2Cor 5:17' },
+        { text: 'Convicts you of sin', ref: 'John 16:8-9' },
+        { text: 'Teaches you the Bible and gives direction in decision making', ref: 'John 16:13-15' },
+        { text: 'Intercedes in prayer for you', ref: 'Rom 8:26-27' },
+        { text: 'Comforts you in time of need and empowers you to serve God', ref: 'John 14:15-18' }
+      ]},
+      { roman: 'III', text: 'The Holy Spirit produces specific results — the fruit of the Spirit', subs: [
+        { text: 'All nine qualities produced together by close relationship with the Spirit', ref: 'Gal 5:22-23' },
+        { text: 'Inward: love, joy, peace — transform your personal life', ref: 'Gal 5:22-23' },
+        { text: 'Outward: longsuffering, gentleness, goodness — transform relationships with others', ref: 'Gal 5:22-23' },
+        { text: 'Upward: faith, meekness, temperance — transform your relationship with God', ref: 'Gal 5:22-23' }
+      ]},
+      { roman: 'IV', text: 'The Holy Spirit gives you a new nature in conflict with your old nature', subs: [
+        { text: 'Old nature (flesh) — physical, sinful, did not change at salvation', ref: 'John 3:6' },
+        { text: 'New nature — spiritual, perfect, renewed in God\'s image', ref: 'Col 3:9-10' },
+        { text: 'Daily choice to follow flesh or follow the Holy Spirit', ref: 'Rom 6:16-19' },
+        { text: 'Following flesh brings consequences; following Holy Spirit brings blessings', ref: 'Gal 6:7-9' }
+      ]}
+    ],
+    keyPoint: 'The Biblical evidence of a walk with God through his Holy Spirit is a changed life. The Holy Spirit transforms your life so others can see your faith in Jesus Christ.',
+    questions: [
+      { q: 'What does it mean to be filled with the Spirit?', a: 'The filling of the Spirit is the control of the Holy Spirit in your life. A person who saturates his mind with the word of God will be filled with the Spirit. Being filled does NOT mean getting more of the Holy Spirit — he controls more of you. It is a lifelong process of spiritual growth.' },
+      { q: 'How do I know when the Holy Spirit is convicting me?', a: 'Conviction (from God) and guilt (from Satan) feel the same but have different results. Conviction: gentle leading from God pointing out something wrong so you can make it right — leads you TO God, produces peace. Guilt: accusations from Satan that you are unworthy — leads you FROM God, produces depression and bitterness.' }
+    ],
+    discussion: [
+      'Why do you think there is so much confusion about the Holy Spirit today?',
+      'How does the Holy Spirit fill the life of a believer in Jesus Christ?',
+      'Briefly explain the conflict between your old nature and your new nature.',
+      'What is the difference between conviction and guilt?'
+    ],
+    memoryVerses: [
+      { ref: '1Cor 6:19-20', text: 'What? know ye not that your body is the temple of the Holy Ghost which is in you, which ye have of God, and ye are not your own? For ye are bought with a price: therefore glorify God in your body, and in your spirit, which are God\'s.' },
+      { ref: 'Gal 5:22-23', text: 'But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith, meekness, temperance: against such there is no law.' },
+      { ref: 'Gal 5:16', text: 'This I say then, Walk in the Spirit, and ye shall not fulfill the lust of the flesh.' }
+    ]
+  },
+  {
+    id: 'lesson_6', num: '6',
+    title: 'Prayer',
+    subtitle: 'Why Does God Want Me To Communicate With Him?',
+    intro: 'There are two basic elements of spiritual survival for our new man in Christ: the Word of God and prayer. When you read the Bible, God speaks to you, and when you pray, you speak to God. Therefore, a Christian\'s spiritual growth is dependent upon a consistent prayer life and personal time in the word of God. Prayer gives you the ability to communicate directly with God.',
+    outline: [
+      { roman: 'I', text: 'Prayer produces a change in YOU first and foremost', subs: [
+        { text: 'Prayer gives you peace of heart and mind', ref: 'Phil 4:6-7' },
+        { text: 'Prayer may not change a situation, but a proper prayer life will ALWAYS produce a change in you', ref: '2Cor 12:7-10' },
+        { text: 'Prayer conforms you to the will of God — it does not conform God to yours', ref: 'Matt 26:36-42' }
+      ]},
+      { roman: 'II', text: 'Prayer is a priority — it must be a daily lifestyle, not an occasional event', subs: [
+        { text: 'Recognize that you have needs only God can meet', ref: 'Rev 3:16-17' },
+        { text: 'Consistent prayer attitude — first response in difficult times AND good times', ref: 'Luke 18:1' },
+        { text: 'Bible characters demonstrate consistent prayer: Nehemiah, Daniel, David', ref: 'Neh 1:4' }
+      ]},
+      { roman: 'III', text: 'Bible principles governing prayer are more important than methods of prayer', subs: [
+        { text: 'Direct access to God personally and at all times — no need for another person', ref: '1Tim 2:5' },
+        { text: 'Talk to the Lord as a friend', ref: 'John 15:13-14' },
+        { text: 'Don\'t repeat the same words over and over', ref: 'Matt 6:7' },
+        { text: 'Things that hinder prayer: unconfessed sin, unforgiving spirit, wrong motives', ref: 'Ps 66:18' },
+        { text: 'Be confident in prayer — God wants to answer according to his will', ref: '1John 5:14-15' }
+      ]},
+      { roman: 'IV', text: 'The Bible classifies four types of prayer', subs: [
+        { text: 'Supplications — urgent requests, seeking God\'s plan in specific matters', ref: '2Cor 12:7-10' },
+        { text: 'Prayers — regular communication with God, based in his word', ref: 'Ps 145:18-19' },
+        { text: 'Intercessions — prayers for others; keeps your motives pure', ref: 'Heb 13:18' },
+        { text: 'Giving of thanks — a proper prayer begins with a thankful heart', ref: 'Ps 100:4' }
+      ]}
+    ],
+    keyPoint: 'Prayer draws you close to God so he can prove his sufficiency for every need.',
+    questions: [
+      { q: 'Does God answer all my prayers?', a: 'Yes, but not always the way you want or at the time you expect. God is your Heavenly Father. Children should not be granted every request. There will be times when the best answer is NO or NOT YET. Simply trust God to have your best interests at heart.' },
+      { q: 'If prayer is personal, should I always pray alone?', a: 'Not always. Praying with others is as important as praying for others. Families should pray together, and church families as well. Praying together produces unity of heart through the Holy Spirit.' }
+    ],
+    discussion: [
+      'Why is it not right to pray to idols, saints, or others?',
+      'If I pray long or hard enough about something, how does that affect God\'s answer?',
+      'Why aren\'t prayers written by religious leaders better than mine?',
+      'Why is prayer not always at a set time or in a set format?'
+    ],
+    memoryVerses: [
+      { ref: '1Tim 2:5', text: 'For there is one God, and one mediator between God and men, the man Christ Jesus.' },
+      { ref: 'Ps 66:18', text: 'If I regard iniquity in my heart, the Lord will not hear me.' },
+      { ref: '1Thess 5:17-18', text: 'Pray without ceasing. In everything give thanks: for this is the will of God in Christ Jesus concerning you.' }
+    ]
+  },
+  {
+    id: 'lesson_7', num: '7',
+    title: 'The Will of God',
+    subtitle: 'How Can I Find Out What God Wants Me To Do?',
+    intro: 'A successful person is one who finds out what God wants him to accomplish in life, then does it. The true measure of success is not social status, bank accounts, influence, or fame. It is simply doing what God wants. When the Bible and prayer function properly, God will use this open communication to direct you in the details of your life.',
+    outline: [
+      { roman: 'I', text: 'There is a difference between the will of God and the plan of God for your life', subs: [
+        { text: 'The will of God is fixed for every believer — same for everyone, involves your relationship with God', ref: '1Thess 4:3-7' },
+        { text: 'The plan of God is variable for each individual — includes marriage, location, ministry', ref: 'Rom 8:28-30' }
+      ]},
+      { roman: 'II', text: 'The will of God is clearly revealed in the Bible', subs: [
+        { text: 'God\'s will: everyone to be saved — share the gospel with the lost', ref: '2Pet 3:9' },
+        { text: 'God\'s will: live a holy life pleasing to God', ref: '1Thess 4:3-7' },
+        { text: 'God\'s will: give thanks in everything', ref: '1Thess 5:18' },
+        { text: 'God\'s will: NOT be conformed to this world — be transformed by renewing of your mind', ref: 'Rom 12:1-2' },
+        { text: 'Summary: Be conformed to the image of Jesus Christ — grow to be more like him every day', ref: 'Rom 8:29-30' }
+      ]},
+      { roman: 'III', text: 'God\'s plan for your life will be revealed as your life in Christ unfolds', subs: [
+        { text: 'The Holy Spirit indwells you to direct you personally', ref: 'Gal 5:25' },
+        { text: 'The word of God is your written authority from God', ref: '1Thess 2:13' },
+        { text: 'The local church equips you for life and ministry — pastors and mature members give wise counsel', ref: 'Eph 4:11-12' },
+        { text: 'If fulfilling the will of God daily, trust him to direct you in his plan', ref: 'Ps 37:23' }
+      ]}
+    ],
+    keyPoint: 'You cannot find God\'s plan for your life until you submit to his will. If you violate the clear commandments of God\'s will, the direction of his plan stops in your life. Keep your main focus on what God expects from you now. Be what God wants you to be, and he will show you what to do.',
+    questions: [
+      { q: 'Why doesn\'t God reveal all the details of his plan for me now?', a: 'It would overwhelm you. You may not yet be the person God wants you to be. God wants you to be patient as he works spiritually. Your interests, talents, and desires grow and change — physically and spiritually. Trust the process.' },
+      { q: 'Why does God allow seemingly bad things to happen in my life?', a: 'Two general reasons: (1) God wants you to grow spiritually through trials — every trial has a larger purpose impossible apart from the adversity. (2) God allows you to make your own choices, and they bring consequences — he gave you a free will. Remember: God is your Heavenly Father and never makes a mistake.' }
+    ],
+    discussion: [
+      'What is the difference between the will of God and the plan of God?',
+      'Explain how God directs you by the three resources he has provided.',
+      'Why is obedience and submission concerning God\'s will so important for finding God\'s plan?',
+      'What are some other reasons a Christian may have problems in his life aside from sin?'
+    ],
+    memoryVerses: [
+      { ref: 'Rom 12:1-2', text: 'I beseech you therefore, brethren, by the mercies of God, that ye present your bodies a living sacrifice, holy, acceptable unto God, which is your reasonable service. And be not conformed to this world: but be ye transformed by the renewing of your mind, that ye may prove what is that good, and acceptable, and perfect will of God.' },
+      { ref: '1Pet 3:17', text: 'For it is better, if the will of God be so, that ye suffer for well-doing, than for evil-doing.' },
+      { ref: '2Pet 3:9', text: 'The Lord is not slack concerning his promise, as some men count slackness; but is longsuffering to us-ward, not willing that any should perish, but that all should come to repentance.' }
+    ]
+  },
+  {
+    id: 'lesson_8', num: '8',
+    title: 'Other Christians',
+    subtitle: 'How Do I Relate to Other People Who Are Saved?',
+    intro: 'When you got saved, you moved from the devil\'s family to God\'s family. Spiritually, you now have a new family with many brothers and sisters in Jesus Christ. We saw how the church is likened to a body in the previous lesson, and in this lesson, we will study the special relationship which you now have with your spiritual family.',
+    outline: [
+      { roman: 'I', text: 'You are related to other Christians by your new birth', subs: [
+        { text: 'New birth gave you many brothers and sisters in Christ', ref: 'John 1:12-13' },
+        { text: 'Not all people are children of God — those who have not received Christ are not spiritually related to you', ref: 'Rom 9:8' }
+      ]},
+      { roman: 'II', text: 'Family relationships carry a unique responsibility — priority within the body of Christ', subs: [
+        { text: 'Spiritual responsibilities: pray for them, labor for the gospel, help restore, share burdens', ref: '1Thess 1:2-3' },
+        { text: 'Physical responsibilities: be sensitive to their needs, minister materially, serve in humility', ref: '1John 3:16-18' },
+        { text: 'Personal responsibilities: encourage, love Biblically, be patient and forgiving', ref: '1Thess 5:11-14' }
+      ]},
+      { roman: 'III', text: 'Biblical fellowship is the essence of your relationship to other Christians', subs: [
+        { text: 'Fellowship — common bond that unites all believers in the person of Jesus Christ', ref: 'Phil 1:3-6' },
+        { text: 'Fellowship is based on Biblical character: humility, honesty, love, hospitality', ref: 'Phil 2:3-8' }
+      ]},
+      { roman: 'IV', text: 'How to deal with offenses among Christians', subs: [
+        { text: 'Seek to reconcile — do not ignore and allow Satan an advantage', ref: '2Cor 2:11' },
+        { text: 'Take the matter directly, personally, and privately to the person who offended you', ref: 'Matt 18:15' },
+        { text: 'If unresolved privately, take a mature believer with you to mediate', ref: 'Matt 18:16' },
+        { text: 'If still unresolved, take to your pastor — submit to Biblical authority of the local church', ref: 'Matt 18:17' },
+        { text: 'Do not harbor bitterness — it hurts you most', ref: 'Heb 12:14-15' }
+      ]}
+    ],
+    keyPoint: 'True Biblical fellowship is ONLY in the person of Jesus Christ. It is not built around physical matters such as social status and common interests. You must learn to have personal fellowship with Jesus Christ before any Christian relationships can be proper.',
+    questions: [
+      { q: 'What should I do if I think I may have offended another Christian?', a: 'Go to them. They may not come to you for a number of reasons. Ask God to give you the strength of character necessary to resolve the conflict. The same conflict resolution principles apply. Until you handle a known offense, your spiritual growth and fellowship will be hindered.' }
+    ],
+    discussion: [
+      'What is the extent of our association with Christians who do not believe exactly as we do?',
+      'Why is true Biblical fellowship not always centered around a meal or an activity?',
+      'If you are offended by a church member, what is the first thing you should do about it?',
+      'Why should you NOT ignore a conflict long enough, hoping it will just go away?'
+    ],
+    memoryVerses: []
+  },
+  {
+    id: 'lesson_9', num: '9',
+    title: 'Giving',
+    subtitle: 'How Am I Supposed To Give To God?',
+    intro: 'Giving is not a controversial subject according to the Bible, but today some Christians try to make it such. Unfortunately, many believers see giving as an obligation rather than a privilege. Although this lesson covers financial giving, God does not need your money — He owns everything. God\'s will for your life is to develop you into a giving person in order to reflect His nature.',
+    outline: [
+      { roman: 'I', text: 'Giving is a reflection of the nature of God', subs: [
+        { text: 'God\'s will is that you would be conformed to the image of Jesus Christ', ref: 'Rom 8:29-30' },
+        { text: 'God\'s essential nature is giving — manifest in Jesus Christ', ref: 'John 3:16' },
+        { text: 'As a saved person, you are a partaker of the divine nature of God', ref: '2Pet 1:3-8' }
+      ]},
+      { roman: 'II', text: 'Biblical giving begins by giving your life to God', subs: [
+        { text: 'God bought you with his blood — you belong to him', ref: '1Cor 6:19-20' },
+        { text: 'God commands you to present your body as a living sacrifice, not just your money', ref: 'Rom 12:1' }
+      ]},
+      { roman: 'III', text: 'Biblical giving benefits you personally', subs: [
+        { text: 'God can bless both the gift and the giver', ref: '2Cor 8:3-5' },
+        { text: 'Giving proves the sincerity of your love for Jesus Christ', ref: '2Cor 8:8' },
+        { text: 'Giving helps you set Biblical priorities — an investment that keeps you focused on eternal matters', ref: 'Matt 6:19-21' }
+      ]},
+      { roman: 'IV', text: 'Biblical giving benefits the life of your church', subs: [
+        { text: 'Built around the local church first and foremost', ref: '1Cor 16:1-2' },
+        { text: 'Supports church leaders so they are free for ministry', ref: '1Cor 9:1-14' },
+        { text: 'Supports the missions work of the local church', ref: 'Phil 4:15-17' }
+      ]},
+      { roman: 'V', text: 'Biblical giving should be consistent and grow as you grow spiritually', subs: [
+        { text: 'The tithe — one-tenth of income — established before the law', ref: 'Gen 14:20' },
+        { text: 'The tithe is your starting point — taken off the top indicating priority of God in your finances', ref: 'Prov 3:9' },
+        { text: 'Offerings — voluntary giving above the tithe to fund special needs', ref: 'Exod 25:1-2' },
+        { text: 'Governing principles: give as God has prospered you, give cheerfully, law of sowing and reaping', ref: '2Cor 9:7' }
+      ]}
+    ],
+    keyPoint: 'Biblical giving begins with your life. True New Testament giving goes much further than money. It concerns turning over complete control of your life and resources to Jesus Christ, who gave his life for you. If God has control of your life, he will have control of your resources.',
+    questions: [
+      { q: 'How can I be sure I am giving to the right things, and that my money and time is being used as God would have it?', a: 'Build your giving around the local church. It is God\'s institution to accomplish his mission in the world. The leaders of your local church are accountable to the people of the church as well as to God. As a member, you can personally see how the money is being used.' }
+    ],
+    discussion: [
+      'How does our giving benefit our own personal life?',
+      'Why do Christians usually feel that giving is an obligation rather than a privilege?',
+      'How does Biblical giving benefit the church and others in our lives?',
+      'How does giving establish the lordship of Jesus Christ in our lives?'
+    ],
+    memoryVerses: [
+      { ref: '2Cor 8:9', text: 'For ye know the grace of our Lord Jesus Christ, that, though he was rich, yet for your sakes he became poor, that ye through his poverty might be rich.' },
+      { ref: '2Cor 9:7', text: 'Every man according as he purposeth in his heart, so let him give; not grudgingly, or of necessity: for God loveth a cheerful giver.' },
+      { ref: 'Matt 6:21', text: 'For where your treasure is, there will your heart be also.' }
+    ]
+  },
+  {
+    id: 'lesson_10', num: '10',
+    title: 'Dealing with Sin',
+    subtitle: 'How Do I Overcome Sin in My Life?',
+    intro: 'The Christian life is filled with many struggles and challenges, as well as great victories. Perhaps the greatest challenge is battling sin in your own life. When you got saved, you became two people. Your old man in Adam\'s image has a sinful nature, and your new man in Christ Jesus has God\'s image. The purpose of this lesson is to help you combat the sin nature of the old man.',
+    outline: [
+      { roman: 'I', text: 'Understand the nature of sin — involves your ENTIRE human nature, not just individual wrong acts', subs: [
+        { text: 'Sin is breaking God\'s law', ref: '1John 3:4' },
+        { text: 'Sin is any unrighteousness', ref: '1John 5:17' },
+        { text: 'Sin is anything done apart from faith', ref: 'Rom 14:23' },
+        { text: 'Sin is NOT doing what you know is right', ref: 'Jas 4:17' }
+      ]},
+      { roman: 'II', text: 'There is a reason why you will still sin even though you are saved', subs: [
+        { text: 'You sin because you inherited a sinful nature from Adam', ref: 'Rom 5:12' },
+        { text: 'You sin because it is your nature to sin', ref: 'Rom 7:14-25' },
+        { text: 'You sin as a result of temptation in three areas: lust of the flesh, lust of the eyes, pride of life', ref: '1John 2:15-17' },
+        { text: 'Adam and Eve: defeat in temptation (Gen 3:1-6); Jesus Christ: victory over temptation', ref: 'Luke 4:1-13' }
+      ]},
+      { roman: 'III', text: 'Understand how God views your sin', subs: [
+        { text: 'God judged sin at Calvary and placed it on Jesus Christ who paid for all of it', ref: '2Cor 5:21' },
+        { text: 'God has put off your sins — will no longer charge sin to your account', ref: 'Rom 4:4-8' },
+        { text: 'Even though sins are forgiven, consequences can remain — continual sin brings chastisement', ref: 'Heb 12:5-11' }
+      ]},
+      { roman: 'IV', text: 'The best way to overcome sin is to prevent it in the first place by God\'s power', subs: [
+        { text: 'Realize you are dead to sin in Jesus Christ — reckon yourself dead also', ref: 'Rom 6:11' },
+        { text: 'Don\'t allow sinful thoughts to control your mind', ref: '2Cor 10:3-5' },
+        { text: 'Don\'t make provisions for the flesh — avoid opportunities to sin', ref: 'Rom 13:14' },
+        { text: 'Walk in the power of the Holy Spirit — focus time and energy on good and right things', ref: 'Gal 5:16-25' }
+      ]},
+      { roman: 'V', text: 'How to deal with sin after it happens', subs: [
+        { text: 'Accept responsibility — your sin is your own fault, not anyone else\'s', ref: 'Prov 28:13' },
+        { text: 'Confess your sins to God — he alone can forgive because he alone was sinless', ref: '1John 1:9' },
+        { text: 'Judge your sin — agree with God that it is sin, no excuses, do this immediately', ref: '1Cor 11:23-32' },
+        { text: 'Repent of your sin — genuine sorrow, ask God for power to turn away and not return', ref: '2Cor 7:9-11' }
+      ]}
+    ],
+    keyPoint: 'Hide God\'s word in your heart to battle sin. God has made a way of escape from temptation. The only sure way of escape from sin and temptation is to hide the word of God in your heart and apply it to your life. Jesus Christ overcame his temptation by quoting scripture. Why would you think there could be a better way?',
+    questions: [
+      { q: 'How do I recognize what is actually a sin in my life?', a: 'The Holy Spirit convicts of sin. Your conscience will also point out right and wrong — God has built his moral law into the heart of every person. However, your conscience can be seared if you ignore God\'s conviction. Read the Bible — the best way to determine what is sinful is to find out what God says about the thoughts and activities of your heart and life.' },
+      { q: 'How do I keep the influences of a sinful world from affecting me?', a: 'Don\'t involve yourself with sinful activities — associate with lost people to win them, but don\'t get involved in their sin. Separate yourself from the ways of the world and follow Jesus Christ. Also, separation is positive — separate yourself UNTO the gospel. The more you involve yourself in reaching lost people, the less likely you are to be drawn into their sin.' }
+    ],
+    discussion: [
+      'What is the difference between big sins and little sins?',
+      'What are the three major ways we can be tempted to sin?',
+      'Why can\'t your sins be forgiven by other men if you confess to them?',
+      'What is the best way to prevent sin before it happens?'
+    ],
+    memoryVerses: [
+      { ref: 'Ps 119:11', text: 'Thy word have I hid in mine heart, that I might not sin against thee.' },
+      { ref: 'Heb 4:15', text: 'For we have not an high priest which cannot be touched with the feelings of our infirmities; but was in all points tempted like as we are, yet without sin.' },
+      { ref: 'Rom 6:11', text: 'Likewise reckon ye also yourselves to be dead indeed unto sin, but alive unto God through Jesus Christ our Lord.' }
     ]
   }
 ];
@@ -753,10 +1230,14 @@ function openLesson(lessonId) {
   document.getElementById('ld-lesson-label').textContent = 'Lesson ' + lesson.num;
   renderLessonContent(lesson);
   renderCompleteArea(lesson);
+  mtrBuildTracks();
 }
 
 /** Close lesson detail and return to list. */
 function closeLesson() {
+  mtrTTSStop();
+  var bar = document.getElementById('tts-bar');
+  if (bar) bar.style.display = 'none';
   activeLessonId = null;
   var detail = document.getElementById('lesson-detail');
   if (detail) detail.classList.remove('active');
@@ -1127,7 +1608,198 @@ function closeScriptureModal(e) {
   document.getElementById('scripture-modal').classList.remove('active');
 }
 
-// ── 14. UTILITIES ────────────────────────────────────────────────────────
+// ── 14. TTS ───────────────────────────────────────────────────────────────
+
+/** @type {Array<{name:string,body:string}>} */
+var _mtrTracks = [];
+var _mtrTrackIdx = 0;
+var _mtrActive = false;
+var _mtrPaused = false;
+var _mtrRate = 1;
+var _mtrVoice = '';
+var _mtrVol = 1;
+var _mtrUtts = []; // current SpeechSynthesisUtterance queue
+
+/** Build TTS track list from lesson-section divs in #lesson-content. */
+function mtrBuildTracks() {
+  _mtrTracks = [];
+  _mtrTrackIdx = 0;
+  _mtrActive = false;
+  _mtrPaused = false;
+  window.speechSynthesis && window.speechSynthesis.cancel();
+
+  var sections = document.querySelectorAll('#lesson-content .lesson-section');
+  sections.forEach(function(sec) {
+    var heading = sec.querySelector('h2, h3');
+    var name = heading ? heading.textContent.trim() : 'Section';
+    var clone = sec.cloneNode(true);
+    clone.querySelectorAll('h2, h3, button, textarea, input, .notes-area, .notes-readonly, .notes-save-status').forEach(function(el) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    var body = clone.textContent.replace(/\s+/g, ' ').trim();
+    if (name || body) _mtrTracks.push({ name: name, body: body });
+  });
+
+  // Load saved settings
+  try {
+    var sett = JSON.parse(localStorage.getItem('bsn_tts_sett') || '{}');
+    if (sett.rate) _mtrRate = sett.rate;
+    if (sett.voice) _mtrVoice = sett.voice;
+    if (sett.vol !== undefined) _mtrVol = sett.vol;
+  } catch (e) {}
+
+  mtrRenderBar();
+}
+
+/** Render the TTS player bar HTML and populate voices. */
+function mtrRenderBar() {
+  var bar = document.getElementById('tts-bar');
+  if (!bar || _mtrTracks.length === 0) return;
+  bar.style.display = '';
+  var speeds = [0.75, 1, 1.25, 1.5, 2];
+  var speedBtns = speeds.map(function(s) {
+    return '<button class="tts-speed' + (s === _mtrRate ? ' on' : '') + '" onclick="mtrTTSSetRate(' + s + ')">' + s + '\u00d7</button>';
+  }).join('');
+  bar.innerHTML =
+    '<div class="tts-row tts-row1">' +
+      '<button class="tts-btn" onclick="mtrTTSPrev()">\u25c4</button>' +
+      '<button class="tts-btn" id="mtr-play-btn" onclick="mtrTTSToggle()">\u25ba Play</button>' +
+      '<button class="tts-btn" onclick="mtrTTSNext()">\u25ba</button>' +
+      '<span class="tts-track-name" id="mtr-track-name">' + (_mtrTracks[0] ? _mtrTracks[0].name : '\u2014') + '</span>' +
+    '</div>' +
+    '<div class="tts-row">' +
+      '<span class="tts-label">Speed:</span>' + speedBtns +
+      '<span class="tts-label" style="margin-left:8px">Vol:</span>' +
+      '<input type="range" class="tts-vol" id="mtr-vol" min="0" max="1" step="0.1" value="' + _mtrVol + '" oninput="mtrTTSSetVol(this.value)">' +
+      '<select class="tts-voice" id="mtr-voice" onchange="mtrTTSSetVoice(this.value)"><option value="">Default voice</option></select>' +
+    '</div>';
+  mtrLoadVoices();
+}
+
+/** Populate the voice selector. */
+function mtrLoadVoices() {
+  var sel = document.getElementById('mtr-voice');
+  if (!sel || !window.speechSynthesis) return;
+  function fill() {
+    var voices = window.speechSynthesis.getVoices().filter(function(v) { return v.lang.startsWith('en'); });
+    if (!voices.length) return;
+    voices.forEach(function(v) {
+      var opt = document.createElement('option');
+      opt.value = v.name; opt.textContent = v.name;
+      if (v.name === _mtrVoice) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+  fill();
+  window.speechSynthesis.addEventListener('voiceschanged', fill);
+}
+
+/** Play or pause. */
+function mtrTTSToggle() {
+  if (!_mtrActive) {
+    mtrTTSPlay(_mtrTrackIdx);
+  } else if (_mtrPaused) {
+    window.speechSynthesis.resume();
+    _mtrPaused = false;
+    mtrTTSUpdateUI();
+  } else {
+    window.speechSynthesis.pause();
+    _mtrPaused = true;
+    mtrTTSUpdateUI();
+  }
+}
+
+/** Start playing track at index idx. */
+function mtrTTSPlay(idx) {
+  if (!window.speechSynthesis || _mtrTracks.length === 0) return;
+  if (idx < 0 || idx >= _mtrTracks.length) { mtrTTSStop(); return; }
+  window.speechSynthesis.cancel();
+  _mtrTrackIdx = idx;
+  _mtrActive = true;
+  _mtrPaused = false;
+  mtrTTSUpdateUI();
+
+  var track = _mtrTracks[idx];
+  var voice = window.speechSynthesis.getVoices().find(function(v) { return v.name === _mtrVoice; }) || null;
+
+  function makeUtt(text) {
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = _mtrRate;
+    u.volume = parseFloat(_mtrVol);
+    if (voice) u.voice = voice;
+    return u;
+  }
+
+  var nameUtt = makeUtt(track.name);
+  var bodyUtt = makeUtt(track.body || '');
+  bodyUtt.onend = function() {
+    if (!_mtrPaused) mtrTTSPlay(_mtrTrackIdx + 1);
+  };
+  bodyUtt.onerror = function() { mtrTTSStop(); };
+  window.speechSynthesis.speak(nameUtt);
+  window.speechSynthesis.speak(bodyUtt);
+}
+
+/** Stop playback entirely. */
+function mtrTTSStop() {
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  _mtrActive = false;
+  _mtrPaused = false;
+  mtrTTSUpdateUI();
+}
+
+/** Go to previous track. */
+function mtrTTSPrev() {
+  var idx = Math.max(0, _mtrTrackIdx - 1);
+  if (_mtrActive) mtrTTSPlay(idx); else { _mtrTrackIdx = idx; mtrTTSUpdateUI(); }
+}
+
+/** Go to next track. */
+function mtrTTSNext() {
+  var idx = Math.min(_mtrTracks.length - 1, _mtrTrackIdx + 1);
+  if (_mtrActive) mtrTTSPlay(idx); else { _mtrTrackIdx = idx; mtrTTSUpdateUI(); }
+}
+
+/** Set playback rate and save setting. */
+function mtrTTSSetRate(r) {
+  _mtrRate = r;
+  mtrTTSSaveSett();
+  document.querySelectorAll('.tts-speed').forEach(function(b) {
+    b.classList.toggle('on', parseFloat(b.textContent) === r);
+  });
+  if (_mtrActive) mtrTTSPlay(_mtrTrackIdx);
+}
+
+/** Set voice and save setting. */
+function mtrTTSSetVoice(name) {
+  _mtrVoice = name;
+  mtrTTSSaveSett();
+  if (_mtrActive) mtrTTSPlay(_mtrTrackIdx);
+}
+
+/** Set volume and save setting. */
+function mtrTTSSetVol(v) {
+  _mtrVol = parseFloat(v);
+  mtrTTSSaveSett();
+}
+
+/** Persist TTS settings to localStorage (shared key with Codex). */
+function mtrTTSSaveSett() {
+  try { localStorage.setItem('bsn_tts_sett', JSON.stringify({ rate: _mtrRate, voice: _mtrVoice, vol: _mtrVol })); } catch(e) {}
+}
+
+/** Update play button label and track name display. */
+function mtrTTSUpdateUI() {
+  var btn = document.getElementById('mtr-play-btn');
+  var nameEl = document.getElementById('mtr-track-name');
+  if (btn) {
+    btn.textContent = (_mtrActive && !_mtrPaused) ? '\u23f8 Pause' : '\u25ba Play';
+    btn.classList.toggle('play-active', _mtrActive && !_mtrPaused);
+  }
+  if (nameEl && _mtrTracks[_mtrTrackIdx]) nameEl.textContent = _mtrTracks[_mtrTrackIdx].name;
+}
+
+// ── 15. UTILITIES ────────────────────────────────────────────────────────
 
 /** Show a temporary toast notification. */
 function showToast(msg) {
@@ -1141,7 +1813,7 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── 15. INIT ─────────────────────────────────────────────────────────────
+// ── 16. INIT ─────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.pin-key').forEach(function(btn) {
