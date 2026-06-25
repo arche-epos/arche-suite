@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arché · Mentor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg0:#0b0907; --bg1:#120f0a; --bg2:#1b1710; --bg3:#252019; --bg4:#2f2a1f;
+      --border:#3a3022; --borderlit:#4d4430;
+      --gold:#c9a84c; --golddim:#7a6520; --goldpale:#e8ca80;
+      --crimson:#8b3535; --crimsonbright:#c05050; --sagebright:#5a9b70;
+      --txt1:#e8d5a3; --txt2:#c4a870; --txt3:#8a7550; --txt4:#5a4d35;
+      --r:8px; --rl:14px;
+    }
+    body {
+      font-family: 'Crimson Pro', Georgia, serif;
+      background: var(--bg0); color: var(--txt1);
+      min-height: 100dvh; font-size: 17px; line-height: 1.5;
+    }
+    .screen { display: none; min-height: 100dvh; }
+    .screen.active { display: flex; flex-direction: column; }
+    .app-header {
+      background: var(--bg1); border-bottom: 1px solid var(--border);
+      padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .app-header h1 { font-family: 'EB Garamond', Georgia, serif; font-size: 1.2rem; font-weight: 600; color: var(--txt1); }
+    .header-sub { font-size: .8rem; color: var(--txt3); }
+    .content { padding: 16px; flex: 1; overflow-y: auto; max-width: 600px; width: 100%; margin: 0 auto; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 18px; border: none; border-radius: var(--r);
+      font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; } .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn-primary { background: var(--gold); color: var(--bg0); }
+    .btn-accent { background: var(--golddim); color: var(--txt1); border: 1px solid var(--gold); }
+    .btn-ghost { background: transparent; color: var(--gold); border: 1.5px solid var(--golddim); }
+    .btn-sm { padding: 6px 12px; font-size: .9rem; }
+    .btn-full { width: 100%; }
+    /* Auth */
+    #screen-auth { align-items: center; justify-content: center; padding: 24px; background: var(--bg0); }
+    .auth-box {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl);
+      padding: 32px 24px; max-width: 340px; width: 100%; text-align: center;
+    }
+    .auth-logo { font-size: 2rem; margin-bottom: 8px; color: var(--gold); }
+    .auth-title { font-family: 'EB Garamond', Georgia, serif; font-size: 1.6rem; font-weight: 600; color: var(--txt1); margin-bottom: 4px; }
+    .auth-motto { font-size: .9rem; color: var(--txt3); margin-bottom: 24px; font-style: italic; }
+    .pin-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 24px; }
+    .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--golddim); background: transparent; transition: background .15s; }
+    .pin-dot.filled { background: var(--gold); border-color: var(--gold); }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .pin-key {
+      aspect-ratio: 1; border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--bg3); color: var(--txt1);
+      font-family: 'Crimson Pro', Georgia, serif; font-size: 1.4rem; font-weight: 600;
+      cursor: pointer; transition: background .1s;
+    }
+    .pin-key:hover { background: var(--bg4); }
+    .pin-key:active { background: var(--golddim); color: var(--goldpale); }
+    .pin-key.del { font-size: 1rem; color: var(--txt3); }
+    .pin-key.blank { visibility: hidden; }
+    .auth-error { color: var(--crimsonbright); font-size: .85rem; margin-top: 12px; min-height: 20px; }
+    /* Role selector */
+    #screen-role { align-items: center; justify-content: center; padding: 24px; background: var(--bg0); }
+    .role-box { text-align: center; max-width: 340px; width: 100%; }
+    .role-title { font-family: 'EB Garamond', Georgia, serif; font-size: 1.3rem; font-weight: 600; color: var(--txt1); margin-bottom: 6px; }
+    .role-sub { color: var(--txt3); font-size: .9rem; margin-bottom: 24px; }
+    .role-btn {
+      display: block; width: 100%; padding: 16px; border: 1.5px solid var(--border);
+      border-radius: var(--r); background: var(--bg2); text-align: left;
+      cursor: pointer; margin-bottom: 10px; transition: border-color .15s;
+    }
+    .role-btn:hover { border-color: var(--gold); }
+    .role-btn .role-name { font-weight: 600; font-size: 1rem; color: var(--txt1); }
+    .role-btn .role-desc { font-size: .85rem; color: var(--txt3); }
+    /* Lesson list */
+    .lesson-card {
+      background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--r);
+      padding: 14px 16px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color .15s;
+    }
+    .lesson-card:hover:not(.locked) { border-color: var(--gold); }
+    .lesson-card.locked { opacity: .4; cursor: not-allowed; }
+    .lesson-card.complete { border-color: var(--sagebright); }
+    .lesson-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--bg3); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .85rem; color: var(--txt2); flex-shrink: 0;
+    }
+    .lesson-card.complete .lesson-num { background: transparent; border-color: var(--sagebright); color: var(--sagebright); }
+    .lesson-card.locked .lesson-num { border-style: dashed; color: var(--txt4); }
+    .lesson-info { flex: 1; }
+    .lesson-title { font-weight: 600; font-size: 1rem; color: var(--txt1); }
+    .lesson-sub { font-size: .85rem; color: var(--txt3); }
+    .lesson-arrow { color: var(--txt3); font-size: 1.1rem; }
+    /* Lesson detail */
+    #lesson-detail { display: none; flex-direction: column; min-height: 100dvh; }
+    #lesson-detail.active { display: flex; }
+    .lesson-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 14px; }
+    .lesson-section h3 {
+      font-family: 'EB Garamond', Georgia, serif; font-size: .8rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--txt3); margin-bottom: 10px;
+    }
+    .key-point { background: var(--bg3); border-left: 3px solid var(--gold); border-radius: 0 var(--r) var(--r) 0; padding: 12px 14px; font-size: .95rem; color: var(--txt2); font-style: italic; }
+    .outline-block { margin-bottom: 10px; }
+    .outline-block .roman { font-weight: 700; color: var(--gold); }
+    .outline-sub { padding-left: 16px; margin-top: 4px; }
+    .scripture-ref { color: var(--gold); text-decoration: underline; cursor: pointer; font-weight: 500; }
+    .scripture-ref:hover { color: var(--goldpale); }
+    .qa-item { margin-bottom: 12px; }
+    .qa-q { font-weight: 600; color: var(--txt1); margin-bottom: 4px; }
+    .qa-a { color: var(--txt3); font-size: .9rem; }
+    .disc-item { padding: 10px 12px; background: var(--bg3); border-radius: var(--r); margin-bottom: 8px; font-size: .9rem; color: var(--txt2); }
+    .mv-item { border: 1.5px solid var(--golddim); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; }
+    .mv-ref { font-weight: 700; color: var(--gold); margin-bottom: 6px; font-size: .85rem; }
+    .mv-text { font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 1.05rem; color: var(--txt1); line-height: 1.7; }
+    .notes-area {
+      width: 100%; min-height: 120px; border: 1.5px solid var(--border); border-radius: var(--r);
+      padding: 10px 12px; font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem;
+      color: var(--txt1); resize: vertical; background: var(--bg1); transition: border-color .15s;
+    }
+    .notes-area:focus { outline: none; border-color: var(--golddim); }
+    .notes-save-status { font-size: .78rem; color: var(--txt3); margin-top: 4px; }
+    .complete-area { padding: 16px; border-top: 1px solid var(--border); background: var(--bg1); position: sticky; bottom: 0; }
+    .complete-badge { display: flex; align-items: center; gap: 8px; color: var(--sagebright); font-weight: 600; justify-content: center; padding: 10px; }
+    .notes-readonly { background: var(--bg1); border: 1.5px dashed var(--border); border-radius: var(--r); padding: 10px 12px; font-size: .9rem; color: var(--txt3); min-height: 60px; white-space: pre-wrap; }
+    /* Teacher / Admin */
+    .user-card { background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .user-name { font-weight: 600; color: var(--txt1); }
+    .user-meta { font-size: .8rem; color: var(--txt3); }
+    .progress-bar { height: 5px; background: var(--bg4); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--sagebright); border-radius: 3px; transition: width .3s; }
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .tab { padding: 10px 16px; border: none; background: transparent; font-family: 'Crimson Pro', Georgia, serif; font-weight: 600; font-size: .95rem; color: var(--txt3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s; }
+    .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; color: var(--txt2); }
+    .form-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--r); font-size: 1rem; font-family: 'Crimson Pro', Georgia, serif; background: var(--bg1); color: var(--txt1); }
+    .form-input:focus { outline: none; border-color: var(--golddim); }
+    .form-select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--r); font-size: 1rem; font-family: 'Crimson Pro', Georgia, serif; background: var(--bg1); color: var(--txt1); }
+    .role-checks { display: flex; gap: 10px; flex-wrap: wrap; }
+    .role-check { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: .9rem; color: var(--txt1); }
+    .pair-card { background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px; }
+    .pair-teacher { font-weight: 700; color: var(--gold); margin-bottom: 6px; }
+    .pair-students { padding-left: 12px; }
+    .pair-student-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: .9rem; color: var(--txt1); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .72rem; font-weight: 700; text-transform: uppercase; }
+    .badge-admin { background: var(--bg3); color: var(--goldpale); border: 1px solid var(--golddim); }
+    .badge-teacher { background: var(--bg3); color: var(--txt2); border: 1px solid var(--border); }
+    .badge-student { background: var(--bg3); color: var(--sagebright); border: 1px solid var(--sagebright); }
+    .badge-complete { background: transparent; color: var(--sagebright); border: 1px solid var(--sagebright); }
+    .badge-pending { background: var(--bg3); color: var(--txt4); border: 1px solid var(--border); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: flex-end; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-sheet { background: var(--bg2); border-radius: var(--rl) var(--rl) 0 0; border-top: 1px solid var(--border); padding: 20px; width: 100%; max-width: 600px; max-height: 60dvh; overflow-y: auto; }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+    .modal-ref { font-family: 'EB Garamond', Georgia, serif; font-weight: 700; color: var(--gold); margin-bottom: 4px; font-size: 1.1rem; }
+    .modal-trans { font-size: .75rem; color: var(--txt3); margin-bottom: 12px; }
+    .modal-text { font-family: 'EB Garamond', Georgia, serif; font-size: 1.1rem; line-height: 1.8; font-style: italic; color: var(--txt1); }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--bg3); color: var(--txt1); border: 1px solid var(--border); padding: 10px 20px; border-radius: 20px; font-size: .85rem; z-index: 200; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .section-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--txt3); margin: 18px 0 8px; }
+    .empty-state { text-align: center; padding: 40px 16px; color: var(--txt3); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .text-muted { color: var(--txt3); font-size: .85rem; }
+    .text-success { color: var(--sagebright); }
+    .text-center { text-align: center; }
+    .mt-8 { margin-top: 8px; } .mt-16 { margin-top: 16px; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .back-btn { background: none; border: none; color: var(--txt3); font-size: .9rem; cursor: pointer; padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+    .back-btn:hover { color: var(--txt1); }
+    .logout-btn { background: none; border: none; color: var(--txt3); cursor: pointer; font-size: .85rem; font-family: 'Crimson Pro', Georgia, serif; }
+    .logout-btn:hover { color: var(--txt1); }
+    /* Assign overlay */
+    .assign-overlay { position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:flex-end;justify-content:center; }
+    .assign-sheet { background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;border-top:1px solid var(--border);padding:24px;width:100%;max-width:600px; }
+    .assign-title { font-family:'EB Garamond',Georgia,serif; font-weight:700;color:var(--txt1);margin-bottom:16px;font-size:1.1rem; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="screen-auth" class="screen active">
+  <div class="auth-box">
+    <div class="auth-logo">✦</div>
+    <div class="auth-title">Arché · Mentor</div>
+    <div class="auth-motto">Disciples Making Disciples</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" data-k="1">1</button>
+      <button class="pin-key" data-k="2">2</button>
+      <button class="pin-key" data-k="3">3</button>
+      <button class="pin-key" data-k="4">4</button>
+      <button class="pin-key" data-k="5">5</button>
+      <button class="pin-key" data-k="6">6</button>
+      <button class="pin-key" data-k="7">7</button>
+      <button class="pin-key" data-k="8">8</button>
+      <button class="pin-key" data-k="9">9</button>
+      <button class="pin-key blank" aria-hidden="true"></button>
+      <button class="pin-key" data-k="0">0</button>
+      <button class="pin-key del" data-k="del">⌫</button>
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- FIRST RUN -->
+<div id="screen-firstrun" class="screen">
+  <div style="display:flex;align-items:center;justify-content:center;flex:1;padding:24px;background:var(--bg0)">
+    <div class="auth-box">
+      <div class="auth-logo">✦</div>
+      <div class="auth-title">Welcome to Arché · Mentor</div>
+      <div class="auth-motto" style="margin-bottom:20px">No accounts exist yet. Set up the first Admin to get started.</div>
+      <div class="form-group" style="text-align:left">
+        <label class="form-label">Your Name</label>
+        <input class="form-input" id="fr-name" type="text" placeholder="Full name" autocomplete="off">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label class="form-label">Choose a 4-Digit PIN</label>
+        <input class="form-input" id="fr-pin" type="number" placeholder="e.g. 1234" min="0" max="9999" autocomplete="off">
+      </div>
+      <div class="form-group" style="text-align:left">
+        <label class="form-label">Confirm PIN</label>
+        <input class="form-input" id="fr-pin2" type="number" placeholder="Re-enter PIN" min="0" max="9999" autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="submitFirstRun()">Create Admin Account</button>
+      <div class="auth-error" id="fr-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROLE SELECTOR -->
+<div id="screen-role" class="screen">
+  <div class="role-box">
+    <div class="role-title" id="role-greeting">Welcome</div>
+    <div class="role-sub">You have multiple roles. Choose one to continue.</div>
+    <div id="role-options"></div>
+  </div>
+</div>
+
+<!-- STUDENT -->
+<div id="screen-student" class="screen">
+  <header class="app-header">
+    <div>
+      <h1 id="s-header-title">My Lessons</h1>
+      <div class="header-sub">Arché · Mentor</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </header>
+  <div id="student-list-view" class="content">
+    <p class="text-muted mt-8" id="s-teacher-label"></p>
+    <div id="lesson-list" class="mt-16"></div>
+  </div>
+  <div id="lesson-detail">
+    <header class="app-header">
+      <button class="back-btn" onclick="closeLesson()">← Back</button>
+      <div style="font-size:.85rem;color:var(--txt3)" id="ld-lesson-label"></div>
+    </header>
+    <div class="content" id="lesson-content"></div>
+    <div class="complete-area" id="complete-area"></div>
+  </div>
+</div>
+
+<!-- TEACHER -->
+<div id="screen-teacher" class="screen">
+  <header class="app-header">
+    <div>
+      <h1 id="t-header-title">My Students</h1>
+      <div class="header-sub">Teacher View</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </header>
+  <div id="teacher-list-view" class="content">
+    <div id="teacher-student-list"></div>
+  </div>
+  <div id="teacher-detail-view" style="display:none">
+    <header class="app-header">
+      <button class="back-btn" onclick="closeTeacherDetail()">← Students</button>
+      <div style="font-size:.85rem;color:var(--txt3)" id="td-name"></div>
+    </header>
+    <div class="content" id="teacher-detail-content"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" class="screen">
+  <header class="app-header">
+    <div>
+      <h1>Admin Dashboard</h1>
+      <div class="header-sub">Arché · Mentor</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </header>
+  <div class="content">
+    <div class="tab-bar">
+      <button class="tab active" onclick="adminTab('pairs',this)">Active Pairs</button>
+      <button class="tab" onclick="adminTab('waiting',this)">Waiting Pool</button>
+      <button class="tab" onclick="adminTab('create',this)">Create</button>
+    </div>
+    <div id="admin-pairs"></div>
+    <div id="admin-waiting" style="display:none"></div>
+    <div id="admin-create" style="display:none"></div>
+  </div>
+</div>
+
+<!-- SCRIPTURE MODAL -->
+<div class="modal-overlay" id="scripture-modal" onclick="closeScriptureModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-ref" id="modal-ref"></div>
+    <div class="modal-trans">NKJV</div>
+    <div class="modal-text" id="modal-text"><span class="spinner"></span></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:16px" onclick="closeScriptureModal()">Close</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── 01. CONFIG ───────────────────────────────────────────────────────────
+var PROXY = 'https://arche-proxy.archestudytools.workers.dev';
+var VERSION = '0.1.0';
+var PHASE1_KEYS = ['lesson_1','lesson_2a','lesson_2b','lesson_3','lesson_4a','lesson_4b',
+                   'lesson_5','lesson_6','lesson_7','lesson_8','lesson_9','lesson_10'];
+
+var BOOK_NUMS = {
+  'Gen':1,'Exod':2,'Lev':3,'Num':4,'Deut':5,'Josh':6,'Judg':7,'Ruth':8,'1Sam':9,'2Sam':10,
+  'Ps':19,'Prov':20,'Isa':23,'Jer':24,'Ezek':26,'Dan':27,
+  'Matt':40,'Mark':41,'Luke':42,'John':43,'Acts':44,
+  'Rom':45,'1Cor':46,'2Cor':47,'Gal':48,'Eph':49,'Phil':50,'Col':51,
+  '1Thess':52,'2Thess':53,'1Tim':54,'2Tim':55,'Titus':56,'Phlm':57,
+  'Heb':58,'Jas':59,'1Pet':60,'2Pet':61,'1John':62,'2John':63,'3John':64,'Jude':65,'Rev':66
+};
+
+// ── 02. CURRICULUM ───────────────────────────────────────────────────────
+var LESSONS = [
+  {
+    id: 'lesson_1', num: '1',
+    title: 'The Word of God',
+    subtitle: 'Is the Bible Reliable and Relevant in My Life?',
+    intro: 'The Bible is the foundation of the Christian life. It is not merely a collection of ancient writings, but the living Word of God — breathed out by the Holy Spirit through human authors, without error, and applicable to every situation we face. Understanding what the Bible is and how to use it is the essential first step for every disciple.',
+    outline: [
+      { roman: 'I', text: 'The Bible Is the Word of God', subs: [
+        { text: 'It was breathed out by God', ref: '2Tim 3:16-17' },
+        { text: 'Holy men wrote as moved by the Spirit', ref: '2Pet 1:21' }
+      ]},
+      { roman: 'II', text: 'The Bible Is Living and Active', subs: [
+        { text: 'It penetrates to the heart', ref: 'Heb 4:12' },
+        { text: 'It is a lamp to guide our path', ref: 'Ps 119:105' }
+      ]},
+      { roman: 'III', text: 'The Bible Equips Us for Life', subs: [
+        { text: 'For every good work', ref: '2Tim 3:17' },
+        { text: 'For guarding our way', ref: 'Ps 119:11' }
+      ]}
+    ],
+    keyPoint: 'The Word of God is not optional equipment for the Christian life — it is the foundation itself. Without it, we build on sand.',
+    questions: [
+      { q: 'What does "God-breathed" mean for the reliability of Scripture?', a: 'It means the Scriptures originate from God Himself, making them fully trustworthy and authoritative.' },
+      { q: 'In what ways is the Bible relevant to your life today?', a: 'Discussion — personal application expected.' },
+      { q: 'What are the four uses of Scripture listed in 2 Tim 3:16?', a: 'Teaching, rebuking, correcting, and training in righteousness.' }
+    ],
+    discussion: [
+      'What habit could you build this week to spend more time in God\'s Word?',
+      'Is there a passage of Scripture that has shaped your life? Share it.'
+    ],
+    memoryVerses: [
+      { ref: '2 Tim 3:16', text: 'All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness.' },
+      { ref: 'Ps 119:11', text: 'Thy word have I hid in mine heart, that I might not sin against thee.' },
+      { ref: 'Heb 4:12', text: 'For the word of God is quick, and powerful, and sharper than any twoedged sword, piercing even to the dividing asunder of soul and spirit, and of the joints and marrow, and is a discerner of the thoughts and intents of the heart.' }
+    ]
+  },
+  {
+    id: 'lesson_2a', num: '2a',
+    title: 'Salvation',
+    subtitle: 'How Can I Know I Am Saved?',
+    intro: 'Salvation is the most important matter in a person\'s life. Many people carry doubt about whether they are truly saved. God\'s Word gives us a sure and certain foundation — salvation is not based on our feelings or our works, but on the finished work of Jesus Christ received through faith.',
+    outline: [
+      { roman: 'I', text: 'What We Were Without Christ', subs: [
+        { text: 'All have sinned and fall short', ref: 'Rom 3:23' },
+        { text: 'The wages of sin is death', ref: 'Rom 6:23' }
+      ]},
+      { roman: 'II', text: 'What God Did Through Christ', subs: [
+        { text: 'God so loved the world', ref: 'John 3:16' },
+        { text: 'Christ died for us while we were sinners', ref: 'Rom 5:8' }
+      ]},
+      { roman: 'III', text: 'How We Receive Salvation', subs: [
+        { text: 'Confess and believe', ref: 'Rom 10:9-10' },
+        { text: 'By grace through faith — not works', ref: 'Eph 2:8-9' }
+      ]}
+    ],
+    keyPoint: 'Salvation is a gift from God, received by faith. It cannot be earned, lost, or revoked by human effort. If you have believed in Christ, you are saved.',
+    questions: [
+      { q: 'According to Romans 10:9, what two things are required for salvation?', a: 'Confessing with your mouth that Jesus is Lord, and believing in your heart that God raised Him from the dead.' },
+      { q: 'Why does Ephesians 2:8-9 say salvation cannot be from works?', a: 'So that no man can boast — salvation is entirely a gift from God to prevent pride.' },
+      { q: 'Can you share when and how you received Christ?', a: 'Personal testimony — discussion.' }
+    ],
+    discussion: [
+      'How would you explain the gospel to someone who had never heard it?',
+      'What doubts have you had about your salvation, and what Scripture helped you?'
+    ],
+    memoryVerses: [
+      { ref: 'John 3:16', text: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.' },
+      { ref: 'Rom 10:9', text: 'That if thou shalt confess with thy mouth the Lord Jesus, and shalt believe in thine heart that God hath raised him from the dead, thou shalt be saved.' },
+      { ref: 'Eph 2:8-9', text: 'For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast.' }
+    ]
+  },
+  {
+    id: 'lesson_2b', num: '2b',
+    title: 'Works of Faith',
+    subtitle: 'How Does My Faith Show Up in Daily Life?',
+    intro: 'Salvation is by faith alone — but genuine saving faith does not remain alone. It produces fruit. The works we do are not the root of our salvation but the fruit of it. A disciple who is truly saved will show that salvation through the way they live, love, and serve.',
+    outline: [
+      { roman: 'I', text: 'Faith Without Works Is Dead', subs: [
+        { text: 'Faith proved by what we do', ref: 'Jas 2:17-18' },
+        { text: 'Abraham\'s faith was completed by his works', ref: 'Jas 2:22' }
+      ]},
+      { roman: 'II', text: 'We Were Created for Good Works', subs: [
+        { text: 'Created in Christ Jesus for good works', ref: 'Eph 2:10' },
+        { text: 'Zealous for good works', ref: 'Titus 2:14' }
+      ]},
+      { roman: 'III', text: 'Fruit Is the Evidence of Life', subs: [
+        { text: 'You will know them by their fruits', ref: 'Matt 7:20' },
+        { text: 'The fruit of the Spirit', ref: 'Gal 5:22-23' }
+      ]}
+    ],
+    keyPoint: 'Good works do not save us, but they demonstrate and strengthen our salvation. A tree is known by its fruit — what fruit is visible in your life?',
+    questions: [
+      { q: 'What is the relationship between faith and works according to James 2?', a: 'Works are the outward evidence of genuine inward faith. Faith without works is dead — it is not saving faith.' },
+      { q: 'According to Ephesians 2:10, what were we created to do?', a: 'Walk in good works that God prepared beforehand for us.' },
+      { q: 'What is one "good work" God has placed in front of you this week?', a: 'Personal application — discussion.' }
+    ],
+    discussion: [
+      'How do you balance knowing that works don\'t save you, while also taking good works seriously?',
+      'What is the fruit of the Spirit (Gal 5:22-23), and which one do you need most right now?'
+    ],
+    memoryVerses: [
+      { ref: 'Jas 2:17', text: 'Even so faith, if it hath not works, is dead, being alone.' },
+      { ref: 'Eph 2:10', text: 'For we are his workmanship, created in Christ Jesus unto good works, which God hath before ordained that we should walk in them.' },
+      { ref: 'Titus 2:14', text: 'Who gave himself for us, that he might redeem us from all iniquity, and purify unto himself a peculiar people, zealous of good works.' }
+    ]
+  }
+];
+
+// ── 03. STATE ────────────────────────────────────────────────────────────
+var currentUser = null;
+var activeRole = null;
+var viewingStudentId = null;
+var viewingStudent = null;
+var activeLessonId = null;
+var allUsers = null;
+var adminActiveTab = 'pairs';
+var notesSaveTimer = null;
+var pinBuffer = '';
+
+// ── 04. BIBLE API ────────────────────────────────────────────────────────
+
+/**
+ * Parse a scripture reference into bolls.life API components.
+ * @param {string} ref
+ * @returns {{ bookNum: number, chapter: number, vStart: number, vEnd: number }|null}
+ */
+function parseRef(ref) {
+  var clean = ref.replace(/\s+/g, ' ').trim();
+  var m = clean.match(/^([\d]?\s?[A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?$/);
+  if (!m) return null;
+  var abbr = m[1].trim().replace(/\s/g, '');
+  var bookNum = BOOK_NUMS[abbr];
+  if (!bookNum) return null;
+  return { bookNum: bookNum, chapter: parseInt(m[2], 10), vStart: parseInt(m[3], 10), vEnd: m[4] ? parseInt(m[4], 10) : parseInt(m[3], 10) };
+}
+
+/**
+ * Fetch verse text from bolls.life (NKJV).
+ * @param {string} ref
+ * @returns {Promise<string>}
+ */
+async function fetchVerse(ref) {
+  var parsed = parseRef(ref);
+  if (!parsed) return '[Reference not recognised]';
+  var url = 'https://bolls.life/get-text/NKJV/' + parsed.bookNum + '/' + parsed.chapter + '/' + parsed.vStart + '/' + parsed.vEnd + '/';
+  try {
+    var res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var data = await res.json();
+    if (!Array.isArray(data) || !data.length) return '[Verse not found]';
+    return data.map(function(v) { return v.text; }).join(' ');
+  } catch (e) {
+    return '[Could not load verse — check connection]';
+  }
+}
+
+// ── 05. API LAYER ────────────────────────────────────────────────────────
+
+/** POST /mentor/auth — PIN login, returns full user record. */
+async function apiAuth(pin) {
+  var res = await fetch(PROXY + '/mentor/auth', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: pin })
+  });
+  if (!res.ok) { var err = await res.json().catch(function() { return {}; }); throw new Error(err.error || 'auth_failed'); }
+  return res.json();
+}
+
+/** POST /mentor/user/get — get single user by id. */
+async function apiGetUser(id) {
+  var res = await fetch(PROXY + '/mentor/user/get', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id })
+  });
+  if (!res.ok) throw new Error('user_not_found');
+  return res.json();
+}
+
+/** POST /mentor/users/list — all user records (PINs stripped). */
+async function apiListUsers() {
+  var res = await fetch(PROXY + '/mentor/users/list', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error('list_failed');
+  var data = await res.json();
+  return data.users || [];
+}
+
+/** POST /mentor/user/create */
+async function apiCreateUser(data) {
+  var res = await fetch(PROXY + '/mentor/user/create', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) { var err = await res.json().catch(function() { return {}; }); throw new Error(err.error || 'create_failed'); }
+  return res.json();
+}
+
+/** POST /mentor/user/update */
+async function apiUpdateUser(id, updates) {
+  var body = Object.assign({ id: id }, updates);
+  var res = await fetch(PROXY + '/mentor/user/update', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('update_failed');
+}
+
+// ── 06. AUTH / SESSION ───────────────────────────────────────────────────
+
+/**
+ * Check if any users exist. If none, show first-run setup. Otherwise show auth.
+ * Called once on app load.
+ */
+async function checkFirstRun() {
+  try {
+    var users = await apiListUsers();
+    if (!users.length) {
+      showScreen('firstrun');
+    } else {
+      showScreen('auth');
+    }
+  } catch (e) {
+    // If list fails, fall through to normal auth — avoid blocking login
+    showScreen('auth');
+  }
+}
+
+/**
+ * Submit first-run admin creation form.
+ */
+async function submitFirstRun() {
+  var name = (document.getElementById('fr-name').value || '').trim();
+  var pin = (document.getElementById('fr-pin').value || '').trim();
+  var pin2 = (document.getElementById('fr-pin2').value || '').trim();
+  var errEl = document.getElementById('fr-error');
+
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = '\u26A0 Name is required.'; return; }
+  if (!pin || pin.length !== 4 || isNaN(parseInt(pin, 10))) { errEl.textContent = '\u26A0 PIN must be exactly 4 digits.'; return; }
+  if (pin !== pin2) { errEl.textContent = '\u26A0 PINs do not match.'; return; }
+
+  var btn = document.querySelector('#screen-firstrun .btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating\u2026'; }
+
+  try {
+    var result = await apiCreateUser({ name: name, pin: pin, roles: ['admin'] });
+    // Log in immediately as the new admin
+    currentUser = await apiGetUser(result.id);
+    currentUser.pin = pin; // restore pin for session (stripped from list, present on get)
+    activeRole = 'admin';
+    showScreen('admin');
+    loadAdminView();
+  } catch (e) {
+    errEl.textContent = e.message === 'pin_in_use' ? '\u26A0 That PIN is already in use.' : '\u26A0 Setup failed: ' + e.message;
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Admin Account'; }
+  }
+}
+
+/**
+ * Authenticate with PIN and route to correct view.
+ * @param {string} pin
+ */
+async function login(pin) {
+  setAuthError('');
+  try {
+    var user = await apiAuth(pin);
+    currentUser = user;
+    pinBuffer = '';
+    updatePinDots();
+    if (!user.roles || !user.roles.length) { setAuthError('Account has no roles assigned.'); currentUser = null; return; }
+    if (user.roles.length > 1) { showScreen('role'); renderRoleSelector(); }
+    else { activeRole = user.roles[0]; routeToRole(); }
+  } catch (e) {
+    setAuthError(e.message === 'invalid_pin' ? 'Incorrect PIN. Please try again.' : 'Login failed. Please try again.');
+    pinBuffer = '';
+    updatePinDots();
+  }
+}
+
+/** Sign out and return to PIN screen. */
+function logout() {
+  currentUser = null; activeRole = null; viewingStudentId = null;
+  viewingStudent = null; activeLessonId = null; allUsers = null;
+  pinBuffer = ''; updatePinDots(); setAuthError(''); showScreen('auth');
+}
+
+// ── 07. ROUTER ───────────────────────────────────────────────────────────
+
+/** Show a named screen, hide all others. */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+}
+
+/** Route to the correct view based on activeRole. */
+function routeToRole() {
+  if (activeRole === 'admin') { showScreen('admin'); loadAdminView(); }
+  else if (activeRole === 'teacher') { showScreen('teacher'); loadTeacherView(); }
+  else { showScreen('student'); loadStudentView(); }
+}
+
+// ── 08. PIN SCREEN ───────────────────────────────────────────────────────
+
+/** Sync the 4 pin dot indicators with pinBuffer length. */
+function updatePinDots() {
+  for (var i = 0; i < 4; i++) {
+    var dot = document.getElementById('dot-' + i);
+    if (dot) dot.classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+/** Handle a single PIN keypad press. */
+function handlePinKey(key) {
+  if (key === 'del') { pinBuffer = pinBuffer.slice(0, -1); updatePinDots(); return; }
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += key;
+  updatePinDots();
+  if (pinBuffer.length === 4) login(pinBuffer);
+}
+
+/** Set the auth screen error message. */
+function setAuthError(msg) {
+  var el = document.getElementById('auth-error');
+  if (el) el.textContent = msg;
+}
+
+// ── 09. ROLE SELECTOR ────────────────────────────────────────────────────
+
+/** Render role buttons for multi-role users. */
+function renderRoleSelector() {
+  document.getElementById('role-greeting').textContent = 'Welcome, ' + (currentUser.name || 'friend') + '!';
+  var roleLabels = {
+    admin:   { name: 'Admin',             desc: 'Manage users, pairs, and assignments' },
+    teacher: { name: 'Teacher (Paul)',    desc: 'View your students and their progress' },
+    student: { name: 'Student (Timothy)', desc: 'Continue your discipleship lessons' }
+  };
+  document.getElementById('role-options').innerHTML = currentUser.roles.map(function(role) {
+    var label = roleLabels[role] || { name: role, desc: '' };
+    return '<button class="role-btn" onclick="selectRole(\'' + role + '\')">' +
+      '<div class="role-name">' + label.name + '</div><div class="role-desc">' + label.desc + '</div></button>';
+  }).join('');
+}
+
+/** Select a role and route. */
+function selectRole(role) { activeRole = role; routeToRole(); }
+
+// ── 10. STUDENT VIEW ─────────────────────────────────────────────────────
+
+/** Load and render the student lesson list. */
+function loadStudentView() {
+  closeLesson();
+  var headerTitle = document.getElementById('s-header-title');
+  if (headerTitle) headerTitle.textContent = currentUser.name + '\'s Lessons';
+  var teacherLabel = document.getElementById('s-teacher-label');
+  if (teacherLabel) {
+    if (currentUser.teacherId) {
+      teacherLabel.textContent = 'Teacher: loading\u2026';
+      apiGetUser(currentUser.teacherId).then(function(t) { teacherLabel.textContent = 'Teacher: ' + t.name; }).catch(function() { teacherLabel.textContent = ''; });
+    } else {
+      teacherLabel.textContent = 'You are not yet assigned to a Teacher.';
+    }
+  }
+  renderLessonList();
+}
+
+/** Render lesson cards with lock/complete state. */
+function renderLessonList() {
+  var progress = currentUser.progress || {};
+  var container = document.getElementById('lesson-list');
+  if (!container) return;
+  container.innerHTML = LESSONS.map(function(lesson, idx) {
+    var state = progress[lesson.id] || {};
+    var complete = !!state.complete;
+    var unlocked = idx === 0 || !!(progress[LESSONS[idx - 1].id] && progress[LESSONS[idx - 1].id].complete);
+    var cls = 'lesson-card' + (complete ? ' complete' : '') + (!unlocked ? ' locked' : '');
+    var icon = complete ? '\u2713' : (unlocked ? lesson.num : '\uD83D\uDD12');
+    var badge = complete ? '<span class="badge badge-complete">Complete</span>' : (!unlocked ? '<span class="badge badge-pending">Locked</span>' : '');
+    var onclick = unlocked ? ' onclick="openLesson(\'' + lesson.id + '\')"' : '';
+    return '<div class="' + cls + '"' + onclick + '>' +
+      '<div class="lesson-num">' + icon + '</div>' +
+      '<div class="lesson-info"><div class="lesson-title">' + lesson.title + '</div><div class="lesson-sub">' + lesson.subtitle + '</div><div class="mt-8">' + badge + '</div></div>' +
+      (unlocked ? '<div class="lesson-arrow">\u203A</div>' : '') + '</div>';
+  }).join('');
+}
+
+/** Open a lesson detail view. */
+function openLesson(lessonId) {
+  var lesson = LESSONS.find(function(l) { return l.id === lessonId; });
+  if (!lesson) return;
+  activeLessonId = lessonId;
+  document.getElementById('student-list-view').style.display = 'none';
+  document.getElementById('lesson-detail').classList.add('active');
+  document.getElementById('ld-lesson-label').textContent = 'Lesson ' + lesson.num;
+  renderLessonContent(lesson);
+  renderCompleteArea(lesson);
+}
+
+/** Close lesson detail and return to list. */
+function closeLesson() {
+  activeLessonId = null;
+  var detail = document.getElementById('lesson-detail');
+  if (detail) detail.classList.remove('active');
+  var lv = document.getElementById('student-list-view');
+  if (lv) lv.style.display = '';
+}
+
+/** Render full lesson content. */
+function renderLessonContent(lesson) {
+  var notes = (currentUser.notes && currentUser.notes[lesson.id]) || '';
+  var isComplete = !!(currentUser.progress && currentUser.progress[lesson.id] && currentUser.progress[lesson.id].complete);
+  var html = '';
+
+  html += '<div class="lesson-section">' +
+    '<h2 style="font-family:\'EB Garamond\',Georgia,serif;font-size:1.4rem;font-weight:600;color:var(--txt1);margin-bottom:4px">Lesson ' + lesson.num + ': ' + lesson.title + '</h2>' +
+    '<p style="color:var(--txt3);font-style:italic;font-size:.95rem">' + lesson.subtitle + '</p></div>';
+
+  html += '<div class="lesson-section"><h3>Introduction</h3><p style="font-size:.95rem;line-height:1.7;color:var(--txt1)">' + lesson.intro + '</p></div>';
+
+  html += '<div class="lesson-section"><h3>Outline</h3>';
+  lesson.outline.forEach(function(point) {
+    html += '<div class="outline-block"><div class="roman">' + point.roman + '. ' + point.text + '</div><div class="outline-sub">';
+    point.subs.forEach(function(sub) {
+      html += '<div style="margin-bottom:4px;font-size:.9rem;color:var(--txt2)">' + sub.text + ' <span class="scripture-ref" onclick="openScriptureModal(\'' + sub.ref + '\')">' + sub.ref + '</span></div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  html += '<div class="lesson-section"><h3>Key Point</h3><div class="key-point">' + lesson.keyPoint + '</div></div>';
+
+  html += '<div class="lesson-section"><h3>Basic Questions</h3>';
+  lesson.questions.forEach(function(item, i) {
+    html += '<div class="qa-item"><div class="qa-q">' + (i + 1) + '. ' + item.q + '</div><div class="qa-a">' + item.a + '</div></div>';
+    if (i < lesson.questions.length - 1) html += '<hr class="divider">';
+  });
+  html += '</div>';
+
+  html += '<div class="lesson-section"><h3>Review &amp; Discussion</h3>';
+  lesson.discussion.forEach(function(q, i) {
+    html += '<div class="disc-item">' + (i + 1) + '. ' + q + '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="lesson-section"><h3>Memory Verses <span style="font-size:.75rem;color:var(--txt3);font-weight:400;text-transform:none">(KJV)</span></h3>';
+  lesson.memoryVerses.forEach(function(mv) {
+    html += '<div class="mv-item"><div class="mv-ref">' + mv.ref + '</div><div class="mv-text">' + mv.text + '</div></div>';
+  });
+  html += '</div>';
+
+  html += '<div class="lesson-section"><h3>My Notes</h3>';
+  if (isComplete) {
+    html += '<div class="notes-readonly">' + escHtml(notes || '(no notes)') + '</div>';
+  } else {
+    html += '<textarea class="notes-area" id="notes-ta" placeholder="Write your notes here\u2026" oninput="scheduleNotesSave(\'' + lesson.id + '\')">' + escHtml(notes) + '</textarea>' +
+      '<div class="notes-save-status" id="notes-status"></div>';
+  }
+  html += '</div><div style="height:80px"></div>';
+
+  document.getElementById('lesson-content').innerHTML = html;
+}
+
+/** Render the sticky complete footer. */
+function renderCompleteArea(lesson) {
+  var isComplete = !!(currentUser.progress && currentUser.progress[lesson.id] && currentUser.progress[lesson.id].complete);
+  var area = document.getElementById('complete-area');
+  if (!area) return;
+  area.innerHTML = isComplete
+    ? '<div class="complete-badge">\u2713 Lesson Complete</div>'
+    : '<button class="btn btn-primary btn-full" onclick="markComplete(\'' + lesson.id + '\')">Mark Lesson Complete</button>';
+}
+
+/** Debounce notes auto-save. */
+function scheduleNotesSave(lessonId) {
+  clearTimeout(notesSaveTimer);
+  var status = document.getElementById('notes-status');
+  if (status) status.textContent = 'Saving\u2026';
+  notesSaveTimer = setTimeout(function() { saveNotes(lessonId); }, 1200);
+}
+
+/** Save notes to KV. */
+async function saveNotes(lessonId) {
+  var ta = document.getElementById('notes-ta');
+  if (!ta) return;
+  if (!currentUser.notes) currentUser.notes = {};
+  currentUser.notes[lessonId] = ta.value;
+  try {
+    await apiUpdateUser(currentUser.id, { notes: currentUser.notes });
+    var status = document.getElementById('notes-status');
+    if (status) { status.textContent = 'Saved \u2713'; setTimeout(function() { if (status) status.textContent = ''; }, 2000); }
+  } catch (e) {
+    var status = document.getElementById('notes-status');
+    if (status) status.textContent = 'Save failed';
+  }
+}
+
+/** Mark a lesson complete and update KV. */
+async function markComplete(lessonId) {
+  var ta = document.getElementById('notes-ta');
+  if (ta && ta.value) { if (!currentUser.notes) currentUser.notes = {}; currentUser.notes[lessonId] = ta.value; }
+  if (!currentUser.progress) currentUser.progress = {};
+  currentUser.progress[lessonId] = { complete: true, completedAt: new Date().toISOString(), reopened: false };
+  try {
+    await apiUpdateUser(currentUser.id, { progress: currentUser.progress, notes: currentUser.notes || {} });
+    showToast('Lesson marked complete! \uD83C\uDF89');
+    var lesson = LESSONS.find(function(l) { return l.id === lessonId; });
+    if (lesson) { renderLessonContent(lesson); renderCompleteArea(lesson); }
+    renderLessonList();
+  } catch (e) {
+    showToast('Could not save \u2014 please try again.');
+  }
+}
+
+// ── 11. TEACHER VIEW ────────────────────────────────────────────────────
+
+/** Load teacher dashboard. */
+async function loadTeacherView() {
+  document.getElementById('t-header-title').textContent = currentUser.name + '\'s Students';
+  var container = document.getElementById('teacher-student-list');
+  container.innerHTML = '<div class="text-muted text-center" style="padding:20px">Loading students\u2026</div>';
+  try {
+    if (!currentUser.studentIds || !currentUser.studentIds.length) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">\uD83D\uDC64</div><div>No students assigned yet.<br>Contact your Admin to get paired.</div></div>';
+      return;
+    }
+    var students = await Promise.all(currentUser.studentIds.map(function(id) { return apiGetUser(id); }));
+    container.innerHTML = students.map(function(student) {
+      var completed = Object.values(student.progress || {}).filter(function(p) { return p.complete; }).length;
+      var pct = Math.round((completed / PHASE1_KEYS.length) * 100);
+      return '<div class="user-card" onclick="viewStudent(\'' + student.id + '\')" style="cursor:pointer">' +
+        '<div style="flex:1"><div class="user-name">' + student.name + (student.newActivity ? ' \uD83D\uDD14' : '') + '</div>' +
+        '<div class="user-meta">' + completed + ' of ' + PHASE1_KEYS.length + ' lessons complete</div>' +
+        '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>' +
+        '<div class="lesson-arrow">\u203A</div></div>';
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="text-muted text-center" style="padding:20px">Error loading students.</div>';
+  }
+}
+
+/** Open student detail view (read-only). */
+async function viewStudent(studentId) {
+  document.getElementById('teacher-list-view').style.display = 'none';
+  var dv = document.getElementById('teacher-detail-view');
+  dv.style.cssText = 'display:flex;flex-direction:column;min-height:100dvh';
+  document.getElementById('td-name').textContent = 'Loading\u2026';
+  document.getElementById('teacher-detail-content').innerHTML = '<div style="padding:20px;text-align:center"><span class="spinner"></span></div>';
+  try {
+    viewingStudent = await apiGetUser(studentId);
+    viewingStudentId = studentId;
+    await apiUpdateUser(studentId, { teacherViewed: true });
+    viewingStudent.newActivity = false;
+    document.getElementById('td-name').textContent = viewingStudent.name;
+    renderTeacherStudentDetail();
+  } catch (e) {
+    document.getElementById('teacher-detail-content').innerHTML = '<p class="text-muted" style="padding:16px">Could not load student data.</p>';
+  }
+}
+
+/** Render teacher's read-only view of a student. */
+function renderTeacherStudentDetail() {
+  var progress = viewingStudent.progress || {};
+  var notes = viewingStudent.notes || {};
+  var html = '';
+  LESSONS.forEach(function(lesson) {
+    var state = progress[lesson.id] || {};
+    var complete = !!state.complete;
+    var studentNotes = notes[lesson.id] || '';
+    html += '<div class="lesson-section">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+        '<strong style="color:var(--txt1)">Lesson ' + lesson.num + ': ' + lesson.title + '</strong>' +
+        '<span class="badge ' + (complete ? 'badge-complete' : 'badge-pending') + '">' + (complete ? '\u2713 Complete' : 'In Progress') + '</span>' +
+      '</div>';
+    if (complete && state.completedAt) html += '<div class="user-meta">Completed: ' + new Date(state.completedAt).toLocaleDateString() + '</div>';
+    html += '<h3 style="margin-top:10px">Notes</h3>' +
+      '<div class="notes-readonly">' + (studentNotes ? escHtml(studentNotes) : '<span style="font-style:italic">No notes yet.</span>') + '</div></div>';
+  });
+  document.getElementById('teacher-detail-content').innerHTML = html;
+}
+
+/** Close teacher detail, return to list. */
+function closeTeacherDetail() {
+  viewingStudentId = null; viewingStudent = null;
+  document.getElementById('teacher-detail-view').style.display = 'none';
+  document.getElementById('teacher-list-view').style.display = '';
+  loadTeacherView();
+}
+
+// ── 12. ADMIN VIEW ───────────────────────────────────────────────────────
+
+/** Fetch all users and render active admin tab. */
+async function loadAdminView() {
+  try { allUsers = await apiListUsers(); renderAdminTab(adminActiveTab); }
+  catch (e) { showToast('Failed to load users.'); }
+}
+
+/** Switch admin tab. */
+function adminTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+  adminActiveTab = tab;
+  ['pairs','waiting','create'].forEach(function(t) {
+    document.getElementById('admin-' + t).style.display = t === tab ? '' : 'none';
+  });
+  renderAdminTab(tab);
+}
+
+/** Render content for a given admin tab. */
+function renderAdminTab(tab) {
+  if (tab === 'pairs') renderAdminPairs();
+  else if (tab === 'waiting') renderAdminWaiting();
+  else if (tab === 'create') renderAdminCreate();
+}
+
+/** Render active teacher→student pairs. */
+function renderAdminPairs() {
+  var users = allUsers || [];
+  var teachers = users.filter(function(u) { return u.roles && u.roles.includes('teacher') && u.studentIds && u.studentIds.length; });
+  var container = document.getElementById('admin-pairs');
+  if (!teachers.length) { container.innerHTML = '<div class="empty-state"><div class="icon">\uD83E\uDD1D</div><div>No active pairs yet.</div></div>'; return; }
+  container.innerHTML = teachers.map(function(teacher) {
+    var students = (teacher.studentIds || []).map(function(sid) { return users.find(function(u) { return u.id === sid; }); }).filter(Boolean);
+    return '<div class="pair-card"><div class="pair-teacher">\u2726 ' + teacher.name + ' <span class="badge badge-teacher">Teacher</span></div>' +
+      '<div class="pair-students">' +
+      (students.length ? students.map(function(s) {
+        var completed = Object.values(s.progress || {}).filter(function(p) { return p.complete; }).length;
+        return '<div class="pair-student-row"><span>\u2192 ' + s.name + '</span><span class="user-meta">' + completed + '/' + PHASE1_KEYS.length + ' lessons</span></div>';
+      }).join('') : '<div class="text-muted" style="font-size:.8rem">No students yet</div>') +
+      '</div></div>';
+  }).join('');
+}
+
+/** Render unassigned teachers and students (waiting pool). */
+function renderAdminWaiting() {
+  var users = allUsers || [];
+  var unassignedTeachers = users.filter(function(u) { return u.roles && u.roles.includes('teacher') && (!u.studentIds || !u.studentIds.length); });
+  var unassignedStudents = users.filter(function(u) { return u.roles && u.roles.includes('student') && !u.teacherId; });
+  var html = '<div class="section-label">Unassigned Teachers (' + unassignedTeachers.length + ')</div>';
+  html += unassignedTeachers.length
+    ? unassignedTeachers.map(function(t) { return '<div class="user-card"><div><div class="user-name">' + t.name + '</div><div class="user-meta">No students assigned</div></div><span class="badge badge-teacher">Teacher</span></div>'; }).join('')
+    : '<div class="text-muted" style="margin-bottom:12px">All teachers are assigned.</div>';
+  html += '<div class="section-label" style="margin-top:20px">Unassigned Students (' + unassignedStudents.length + ')</div>';
+  html += unassignedStudents.length
+    ? unassignedStudents.map(function(s) {
+        return '<div class="user-card"><div><div class="user-name">' + s.name + '</div><div class="user-meta">Awaiting assignment</div></div>' +
+          (unassignedTeachers.length ? '<button class="btn btn-accent btn-sm" onclick="showAssignModal(\'' + s.id + '\')">Assign</button>' : '<span class="badge badge-pending">No teachers available</span>') + '</div>';
+      }).join('')
+    : '<div class="text-muted">All students are assigned.</div>';
+  document.getElementById('admin-waiting').innerHTML = html;
+}
+
+/** Render the create user form. */
+function renderAdminCreate() {
+  var users = allUsers || [];
+  var teachers = users.filter(function(u) { return u.roles && u.roles.includes('teacher'); });
+  var teacherOptions = '<option value="">None (waiting pool)</option>' +
+    teachers.map(function(t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
+  document.getElementById('admin-create').innerHTML =
+    '<div class="card">' +
+    '<h3 style="font-family:\'EB Garamond\',Georgia,serif;font-weight:700;margin-bottom:16px;color:var(--txt1)">Create New User</h3>' +
+    '<div class="form-group"><label class="form-label">Name</label><input class="form-input" id="create-name" type="text" placeholder="Full name"></div>' +
+    '<div class="form-group"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="create-pin" type="number" placeholder="e.g. 1234" min="0" max="9999"></div>' +
+    '<div class="form-group"><label class="form-label">Role(s)</label>' +
+      '<div class="role-checks">' +
+        '<label class="role-check"><input type="checkbox" id="role-admin" value="admin"> Admin</label>' +
+        '<label class="role-check"><input type="checkbox" id="role-teacher" value="teacher" onchange="toggleTeacherAssign()"> Teacher</label>' +
+        '<label class="role-check"><input type="checkbox" id="role-student" value="student" onchange="toggleTeacherAssign()"> Student</label>' +
+      '</div></div>' +
+    '<div class="form-group" id="assign-teacher-group" style="display:none">' +
+      '<label class="form-label">Assign to Teacher <span class="text-muted">(optional)</span></label>' +
+      '<select class="form-select" id="create-teacher">' + teacherOptions + '</select></div>' +
+    '<button class="btn btn-primary btn-full" onclick="submitCreateUser()">Create User</button>' +
+    '<div id="create-status" style="margin-top:10px;font-size:.85rem;min-height:20px"></div></div>';
+}
+
+/** Show/hide teacher assignment field based on Student checkbox. */
+function toggleTeacherAssign() {
+  var isStudent = document.getElementById('role-student') && document.getElementById('role-student').checked;
+  var group = document.getElementById('assign-teacher-group');
+  if (group) group.style.display = isStudent ? '' : 'none';
+}
+
+/** Validate and submit create user form. */
+async function submitCreateUser() {
+  var name = (document.getElementById('create-name').value || '').trim();
+  var pin = (document.getElementById('create-pin').value || '').trim();
+  var roles = [];
+  if (document.getElementById('role-admin') && document.getElementById('role-admin').checked) roles.push('admin');
+  if (document.getElementById('role-teacher') && document.getElementById('role-teacher').checked) roles.push('teacher');
+  if (document.getElementById('role-student') && document.getElementById('role-student').checked) roles.push('student');
+  var teacherEl = document.getElementById('create-teacher');
+  var teacherId = (teacherEl && teacherEl.value) || null;
+  var status = document.getElementById('create-status');
+  if (!name) { status.textContent = '\u26A0 Name is required.'; status.style.color = 'var(--crimsonbright)'; return; }
+  if (!pin || pin.length !== 4 || isNaN(parseInt(pin, 10))) { status.textContent = '\u26A0 PIN must be exactly 4 digits.'; status.style.color = 'var(--crimsonbright)'; return; }
+  if (!roles.length) { status.textContent = '\u26A0 Select at least one role.'; status.style.color = 'var(--crimsonbright)'; return; }
+  status.textContent = 'Creating\u2026'; status.style.color = 'var(--txt3)';
+  try {
+    var result = await apiCreateUser({ name: name, pin: pin, roles: roles, teacherId: teacherId || null });
+    if (roles.includes('student') && teacherId) {
+      var teacher = (allUsers || []).find(function(u) { return u.id === teacherId; });
+      if (teacher) await apiUpdateUser(teacherId, { studentIds: (teacher.studentIds || []).concat([result.id]) });
+    }
+    status.textContent = '\u2713 ' + name + ' created successfully.'; status.style.color = 'var(--sagebright)';
+    document.getElementById('create-name').value = ''; document.getElementById('create-pin').value = '';
+    ['role-admin','role-teacher','role-student'].forEach(function(id) { var el = document.getElementById(id); if (el) el.checked = false; });
+    toggleTeacherAssign();
+    allUsers = await apiListUsers();
+  } catch (e) {
+    status.textContent = e.message === 'pin_in_use' ? '\u26A0 That PIN is already in use.' : '\u26A0 ' + e.message;
+    status.style.color = 'var(--crimsonbright)';
+  }
+}
+
+/** Show assign modal for an unassigned student. */
+function showAssignModal(studentId) {
+  var users = allUsers || [];
+  var student = users.find(function(u) { return u.id === studentId; });
+  var teachers = users.filter(function(u) { return u.roles && u.roles.includes('teacher'); });
+  if (!student || !teachers.length) return;
+  var overlay = document.createElement('div');
+  overlay.className = 'assign-overlay'; overlay.id = '_assign-overlay';
+  overlay.innerHTML = '<div class="assign-sheet">' +
+    '<div class="assign-title">Assign ' + student.name + ' to a Teacher</div>' +
+    '<select class="form-select" id="assign-teacher-select">' +
+      teachers.map(function(t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('') +
+    '</select>' +
+    '<div style="display:flex;gap:10px;margin-top:16px">' +
+      '<button class="btn btn-primary" style="flex:1" onclick="doAssign(\'' + studentId + '\')">Assign</button>' +
+      '<button class="btn btn-ghost" style="flex:1" onclick="document.getElementById(\'_assign-overlay\').remove()">Cancel</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+/** Complete a student→teacher assignment. */
+async function doAssign(studentId) {
+  var sel = document.getElementById('assign-teacher-select');
+  if (!sel) return;
+  var teacherId = sel.value;
+  if (!teacherId) return;
+  try {
+    await apiUpdateUser(studentId, { teacherId: teacherId });
+    var teacher = (allUsers || []).find(function(u) { return u.id === teacherId; });
+    if (teacher) await apiUpdateUser(teacherId, { studentIds: (teacher.studentIds || []).filter(function(id) { return id !== studentId; }).concat([studentId]) });
+    var ov = document.getElementById('_assign-overlay');
+    if (ov) ov.remove();
+    showToast('Assigned successfully \u2713');
+    allUsers = await apiListUsers();
+    renderAdminTab('waiting');
+  } catch (e) { showToast('Assignment failed.'); }
+}
+
+// ── 13. SCRIPTURE MODAL ──────────────────────────────────────────────────
+
+/** Open scripture modal and fetch NKJV verse. */
+async function openScriptureModal(ref) {
+  document.getElementById('modal-ref').textContent = ref;
+  document.getElementById('modal-text').innerHTML = '<span class="spinner"></span>';
+  document.getElementById('scripture-modal').classList.add('active');
+  var text = await fetchVerse(ref);
+  var el = document.getElementById('modal-text');
+  if (el) el.textContent = text;
+}
+
+/** Close scripture modal (on overlay click or button). */
+function closeScriptureModal(e) {
+  if (e && e.target !== document.getElementById('scripture-modal')) return;
+  document.getElementById('scripture-modal').classList.remove('active');
+}
+
+// ── 14. UTILITIES ────────────────────────────────────────────────────────
+
+/** Show a temporary toast notification. */
+function showToast(msg) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg; toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2500);
+}
+
+/** Escape HTML special characters for safe innerHTML insertion. */
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── 15. INIT ─────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.pin-key').forEach(function(btn) {
+    btn.addEventListener('click', function() { handlePinKey(this.dataset.k); });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (!document.getElementById('screen-auth').classList.contains('active')) return;
+    if (e.key >= '0' && e.key <= '9') handlePinKey(e.key);
+    else if (e.key === 'Backspace') handlePinKey('del');
+  });
+  // Remove 'active' from auth screen — checkFirstRun decides which screen to show
+  document.getElementById('screen-auth').classList.remove('active');
+  checkFirstRun();
+});
+</script>
+</body>
+</html>
