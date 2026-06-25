@@ -187,6 +187,22 @@
     .assign-overlay { position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:flex-end;justify-content:center; }
     .assign-sheet { background:var(--bg2);border-radius:var(--rl) var(--rl) 0 0;border-top:1px solid var(--border);padding:24px;width:100%;max-width:600px; }
     .assign-title { font-family:'EB Garamond',Georgia,serif; font-weight:700;color:var(--txt1);margin-bottom:16px;font-size:1.1rem; }
+    /* ── User Management (Admin → Users tab) ── */
+    .btn-danger { background: var(--crimsonbright); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size:.9rem; cursor: pointer; }
+    .btn-danger:hover { opacity: .85; }
+    .user-mgt-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .user-mgt-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; user-select: none; }
+    .user-mgt-header:hover { background: var(--bg3); }
+    .user-mgt-chevron { color: var(--txt3); font-size: 1.1rem; transition: transform .2s; }
+    .user-mgt-chevron.open { transform: rotate(90deg); }
+    .user-mgt-body { padding: 0 16px 16px; border-top: 1px solid var(--border); }
+    .edit-section { padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .edit-section:last-of-type { border-bottom: none; }
+    .progress-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: .85rem; color: var(--txt2); flex-wrap: wrap; }
+    .progress-row > span:first-child { flex: 1; min-width: 0; }
+    .new-user-pill { background: var(--sagebright); color: #000; border: none; border-radius: 20px; padding: 6px 14px; font-size: .82rem; font-weight: 600; cursor: pointer; }
+    .new-user-pill:hover { opacity: .85; }
+    .create-inline-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
     /* ── TTS Player Bar ── */
     .tts-bar { background: var(--bg2); border-top: 1px solid var(--border); padding: 8px 12px; position: sticky; bottom: 52px; z-index: 9; }
     .tts-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -325,12 +341,12 @@
   <div class="content">
     <div class="tab-bar">
       <button class="tab active" onclick="adminTab('pairs',this)">Active Pairs</button>
-      <button class="tab" onclick="adminTab('waiting',this)">Waiting Pool</button>
-      <button class="tab" onclick="adminTab('create',this)">Create</button>
+      <button class="tab" onclick="adminTab('waiting',this)">Unassigned Students</button>
+      <button class="tab" onclick="adminTab('users',this)">Users</button>
     </div>
     <div id="admin-pairs"></div>
     <div id="admin-waiting" style="display:none"></div>
-    <div id="admin-create" style="display:none"></div>
+    <div id="admin-users" style="display:none"></div>
   </div>
 </div>
 
@@ -1041,6 +1057,14 @@ async function apiUpdateUser(id, updates) {
   if (!res.ok) throw new Error('update_failed');
 }
 
+/** Hard-delete a user record from KV (proxy cleans pin + index). */
+async function apiDeleteUser(id) {
+  var res = await fetch(PROXY_BASE + '/mentor/user/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) });
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'delete_failed');
+  return data;
+}
+
 // ── 06. AUTH / SESSION ───────────────────────────────────────────────────
 
 /**
@@ -1439,7 +1463,7 @@ function adminTab(tab, el) {
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
   adminActiveTab = tab;
-  ['pairs','waiting','create'].forEach(function(t) {
+  ['pairs','waiting','users'].forEach(function(t) {
     document.getElementById('admin-' + t).style.display = t === tab ? '' : 'none';
   });
   renderAdminTab(tab);
@@ -1449,7 +1473,7 @@ function adminTab(tab, el) {
 function renderAdminTab(tab) {
   if (tab === 'pairs') renderAdminPairs();
   else if (tab === 'waiting') renderAdminWaiting();
-  else if (tab === 'create') renderAdminCreate();
+  else if (tab === 'users') renderAdminUsers();
 }
 
 /** Render active teacher→student pairs. */
@@ -1489,15 +1513,16 @@ function renderAdminWaiting() {
   document.getElementById('admin-waiting').innerHTML = html;
 }
 
-/** Render the create user form. */
-function renderAdminCreate() {
+/** Render the create user form inside the Users tab inline panel. */
+function renderAdminCreateInline() {
   var users = allUsers || [];
   var teachers = users.filter(function(u) { return u.roles && u.roles.includes('teacher'); });
-  var teacherOptions = '<option value="">None (waiting pool)</option>' +
+  var teacherOptions = '<option value="">None (unassigned)</option>' +
     teachers.map(function(t) { return '<option value="' + t.id + '">' + t.name + '</option>'; }).join('');
-  document.getElementById('admin-create').innerHTML =
-    '<div class="card">' +
-    '<h3 style="font-family:\'EB Garamond\',Georgia,serif;font-weight:700;margin-bottom:16px;color:var(--txt1)">Create New User</h3>' +
+  var panel = document.getElementById('create-user-inline');
+  if (!panel) return;
+  panel.innerHTML =
+    '<h3 style="font-family:\'EB Garamond\',Georgia,serif;font-weight:700;margin-bottom:16px;color:var(--txt1)">New User</h3>' +
     '<div class="form-group"><label class="form-label">Name</label><input class="form-input" id="create-name" type="text" placeholder="Full name"></div>' +
     '<div class="form-group"><label class="form-label">PIN (4 digits)</label><input class="form-input" id="create-pin" type="number" placeholder="e.g. 1234" min="0" max="9999"></div>' +
     '<div class="form-group"><label class="form-label">Role(s)</label>' +
@@ -1510,7 +1535,7 @@ function renderAdminCreate() {
       '<label class="form-label">Assign to Teacher <span class="text-muted">(optional)</span></label>' +
       '<select class="form-select" id="create-teacher">' + teacherOptions + '</select></div>' +
     '<button class="btn btn-primary btn-full" onclick="submitCreateUser()">Create User</button>' +
-    '<div id="create-status" style="margin-top:10px;font-size:.85rem;min-height:20px"></div></div>';
+    '<div id="create-status" style="margin-top:10px;font-size:.85rem;min-height:20px"></div>';
 }
 
 /** Show/hide teacher assignment field based on Student checkbox. */
@@ -1546,6 +1571,7 @@ async function submitCreateUser() {
     ['role-admin','role-teacher','role-student'].forEach(function(id) { var el = document.getElementById(id); if (el) el.checked = false; });
     toggleTeacherAssign();
     allUsers = await apiListUsers();
+    renderAdminUsers();
   } catch (e) {
     status.textContent = e.message === 'pin_in_use' ? '\u26A0 That PIN is already in use.' : '\u26A0 ' + e.message;
     status.style.color = 'var(--crimsonbright)';
@@ -1588,6 +1614,273 @@ async function doAssign(studentId) {
     allUsers = await apiListUsers();
     renderAdminTab('waiting');
   } catch (e) { showToast('Assignment failed.'); }
+}
+
+/** Render the Users management tab. */
+function renderAdminUsers() {
+  var users = allUsers || [];
+  var container = document.getElementById('admin-users');
+  if (!container) return;
+  var html =
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">' +
+      '<button class="new-user-pill" id="new-user-pill" onclick="adminToggleCreate()">\u002B New User</button>' +
+    '</div>' +
+    '<div id="create-user-inline" class="create-inline-card" style="display:none"></div>';
+
+  if (!users.length) {
+    html += '<div class="empty-state"><div class="icon">\uD83D\uDC65</div><div>No users yet.</div></div>';
+  } else {
+    html += users.map(function(u) {
+      var roles = (u.roles || []);
+      var completed = Object.values(u.progress || {}).filter(function(p) { return p.complete; }).length;
+      var rolesBadges = roles.map(function(r) {
+        var cls = r === 'admin' ? '' : r === 'teacher' ? 'badge-teacher' : 'badge-student';
+        return '<span class="badge ' + cls + '" style="' + (r === 'admin' ? 'background:var(--gold);color:#000' : '') + '">' + r + '</span>';
+      }).join(' ');
+      var progressText = roles.includes('student') ? '\u00b7 ' + completed + '/' + PHASE1_KEYS.length + ' lessons' : '';
+      return '<div class="user-mgt-card" id="umcard-' + u.id + '">' +
+        '<div class="user-mgt-header" onclick="adminToggleUser(\'' + u.id + '\')">' +
+          '<div>' +
+            '<div class="user-name">' + escHtml(u.name) + '</div>' +
+            '<div class="user-meta" style="margin-top:3px">' + rolesBadges + ' <span style="color:var(--txt4)">' + progressText + '</span></div>' +
+          '</div>' +
+          '<span class="user-mgt-chevron" id="umchev-' + u.id + '">\u203A</span>' +
+        '</div>' +
+        '<div class="user-mgt-body" id="umbody-' + u.id + '" style="display:none">' +
+          '<div style="padding:12px 0;color:var(--txt3);font-size:.85rem">Loading\u2026</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  container.innerHTML = html;
+}
+
+/** Toggle the inline create user form. */
+function adminToggleCreate() {
+  var panel = document.getElementById('create-user-inline');
+  var pill = document.getElementById('new-user-pill');
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    if (pill) pill.textContent = '\u002B New User';
+  } else {
+    panel.style.display = '';
+    if (pill) pill.textContent = '\u00d7 Close';
+    renderAdminCreateInline();
+  }
+}
+
+/**
+ * Expand or collapse a user management card.
+ * On first open, fetches full user record (includes PIN) and renders edit form.
+ * @param {string} id
+ */
+async function adminToggleUser(id) {
+  var body = document.getElementById('umbody-' + id);
+  var chev = document.getElementById('umchev-' + id);
+  if (!body) return;
+  var isOpen = body.style.display !== 'none';
+  if (isOpen) {
+    body.style.display = 'none';
+    if (chev) chev.classList.remove('open');
+    return;
+  }
+  body.style.display = '';
+  if (chev) chev.classList.add('open');
+  // Only fetch if body is still showing loading placeholder
+  if (body.innerHTML.indexOf('Loading') !== -1) {
+    try {
+      var user = await apiGetUser(id);
+      var teachers = (allUsers || []).filter(function(u) { return u.roles && u.roles.includes('teacher') && u.id !== id; });
+      body.innerHTML = renderUserEditBody(user, teachers);
+    } catch(e) {
+      body.innerHTML = '<div class="text-muted" style="padding:12px 0">Failed to load user.</div>';
+    }
+  }
+}
+
+/**
+ * Build the edit form + progress HTML string for a user card body.
+ * @param {object} user - Full user record (including PIN)
+ * @param {Array} teachers - Array of teacher users (excluding this user)
+ * @returns {string}
+ */
+function renderUserEditBody(user, teachers) {
+  var uid = user.id;
+  var teacherOpts = '<option value="">None (unassigned)</option>' +
+    teachers.map(function(t) {
+      return '<option value="' + t.id + '"' + (t.id === user.teacherId ? ' selected' : '') + '>' + escHtml(t.name) + '</option>';
+    }).join('');
+  var rolesHtml = ['admin','teacher','student'].map(function(r) {
+    var checked = user.roles && user.roles.includes(r) ? ' checked' : '';
+    var onChange = (r === 'student' || r === 'teacher') ? ' onchange="toggleUETeacher(\'' + uid + '\')"' : '';
+    return '<label class="role-check"><input type="checkbox" id="ue-role-' + r + '-' + uid + '" value="' + r + '"' + checked + onChange + '> ' +
+      r.charAt(0).toUpperCase() + r.slice(1) + '</label>';
+  }).join('');
+  var isStudent = user.roles && user.roles.includes('student');
+  var progressHtml = PHASE1_KEYS.map(function(key) {
+    var lesson = LESSONS.find(function(l) { return l.id === key; });
+    var state = (user.progress && user.progress[key]) || {};
+    var complete = !!state.complete;
+    var hasNotes = !!(user.notes && user.notes[key]);
+    var badge = complete
+      ? '<span class="badge badge-complete">\u2713 Complete</span>'
+      : (hasNotes ? '<span class="badge badge-pending">In Progress</span>' : '<span style="color:var(--txt4);font-size:.8rem">Not started</span>');
+    var btn = complete
+      ? '<button class="btn btn-ghost btn-sm" onclick="adminResetLesson(\'' + uid + '\',\'' + key + '\')">Reopen</button>'
+      : '<button class="btn btn-ghost btn-sm" onclick="adminMarkComplete(\'' + uid + '\',\'' + key + '\')">Mark Complete</button>';
+    var lessonLabel = lesson ? 'L' + lesson.num + ': ' + lesson.title : key;
+    return '<div class="progress-row"><span>' + lessonLabel + '</span>' + badge + btn + '</div>';
+  }).join('');
+
+  return '<div class="edit-section">' +
+    '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Name</label>' +
+    '<input class="form-input" id="ue-name-' + uid + '" type="text" value="' + escHtml(user.name) + '"></div>' +
+    '<div class="form-group" style="margin-bottom:10px"><label class="form-label">PIN</label>' +
+    '<input class="form-input" id="ue-pin-' + uid + '" type="text" maxlength="4" placeholder="4 digits" value="' + escHtml(user.pin || '') + '"></div>' +
+    '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Roles</label>' +
+    '<div class="role-checks">' + rolesHtml + '</div></div>' +
+    '<div class="form-group" id="ue-teacher-group-' + uid + '"' + (isStudent ? '' : ' style="display:none"') + '>' +
+    '<label class="form-label">Teacher Assignment</label>' +
+    '<select class="form-select" id="ue-teacher-' + uid + '">' + teacherOpts + '</select></div>' +
+    '</div>' +
+    (user.roles && user.roles.includes('student')
+      ? '<div class="edit-section"><div class="section-label" style="margin-bottom:8px">Lesson Progress</div>' + progressHtml + '</div>'
+      : '') +
+    '<div style="display:flex;gap:10px;padding-top:14px">' +
+    '<button class="btn btn-primary" style="flex:1" onclick="submitUserEdit(\'' + uid + '\')">Save Changes</button>' +
+    '<button class="btn btn-danger" onclick="adminDeleteUser(\'' + uid + '\')">Delete</button>' +
+    '</div>' +
+    '<div id="ue-status-' + uid + '" style="margin-top:8px;font-size:.85rem;min-height:18px"></div>';
+}
+
+/** Show/hide teacher assignment field in user edit form. */
+function toggleUETeacher(uid) {
+  var isStudent = document.getElementById('ue-role-student-' + uid);
+  var group = document.getElementById('ue-teacher-group-' + uid);
+  if (isStudent && group) group.style.display = isStudent.checked ? '' : 'none';
+}
+
+/**
+ * Validate and save edits to a user record.
+ * Handles PIN changes, role changes, and teacher reassignment.
+ * @param {string} uid
+ */
+async function submitUserEdit(uid) {
+  var nameEl = document.getElementById('ue-name-' + uid);
+  var pinEl  = document.getElementById('ue-pin-' + uid);
+  var status = document.getElementById('ue-status-' + uid);
+  var name = (nameEl ? nameEl.value : '').trim();
+  var pin  = (pinEl  ? pinEl.value  : '').trim();
+  var roles = ['admin','teacher','student'].filter(function(r) {
+    var el = document.getElementById('ue-role-' + r + '-' + uid);
+    return el && el.checked;
+  });
+  var teacherEl = document.getElementById('ue-teacher-' + uid);
+  var newTeacherId = (teacherEl && teacherEl.value) || null;
+  if (!name) { status.textContent = '\u26a0 Name required.'; status.style.color = 'var(--crimsonbright)'; return; }
+  if (!pin || pin.length !== 4 || isNaN(parseInt(pin, 10))) { status.textContent = '\u26a0 PIN must be 4 digits.'; status.style.color = 'var(--crimsonbright)'; return; }
+  if (!roles.length) { status.textContent = '\u26a0 Select at least one role.'; status.style.color = 'var(--crimsonbright)'; return; }
+  status.textContent = 'Saving\u2026'; status.style.color = 'var(--txt3)';
+  try {
+    var currentRecord = (allUsers || []).find(function(u) { return u.id === uid; });
+    var oldTeacherId = currentRecord ? currentRecord.teacherId : null;
+    // Save core fields
+    await apiUpdateUser(uid, { name: name, pin: pin, roles: roles, teacherId: roles.includes('student') ? newTeacherId : null });
+    // Reassign teacher relationships if student teacher changed
+    if (roles.includes('student') && newTeacherId !== oldTeacherId) {
+      if (oldTeacherId) {
+        var oldT = (allUsers || []).find(function(u) { return u.id === oldTeacherId; });
+        if (oldT) await apiUpdateUser(oldTeacherId, { studentIds: (oldT.studentIds || []).filter(function(sid) { return sid !== uid; }) });
+      }
+      if (newTeacherId) {
+        var newT = (allUsers || []).find(function(u) { return u.id === newTeacherId; });
+        if (newT) {
+          var sids = (newT.studentIds || []).filter(function(sid) { return sid !== uid; }).concat([uid]);
+          await apiUpdateUser(newTeacherId, { studentIds: sids });
+        }
+      }
+    }
+    status.textContent = '\u2713 Saved.'; status.style.color = 'var(--sagebright)';
+    allUsers = await apiListUsers();
+    // Invalidate card body so it re-fetches on next open
+    var body = document.getElementById('umbody-' + uid);
+    if (body) body.innerHTML = '<div style="padding:12px 0;color:var(--txt3);font-size:.85rem">Loading\u2026</div>';
+    renderAdminUsers();
+  } catch(e) {
+    status.textContent = '\u26a0 ' + (e.message === 'pin_in_use' ? 'PIN already in use.' : e.message);
+    status.style.color = 'var(--crimsonbright)';
+  }
+}
+
+/**
+ * Hard-delete a user after confirmation.
+ * Cleans up teacher↔student relationship links before deleting.
+ * @param {string} uid
+ */
+async function adminDeleteUser(uid) {
+  var user = (allUsers || []).find(function(u) { return u.id === uid; });
+  if (!user) return;
+  if (!confirm('Delete ' + user.name + '? This cannot be undone.')) return;
+  try {
+    // Remove from teacher's studentIds
+    if (user.teacherId) {
+      var teacher = (allUsers || []).find(function(u) { return u.id === user.teacherId; });
+      if (teacher) await apiUpdateUser(user.teacherId, { studentIds: (teacher.studentIds || []).filter(function(sid) { return sid !== uid; }) });
+    }
+    // Clear teacherId on any students this user taught
+    if (user.studentIds && user.studentIds.length) {
+      await Promise.all(user.studentIds.map(function(sid) {
+        return apiUpdateUser(sid, { teacherId: null });
+      }));
+    }
+    await apiDeleteUser(uid);
+    showToast(user.name + ' deleted.');
+    allUsers = await apiListUsers();
+    renderAdminUsers();
+  } catch(e) { showToast('Delete failed: ' + e.message); }
+}
+
+/**
+ * Reopen a completed lesson for a student (admin override).
+ * Sets complete:false, reopened:true; preserves notes.
+ * @param {string} uid
+ * @param {string} lessonId
+ */
+async function adminResetLesson(uid, lessonId) {
+  var user = (allUsers || []).find(function(u) { return u.id === uid; });
+  if (!user) return;
+  var progress = Object.assign({}, user.progress || {});
+  progress[lessonId] = Object.assign({}, progress[lessonId] || {}, { complete: false, reopened: true });
+  try {
+    await apiUpdateUser(uid, { progress: progress });
+    showToast('Lesson reopened.');
+    allUsers = await apiListUsers();
+    var body = document.getElementById('umbody-' + uid);
+    if (body) body.innerHTML = '<div style="padding:12px 0;color:var(--txt3);font-size:.85rem">Loading\u2026</div>';
+    adminToggleUser(uid);
+  } catch(e) { showToast('Failed: ' + e.message); }
+}
+
+/**
+ * Mark a lesson complete for a student (admin override).
+ * @param {string} uid
+ * @param {string} lessonId
+ */
+async function adminMarkComplete(uid, lessonId) {
+  var user = (allUsers || []).find(function(u) { return u.id === uid; });
+  if (!user) return;
+  var progress = Object.assign({}, user.progress || {});
+  progress[lessonId] = Object.assign({}, progress[lessonId] || {}, { complete: true, completedAt: new Date().toISOString() });
+  try {
+    await apiUpdateUser(uid, { progress: progress });
+    showToast('Lesson marked complete.');
+    allUsers = await apiListUsers();
+    var body = document.getElementById('umbody-' + uid);
+    if (body) body.innerHTML = '<div style="padding:12px 0;color:var(--txt3);font-size:.85rem">Loading\u2026</div>';
+    adminToggleUser(uid);
+  } catch(e) { showToast('Failed: ' + e.message); }
 }
 
 // ── 13. SCRIPTURE MODAL ──────────────────────────────────────────────────
