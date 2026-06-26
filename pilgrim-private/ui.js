@@ -942,9 +942,11 @@ function importDataFromFile(input){
 /**
  * Opens the Joshua 1:8 cornerstone verse modal.
  */
-function openVerseModal(){
-  document.getElementById('verse-overlay').classList.add('on');
-}
+function openVerseModal(){var o=document.getElementById('verse-modal');if(o)o.classList.add('on');}
+/**
+ * Closes the Joshua 1:8 verse modal.
+ */
+function closeVerseModal(){var o=document.getElementById('verse-modal');if(o)o.classList.remove('on');}
 function shareApp(){
   // Three-tier fallback: native share API → clipboard write → manual copy modal
   var url=APP_SHARE_URL;
