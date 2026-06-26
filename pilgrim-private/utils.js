@@ -1063,6 +1063,191 @@ var _clOpen={};
 var _clSectionOpen=false;
 
 
+// ── Section 07 — additional ref management functions ─────────────────────────
+// switchRef, addRef, moveRef, toggleRefType, removeRef, confirmRemoveRef,
+// doRemoveRef, renderRefPills were not extracted in Sessions 1–5.
+// Cross-module calls use window.* bridges (same pattern as rest of extraction phase).
+
+/**
+ * Switches the active reference to the given index and re-renders the visible screen.
+ * Syncs field inputs first, resets AI panel state, and refreshes ref pills.
+ * @param {number} idx - Zero-based index into cur.refs to activate.
+ */
+function switchRef(idx){
+  if(!cur||!cur.refs)return;
+  if(window.syncFromInputs)window.syncFromInputs();
+  setActiveRefIdx(Math.min(idx,cur.refs.length-1));
+  setStudyScope((activeRef()&&activeRef().deep&&activeRef().deep.studyScope)||'passage');
+  if(window.setAiPanelResults)window.setAiPanelResults({});
+  if(window.setAiActiveTab)window.setAiActiveTab(null);
+  var fieldOn=document.getElementById('scr-field')&&document.getElementById('scr-field').classList.contains('on');
+  var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');
+  if(fieldOn){
+    var ar=activeRef();
+    document.getElementById('f-ref').value=ar?ar.reference||'':'';
+    document.getElementById('f-trans').value=ar?ar.translation||'esv':'esv';
+    if(window.updateBarRefLabel)window.updateBarRefLabel();
+    if(ar&&ar.scriptureText){
+      if(window.renderScrText)window.renderScrText(ar.scriptureText,ar.pastedTranslation||ar.translation);
+      document.getElementById('scracts').style.display='flex';
+    }else{
+      document.getElementById('scrdisplay').innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';
+      document.getElementById('scracts').style.display='none';
+    }
+    renderRefPills('f-ref-pills','field');
+  }
+  if(deepOn){if(window.populateDeep)window.populateDeep();}
+}
+
+/**
+ * Appends a new secondary reference to the current study and switches to it.
+ * Focuses the reference input field after a short delay.
+ */
+function addRef(){
+  if(!cur)return;
+  if(!cur.refs)cur.refs=[];
+  cur.refs.push(makeRef('secondary'));
+  if(window.saveStudy)window.saveStudy(true);
+  switchRef(cur.refs.length-1);
+  toast('New passage added');
+  setTimeout(function(){var r=document.getElementById('f-ref');if(r){r.focus();r.select();}},80);
+}
+
+/**
+ * Moves the active reference one position left or right within its type group.
+ * Only swaps with adjacent references of the same type.
+ * @param {number} dir - Direction: -1 to move left, +1 to move right.
+ */
+function moveRef(dir){
+  if(!cur||!cur.refs||cur.refs.length<2)return;
+  var idx=activeRefIdx;var type=cur.refs[idx].type;
+  var target=idx+dir;
+  while(target>=0&&target<cur.refs.length&&cur.refs[target].type!==type)target+=dir;
+  if(target<0||target>=cur.refs.length||cur.refs[target].type!==type)return;
+  var tmp=cur.refs[idx];cur.refs[idx]=cur.refs[target];cur.refs[target]=tmp;
+  setActiveRefIdx(target);
+  if(window.saveStudy)window.saveStudy(true);
+  var fieldOn=document.getElementById('scr-field')&&document.getElementById('scr-field').classList.contains('on');
+  var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');
+  if(fieldOn)renderRefPills('f-ref-pills','field');
+  if(deepOn)renderRefPills('d-ref-pills','deep');
+}
+
+/**
+ * Toggles a reference between primary and secondary type and repositions it.
+ * Primary refs are grouped before secondaries.
+ * @param {number} idx - Zero-based index of the reference to toggle.
+ */
+function toggleRefType(idx){
+  if(!cur||!cur.refs||!cur.refs[idx])return;
+  var newType=cur.refs[idx].type==='secondary'?'primary':'secondary';
+  cur.refs[idx].type=newType;
+  var ref=cur.refs.splice(idx,1)[0];
+  if(newType==='primary'){
+    var lastPrimary=-1;
+    cur.refs.forEach(function(r,i){if(r.type==='primary')lastPrimary=i;});
+    cur.refs.splice(lastPrimary+1,0,ref);setActiveRefIdx(lastPrimary+1);
+  }else{
+    var firstSec=cur.refs.length;
+    for(var si=0;si<cur.refs.length;si++){if(cur.refs[si].type==='secondary'){firstSec=si;break;}}
+    cur.refs.splice(firstSec,0,ref);setActiveRefIdx(firstSec);
+  }
+  if(window.saveStudy)window.saveStudy(true);
+  var fieldOn=document.getElementById('scr-field')&&document.getElementById('scr-field').classList.contains('on');
+  var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');
+  if(fieldOn)renderRefPills('f-ref-pills','field');
+  if(deepOn)renderRefPills('d-ref-pills','deep');
+}
+
+/**
+ * Initiates removal of a reference by index.
+ * If the reference has content, shows a confirmation overlay; otherwise removes immediately.
+ * Guards against removing the last remaining reference.
+ * @param {number} idx - Zero-based index of the reference to remove.
+ */
+function removeRef(idx){
+  if(!cur||!cur.refs)return;
+  if(cur.refs.length<=1){toast('A study needs at least one passage');return;}
+  var ref=cur.refs[idx];
+  var hasContent=ref&&(ref.reference||ref.scriptureText||['lexical','grammar','historical','cultural','crossrefs','lexical_book','grammar_book','historical_book','cultural_book','crossrefs_book'].some(function(k){return ref.deep&&ref.deep[k];}));
+  if(hasContent){setPendingDeleteRefIdx(idx);document.getElementById('delref-overlay').classList.add('on');}else{doRemoveRef(idx);}
+}
+
+/**
+ * Confirms and executes a pending reference removal after user confirms the overlay.
+ * Clears _pendingDeleteRefIdx and closes the confirmation overlay.
+ */
+function confirmRemoveRef(){
+  if(_pendingDeleteRefIdx===null)return;
+  doRemoveRef(_pendingDeleteRefIdx);
+  setPendingDeleteRefIdx(null);
+  closeOverlay('delref-overlay');
+}
+
+/**
+ * Performs the actual removal of a reference at the given index.
+ * Clamps activeRefIdx, resets AI panel state, re-renders the visible screen, and persists.
+ * @param {number} idx - Zero-based index of the reference to remove from cur.refs.
+ */
+function doRemoveRef(idx){
+  if(!cur||!cur.refs||cur.refs.length<=1)return;
+  cur.refs.splice(idx,1);
+  if(activeRefIdx>=cur.refs.length)setActiveRefIdx(cur.refs.length-1);
+  setStudyScope((activeRef()&&activeRef().deep&&activeRef().deep.studyScope)||'passage');
+  if(window.setAiPanelResults)window.setAiPanelResults({});
+  if(window.setAiActiveTab)window.setAiActiveTab(null);
+  var fieldOn=document.getElementById('scr-field')&&document.getElementById('scr-field').classList.contains('on');
+  var deepOn=document.getElementById('scr-deep')&&document.getElementById('scr-deep').classList.contains('on');
+  if(fieldOn){
+    var ar=activeRef();
+    document.getElementById('f-ref').value=ar?ar.reference||'':'';
+    document.getElementById('f-trans').value=ar?ar.translation||'esv':'esv';
+    if(window.updateBarRefLabel)window.updateBarRefLabel();
+    if(ar&&ar.scriptureText){
+      if(window.renderScrText)window.renderScrText(ar.scriptureText,ar.pastedTranslation||ar.translation);
+      document.getElementById('scracts').style.display='flex';
+    }else{
+      document.getElementById('scrdisplay').innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';
+      document.getElementById('scracts').style.display='none';
+    }
+    renderRefPills('f-ref-pills','field');
+  }
+  if(deepOn){if(window.populateDeep)window.populateDeep();}
+  if(window.saveStudy)window.saveStudy(true);
+  toast('Passage removed');
+}
+
+/**
+ * Renders the reference pill tab bar into a container element.
+ * In field mode, includes move arrows, type toggle, remove (×), and "Add Passage" button.
+ * In deep mode, omits the × button.
+ * @param {string} containerId - DOM id of the container element.
+ * @param {string} mode - 'field' or 'deep', controls which controls are rendered.
+ */
+function renderRefPills(containerId,mode){
+  var el=document.getElementById(containerId);if(!el||!cur||!cur.refs)return;
+  var html='';
+  cur.refs.forEach(function(ref,i){
+    var isActive=(i===activeRefIdx);
+    var label=ref.reference||'Passage '+(i+1);
+    if(label.length>20)label=label.slice(0,18)+'\u2026';
+    var showX=cur.refs.length>1&&mode==='field';
+    var isPrimary=ref.type!=='secondary';
+    var typeBadge='<span class="ref-pill-type" onclick="event.stopPropagation();toggleRefType('+i+')" title="'+(isPrimary?'Primary':'Secondary')+'">'+(isPrimary?'\u2605':'\u25cb')+'</span>';
+    var canLeft=false,canRight=false;
+    if(isActive&&cur.refs.length>1){
+      for(var li=i-1;li>=0;li--){if(cur.refs[li].type===ref.type){canLeft=true;break;}}
+      for(var ri=i+1;ri<cur.refs.length;ri++){if(cur.refs[ri].type===ref.type){canRight=true;break;}}
+    }
+    var leftArr=canLeft?'<span class="ref-pill-type" onclick="event.stopPropagation();moveRef(-1)" title="Move left">\u2039</span>':'';
+    var rightArr=canRight?'<span class="ref-pill-type" onclick="event.stopPropagation();moveRef(1)" title="Move right">\u203a</span>':'';
+    html+='<button class="ref-pill'+(isActive?' on':'')+(isPrimary?'':' secondary')+'" onclick="switchRef('+i+')">'+typeBadge+leftArr+escHtml(label)+rightArr+(showX?'<span class="ref-pill-x" onclick="event.stopPropagation();removeRef('+i+')">\u2715</span>':'')+'</button>';
+  });
+  if(mode==='field'){html+='<button class="ref-pill ref-pill-add" onclick="addRef()">+ Add Passage</button>';}
+  el.innerHTML=html;
+}
+
+
 // ════════════════════════════════════════════════════════
 
 // Export all public symbols for ES Module consumers
@@ -1086,6 +1271,9 @@ export {
   pdfSafe, prevDay, TEMPLATES, activeTagFilter, obStep, mfBlob,
   // Section 07 partial — pure data model
   makeRef, migrateStudy, activeRef,
+  // Section 07 — additional ref management (extracted session 6)
+  switchRef, addRef, moveRef, toggleRefType,
+  removeRef, confirmRemoveRef, doRemoveRef, renderRefPills,
   // Section 27 partial — namespace helpers
   migrateLegacyKey, activateUser,
   // Section 29 — changelog
