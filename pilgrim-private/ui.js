@@ -2586,7 +2586,7 @@ export {
   openExportModal, expToggle, expSelectAll, expSelectAllTools, expIsOn,
   deleteAIResult, runExport, exportPDF, initSwipe,
   // S19 — Backup & Import
-  importDataPrompt, importDataFromFile, openVerseModal,
+  importDataPrompt, importDataFromFile, openVerseModal, closeVerseModal,
   // S20 — Share & Deep Links
   shareApp, shareStudyLink, shareStudyLinkById,
   copyLinkFromModal, promptCopyFallback, checkImportHash, confirmImportLink,
