@@ -53,7 +53,7 @@ import {
   snapshotIntent, runSnapshot, showAIPanel, renderAITabs,
   switchAITab, renderAIPanelContent, closeAIPanel,
   updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,
-  libTab, switchLibTab, renderWordList, wlView, wlRemove, renderStudyWords, swView, swRemove,
+  switchLibTab, renderWordList, wlView, wlRemove, renderStudyWords, swView, swRemove, libTab,
   showWordDetail, showWordDetailCur, _showWordOverlay,
   openLexSaveSheet, toggleLexCb, saveLexWord, removeWordGlobal, removeWordStudy,
   openLexiconModal, openLexiconModalFor, closeLexiconModal, runLexiconLookup, renderLexiconEntry,
@@ -171,8 +171,8 @@ function newStudy(){setTimeout(function(){document.getElementById('tpl-overlay')
 function createFromTemplate(tplKey){
   closeOverlay('tpl-overlay');
   var tpl=TEMPLATES[tplKey]||TEMPLATES.blank;
-  cur={id:'bsn_'+Date.now(),date:todayStr(),title:tpl.title||'',series:'',teacher:'',fieldNotes:tpl.fieldNotes||'',tags:(tpl.tags||[]).slice(),resources:[],refs:[makeRef()],deep:{conclusions:'',outline:''}};
-  activeRefIdx=0;studyScope='passage';
+  setCur({id:'bsn_'+Date.now(),date:todayStr(),title:tpl.title||'',series:'',teacher:'',fieldNotes:tpl.fieldNotes||'',tags:(tpl.tags||[]).slice(),resources:[],refs:[makeRef()],deep:{conclusions:'',outline:''}});
+  setActiveRefIdx(0);setStudyScope('passage');
   // Reset Quill editors to empty — template content lives in fieldNotes, not the rich editors
   if(_qOutline)_qOutline.setText('');
   if(_qConcl)_qConcl.setText('');
@@ -311,6 +311,7 @@ function setTagFilter(id){activeTagFilter=id;renderLib();}
  */
 function setLibSort(){var sub=document.getElementById('lib-sub-filter');if(sub)sub.value='';renderLib();}
 var BIBLE_BOOKS=['Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'];
+window.BIBLE_BOOKS=BIBLE_BOOKS;
 
 
 // ════════════════════════════════════════════════════════
@@ -331,7 +332,7 @@ function populateField(){
   var ar=activeRef();
   // Treat as new if no field notes and no scripture — expand header and reset scope so nothing looks pre-collapsed
   var isNew=!cur.fieldNotes&&!(ar&&ar.scriptureText);
-  if(isNew){hdrCollapsed=false;scrCollapsed=false;studyScope='passage';}
+  if(isNew){hdrCollapsed=false;scrCollapsed=false;setStudyScope('passage');}
   var body=document.getElementById('hdrfields-body'),summary=document.getElementById('hdr-summary'),panel=document.getElementById('scrpanel'),chev=document.getElementById('hdr-chevron'),barchev=document.getElementById('bar-scrchev'),barlbl=document.getElementById('bar-scrchev-lbl');
   if(hdrCollapsed){if(body)body.style.display='none';if(summary)summary.classList.add('show');if(chev)chev.textContent='v';}
   else{if(body)body.style.display='';if(summary)summary.classList.remove('show');if(chev)chev.textContent='^';}
@@ -902,7 +903,7 @@ function importDataFromFile(input){
           if(!mergedTags.find(function(r){return r.id===t.id;}))mergedTags.push(t);
         });
         var mergedDeleted=mergeDeletedTags(DELETED_TAGS,payload.deletedTags||[]);
-        TAGS=applyTagTombstones(mergedTags,mergedDeleted);
+        setTags(applyTagTombstones(mergedTags,mergedDeleted));
         DELETED_TAGS=mergedDeleted;
         persistDeletedTags();
         persistTags();
@@ -1087,7 +1088,7 @@ async function fetchAllMissingScripture(s){
 /** Opens the clear-all confirmation overlay. */
 function clearAll(){document.getElementById('clearall-overlay').classList.add('on');}
 /** Confirms clear-all: wipes the studies array, clears cur, persists, and re-renders. */
-function confirmClearAll(){studies=[];cur=null;persist();renderLib();closeOverlay('clearall-overlay');toast('All data cleared');}
+function confirmClearAll(){setStudies([]);setCur(null);persist();renderLib();closeOverlay('clearall-overlay');toast('All data cleared');}
 
 // ════════════════════════════════════════════════════════
 
@@ -1100,7 +1101,7 @@ function confirmClearAll(){studies=[];cur=null;persist();renderLib();closeOverla
  * Loads user settings from localStorage into the sett object.
  * Applies defaults for scrMode, defaultTrans, and diagFeedback if missing, then updates UI.
  */
-function loadSett(){try{var s=JSON.parse(localStorage.getItem(SK_SETT));if(s)sett=Object.assign({},sett,s);
+function loadSett(){try{var s=JSON.parse(localStorage.getItem(SK_SETT));if(s)Object.assign(sett,s);
   // Apply defaults for any settings key absent from the stored object
   if(!sett.scrMode)sett.scrMode='auto';if(!sett.defaultTrans)sett.defaultTrans='esv';if(typeof sett.diagFeedback==='undefined')sett.diagFeedback=false;updateScrModeUI();updateDefaultTransUI();}catch(e){}}
 /**
@@ -1177,7 +1178,9 @@ var TRANS_DATA=[
   {abbr:'NLT',name:'New Living Translation',year:1996,available:true,philosophy:'Thought-for-Thought',producers:'Tyndale House Publishers — over 90 scholars revising The Living Bible paraphrase.',purpose:'Moved from a paraphrase to a full translation, aimed at making Scripture immediately understandable for modern readers, especially those new to the Bible or with limited reading backgrounds.',notes:'A revision of Kenneth Taylor\'s The Living Bible (1971). The NLT 2nd edition (2004) significantly improved accuracy. Widely used in children\'s ministry, devotionals, and outreach contexts.'},
   {abbr:'MSG',name:'The Message',year:2002,available:true,philosophy:'Paraphrase',producers:'Eugene H. Peterson, a pastor and scholar, working alone over 10 years.',purpose:'Written to recapture the original impact of Scripture — the surprise, challenge, and freshness it would have had for its first hearers. Aimed at people who have become numb to traditional Bible language.',notes:'Not a translation in the technical sense but a paraphrase — Peterson rendered meaning rather than words. Controversial in study contexts but widely appreciated for devotional and pastoral use. Peterson also wrote "A Long Obedience in the Same Direction."'}
 ];
+window.TRANS_DATA=TRANS_DATA;
 var TRANS_AVAILABLE_IDS=['YLT','ASV','KJV','ESV','Darby','WEB','NKJV','NET','AMP','CSB','NLT','MSG','NASB','NIV'];
+window.TRANS_AVAILABLE_IDS=TRANS_AVAILABLE_IDS;
 
 
 // ════════════════════════════════════════════════════════
@@ -1717,7 +1720,7 @@ function endTour(){
   ['tpl-overlay','bp-overlay','lexicon-overlay'].forEach(function(id){var ov=document.getElementById(id);if(ov)ov.classList.remove('on');});
   if(_tourActive==='study'){
     localStorage.setItem(SK_TOUR_STUDY_SEEN,'1');
-    cur=null;activeRefIdx=0;
+    setCur(null);setActiveRefIdx(0);
     tourCleanupDemoData();
     navTo('library');
   }
@@ -1796,7 +1799,7 @@ function tourSeedProgressData(){
  */
 function tourCleanupDemoData(){
   var before=studies.length;
-  studies=studies.filter(function(s){return !s._tourDemo;});
+  setStudies(studies.filter(function(s){return !s._tourDemo;}));
   if(studies.length!==before)persist();
   try{
     var gw=JSON.parse(localStorage.getItem(SK_WORDS)||'[]');
