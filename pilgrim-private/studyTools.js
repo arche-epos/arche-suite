@@ -7,9 +7,10 @@
 import {
   WORKER_URL,
   BOLLS_TRANS, BOLLS_BOOKS, parseRef,
-  SK_WORDS, SK_TAGS, SK_TTS_SETT,
-  TAGS, ACTIVE_USER,
+  SK_WORDS, SK_TAGS, SK_TTS_SETT, SK_SETT,
+  TAGS, ACTIVE_USER, TOOL_LABELS,
   cur, studies, sett, activeRef,
+  online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess
 } from './utils.js';
@@ -31,7 +32,8 @@ function _updateWordCount(){ if(window.updateWordCount)window.updateWordCount();
 // ── studyTools state ────────────────────────────────────────────────────────
 // S12 — panel toggle state
 export var _fnotesOpen  = false;
-export function setFnotesOpen(v) { _fnotesOpen = v; }
+// _renameResId: local to studyTools — tracks pending resource rename (resEditTitle/confirmRenameRes)
+var _renameResId = null;
 export var _outlineOpen = false;
 export var _deepScrOpen = false;
 // S13 — AI panel state
@@ -41,7 +43,7 @@ var _snapshotRunning = false;
 // S14-partial
 var _expandRunning = false;
 // S15 — Lexicon / Word List state
-export var libTab = 'words';
+var libTab = 'studies';
 var _lexLastResult  = null;
 var _lexSaveContext = null;
 var _wlCache = [];
@@ -316,7 +318,7 @@ function populateDeep(){
   if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');_qConclDirty=false;}
   if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');_qOutlineDirty=false;}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
-  studyScope=(ar&&ar.deep&&ar.deep.studyScope)||'passage';
+  setStudyScope((ar&&ar.deep&&ar.deep.studyScope)||'passage');
   _renderRefPills('d-ref-pills','deep');
   // Snapshot ready indicator
   var snapSub=document.getElementById('snapshot-sub');
@@ -475,7 +477,7 @@ function toggleResSection(sectionId,chevId){
  * @param {string} s - Scope: 'passage' | 'book'.
  */
 function setScope(s){
-  studyScope=s;
+  setStudyScope(s);
   if(activeRef()&&activeRef().deep)activeRef().deep.studyScope=s;
   document.getElementById('scope-passage').classList.toggle('on',s==='passage');
   document.getElementById('scope-book').classList.toggle('on',s==='book');
@@ -651,14 +653,14 @@ async function runSnapshot(){
     var item=all[i];
     // Temporarily override studyScope so buildPrompt and cache keys use the tool's required scope
     var prevScope=studyScope;
-    studyScope=item.scope;
+    setStudyScope(item.scope);
     var ck=item.scope==='book'?item.tool+'_book':item.tool; // Storage key matching the tool+scope combination
     done++;
     lbl.textContent='Running '+TOOL_LABELS[item.tool]+'... ('+done+' of '+total+')';
     sub.textContent=item.scope==='book'?'Whole book scope':'Passage scope';
     // Skip if cached — but NOT if the value is '__shared__' (placeholder from an imported study that needs real data)
     if(ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'){
-      studyScope=prevScope;
+      setStudyScope(prevScope);
       await new Promise(function(r){setTimeout(r,200);});
       continue;
     }
@@ -676,7 +678,7 @@ async function runSnapshot(){
     }catch(e){
       toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
     }
-    studyScope=prevScope;
+    setStudyScope(prevScope);
     // 2.5s inter-request delay to avoid hitting the Groq free-tier rate limit (30 req/min)
     if(i<all.length-1)await new Promise(function(r){setTimeout(r,2500);});
   }
@@ -688,7 +690,7 @@ async function runSnapshot(){
   btn.style.opacity='';btn.style.pointerEvents='';
   // Restore passage scope after snapshot — book-scope tools temporarily override it during the run
   if(ar&&ar.deep)ar.deep.studyScope='passage';
-  studyScope='passage';
+  setStudyScope('passage');
   persist();
   toast('Snapshot complete \u2014 all tools loaded');
 }
@@ -1483,7 +1485,7 @@ export {
   // S14-partial — Expand / Copy / Share
   updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,
   // S15 — Lexicon & Word List
-  switchLibTab, renderWordList, wlView, wlRemove,
+  libTab, switchLibTab, renderWordList, wlView, wlRemove,
   renderStudyWords, swView, swRemove,
   showWordDetail, showWordDetailCur, _showWordOverlay,
   openLexSaveSheet, toggleLexCb, saveLexWord,
