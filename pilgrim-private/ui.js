@@ -2367,7 +2367,13 @@ async function submitFeedback(){
     imageFiles.forEach(function(f,i){form.append('files['+(fileIdx++)+']',f,'screenshot-'+(i+1)+'-'+Date.now()+'.'+f.name.split('.').pop());});
     var r=await fetch(DISCORD_WEBHOOK_URL,{method:'POST',body:form});
     // Discord webhooks return 204 No Content on success
-    if(r.ok||r.status===204){statusEl.style.color='var(--sagebright)';statusEl.textContent='\u2713 Feedback sent!';}
+    if(r.ok||r.status===204){
+      statusEl.style.color='var(--sagebright)';
+      statusEl.textContent='\u2713 Feedback sent!';
+      // Reset pills/text/images after a brief delay so the confirmation is visible first.
+      // diagFbReset() also clears diag-send-status — that's fine once the 2s window has passed.
+      setTimeout(diagFbReset,2000);
+    }
     else{throw new Error('HTTP '+r.status);}
   }catch(e){statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Failed: '+e.message;}
   finally{btn.disabled=false;}

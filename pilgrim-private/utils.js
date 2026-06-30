@@ -355,7 +355,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.3',date:'June 29, 2026',label:'Latest',
+    version:'4.13.4',date:'June 30, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: diagnostic feedback form (item [21]) — submitFeedback() never reset pills/text/images after a successful send; form stayed fully populated post-submit, making pill selectors look stuck/broken. Now resets via diagFbReset() 2s after the success message displays, so the confirmation is still visible first'
+    ]},
+  {
+    version:'4.13.3',date:'June 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: TTS restart race condition — added session counter to tts.js; stale onend/onboundary/onerror callbacks from a cancelled utterance no longer hijack the new playback session (fixes Listen/Pause button reverting incorrectly on AI, Field Notes, Conclusions, Outline, and Scripture restart)',
