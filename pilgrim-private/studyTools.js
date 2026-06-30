@@ -1412,7 +1412,7 @@ function confirmRenameRes(){if(!_renameResId||!cur||!cur.resources)return;var re
 function renderResources(){
   var list=document.getElementById('res-list'),status=document.getElementById('res-status');
   if(!list)return;
-  if(!cur||!cur.resources||!cur.resources.length){list.innerHTML='<p style="font-size:12px;color:var(--txt4);font-style:italic">No resources yet. Add photos or documents in Field Mode.</p>';if(status)status.textContent='';renderFieldTiles();return;}
+  if(!cur||!cur.resources||!cur.resources.length){list.innerHTML='<p style="font-size:12px;color:var(--txt4);font-style:italic">No resources yet. Add photos or documents in the Notes tab.</p>';if(status)status.textContent='';renderFieldTiles();return;}
   if(status)status.textContent=cur.resources.length+' resource'+(cur.resources.length!==1?'s':'');
   list.innerHTML='<div class="res-tile-grid">'+cur.resources.map(function(r){
     var badge=r.ocrStatus==='done'&&r.ocrText?'<div class="res-tile-badge" title="Text ready"></div>':'';
@@ -1461,7 +1461,7 @@ function resInsertText(id){
   var res=cur&&cur.resources&&cur.resources.find(function(r){return r.id===id;});
   if(!res||!res.ocrText){toast('No extracted text to insert');return;}
   var fn=window._qFN;
-  if(!fn){toast('Switch to Field Mode to insert text');return;}
+  if(!fn){toast('Switch to the Notes tab to insert text');return;}
   var idx=fn.getLength();
   fn.insertText(idx>1?idx-1:0,'\n['+res.title+']\n'+res.ocrText);
   if(cur)cur.fieldNotes=fn.root.innerHTML;
