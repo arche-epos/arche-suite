@@ -60,7 +60,8 @@ import {
   resCapture, resAddDocPrompt, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
-  resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText
+  resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
+  aiActiveTab, aiPanelResults
 } from './studyTools.js';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
@@ -91,6 +92,12 @@ function setDeletedTags(arr) { DELETED_TAGS = arr; }
 // ════════════════════════════════════════════════════════
 var _qFN=null,_qConcl=null,_qOutline=null;
 var _qFNDirty=false,_qConclDirty=false,_qOutlineDirty=false; // Dirty flags: true when user has edited since last populate/sync
+/** Sets the Field Notes dirty flag. @param {boolean} v */
+function setQFNDirty(v){_qFNDirty=v;}
+/** Sets the Conclusions dirty flag. @param {boolean} v */
+function setQConclDirty(v){_qConclDirty=v;}
+/** Sets the Outline dirty flag. @param {boolean} v */
+function setQOutlineDirty(v){_qOutlineDirty=v;}
 var _qlToolbar=[
   ['bold','italic','underline','strike'],
   [{'header':[1,2,3,false]}],
@@ -134,7 +141,7 @@ function navTo(id){
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
   if(window.speechSynthesis)window.speechSynthesis.cancel();
   if(window.setTtsActive)window.setTtsActive(false);if(window.setTtsPaused)window.setTtsPaused(false);
-  if(cur)syncFromInputs(); // Flush any unsaved form state before leaving the current screen
+  if(cur)saveStudy(true); // Persist + queue debounced Gist sync before leaving the current screen
   document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
   document.querySelectorAll('.navbtn').forEach(function(b){b.classList.remove('on');});
   document.getElementById('scr-'+id).classList.add('on');
@@ -2569,6 +2576,7 @@ export {
   // S05 — Editor Setup: Quill instances + dirty flags (read by storage.js, tts.js via window.*)
   _qFN, _qConcl, _qOutline,
   _qFNDirty, _qConclDirty, _qOutlineDirty,
+  setQFNDirty, setQConclDirty, setQOutlineDirty,
   initEditors,
   // S06 — Navigation
   navTo, saveAndGoLib, goField, newStudy, createFromTemplate,

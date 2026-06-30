@@ -35,6 +35,7 @@ export var _ttsSource = '';
 export var _ttsRate = 1;
 export var _ttsVoice = '';
 export var _ttsCharOffset = 0;
+export var _ttsSession = 0;
 
 // ── Setters for cross-module writes ─────────────────────────────────────────
 export function setTtsActive(v)  { _ttsActive  = v; }
@@ -95,7 +96,7 @@ function ttsGetVoice(){if(!window.speechSynthesis)return null;var voices=window.
  * Stops TTS playback and resets all playback state (index, char offset, active/paused flags).
  * Updates buttons for the previously active source to stopped state.
  */
-function ttsStop(){if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');}
+function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');}
 /**
  * Pauses TTS by cancelling the current utterance and setting _ttsPaused=true.
  * Preserves _ttsIdx and _ttsCharOffset so playback can resume mid-sentence.
@@ -112,6 +113,7 @@ function ttsPause(){if(window.speechSynthesis)window.speechSynthesis.cancel();_t
 function ttsPlay(source,fromIdx,charOffset){
   if(!window.speechSynthesis){toast('Text-to-speech not supported in this browser');return;}
   _ttsActive=true;_ttsPaused=false;_ttsSource=source;_ttsIdx=fromIdx||0;
+  _ttsSession++;var mySession=_ttsSession;
   var resumeOffset=charOffset||0;
   ttsUpdateBtn(source,'playing');
   /**
@@ -120,6 +122,7 @@ function ttsPlay(source,fromIdx,charOffset){
    * Recursively calls itself via utt.onend to chain sentences until stopped or paused.
    */
   function speakNext(){
+    if(mySession!==_ttsSession)return;
     if(!_ttsActive||_ttsIdx>=_ttsSentences.length){_ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;}
     var sentence=_ttsSentences[_ttsIdx].trim();
     // If resuming mid-sentence, slice off already-spoken characters (tracked via onboundary)
@@ -131,9 +134,9 @@ function ttsPlay(source,fromIdx,charOffset){
     // Capture resumeOffset in a closure — resumeOffset is reset to 0 after the first chunk
     var capturedOffset=resumeOffset;
     // Track word-boundary char position so a pause can resume from the exact word
-    utt.onboundary=function(e){if(e.name==='word')_ttsCharOffset=capturedOffset+e.charIndex;};
-    utt.onend=function(){_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
-    utt.onerror=function(){_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
+    utt.onboundary=function(e){if(mySession!==_ttsSession)return;if(e.name==='word')_ttsCharOffset=capturedOffset+e.charIndex;};
+    utt.onend=function(){if(mySession!==_ttsSession)return;_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
+    utt.onerror=function(){if(mySession!==_ttsSession)return;_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
     window.speechSynthesis.speak(utt);
     resumeOffset=0;
   }

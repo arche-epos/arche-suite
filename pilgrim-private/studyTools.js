@@ -183,7 +183,7 @@ function renderScrText(text,trans){var clean=text.replace(/\[(\d+)\]/g,'<sup cla
  * Copies the current study's scripture text to the clipboard.
  * No-op if no study is open or scripture text is empty.
  */
-function copyScrip(){if(cur&&cur.scriptureText)navigator.clipboard&&navigator.clipboard.writeText(cur.scriptureText).then(function(){toast('Copied');});}
+function copyScrip(){var ar=activeRef();if(ar&&ar.scriptureText)navigator.clipboard&&navigator.clipboard.writeText(ar.scriptureText.replace(/<[^>]+>/g,'')).then(function(){toast('Copied');});}
 /**
  * Opens the paste scripture overlay and pre-fills the translation field.
  * Focuses the translation input if empty, otherwise focuses the text area.
@@ -315,8 +315,8 @@ function populateDeep(){
   var wc=_notesPlain.trim()?_notesPlain.trim().split(/\s+/).length:0;
   var badge=document.getElementById('fnotes-wc-badge');
   if(badge)badge.textContent=wc?'('+wc+' words)':'';
-  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');_qConclDirty=false;}
-  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');_qOutlineDirty=false;}
+  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');if(window.setQConclDirty)window.setQConclDirty(false);}
+  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
   setStudyScope((ar&&ar.deep&&ar.deep.studyScope)||'passage');
   _renderRefPills('d-ref-pills','deep');
@@ -337,12 +337,16 @@ function populateDeep(){
   if(scrEl&&scrPanel){
     var scrText=ar&&ar.scriptureText?ar.scriptureText.replace(/<[^>]+>/g,''):'';
     if(scrText){
+      scrEl.innerHTML='';
       scrEl.textContent=scrText;
       if(scrLabel)scrLabel.textContent=(ar&&ar.reference)||'Scripture';
-      scrPanel.style.display='';
     } else {
-      scrPanel.style.display='none';
+      // Always show the section — an empty, unexplained hidden panel reads as a missing
+      // feature. Show a clear empty-state with a direct path to fix it instead.
+      scrEl.innerHTML='<p style="font-style:normal;color:var(--txt3);font-size:14px;line-height:1.6;margin:0">No scripture loaded yet. <a href="#" onclick="event.preventDefault();navTo(\'field\')" style="color:var(--gold);text-decoration:underline">Add a reference in Notes</a> to see it here.</p>';
+      if(scrLabel)scrLabel.textContent='Scripture';
     }
+    scrPanel.style.display='';
     // Reset collapsed state each time a new study or ref is loaded — prevents stale open state
     _deepScrOpen=false;
     var sb=document.getElementById('deep-scr-body');var sc=document.getElementById('deep-scr-chev');
@@ -694,7 +698,6 @@ async function runSnapshot(){
   persist();
   toast('Snapshot complete \u2014 all tools loaded');
 }
-var aiPanelResults={};var aiActiveTab=null;
 /**
  * Caches an AI result, sets it as the active tab, and renders the AI panel.
  * Scrolls the panel into view after a short delay.
@@ -1457,10 +1460,11 @@ function renderFieldTiles(){
 function resInsertText(id){
   var res=cur&&cur.resources&&cur.resources.find(function(r){return r.id===id;});
   if(!res||!res.ocrText){toast('No extracted text to insert');return;}
-  if(!_qFN){toast('Switch to Field Mode to insert text');return;}
-  var idx=_qFN.getLength();
-  _qFN.insertText(idx>1?idx-1:0,'\n['+res.title+']\n'+res.ocrText);
-  if(cur)cur.fieldNotes=_qFN.root.innerHTML;
+  var fn=window._qFN;
+  if(!fn){toast('Switch to Field Mode to insert text');return;}
+  var idx=fn.getLength();
+  fn.insertText(idx>1?idx-1:0,'\n['+res.title+']\n'+res.ocrText);
+  if(cur)cur.fieldNotes=fn.root.innerHTML;
   _updateWordCount();
   toast('Text inserted into notes');
 }

@@ -48,6 +48,11 @@ Object.defineProperty(window, '_qFNDirty',     { configurable:true, get: () => U
 Object.defineProperty(window, '_qConclDirty',  { configurable:true, get: () => UI._qConclDirty });
 Object.defineProperty(window, '_qOutlineDirty',{ configurable:true, get: () => UI._qOutlineDirty });
 
+window._aiResults   = function() { return StudyTools.aiPanelResults; };
+window._aiActiveTab = function() { return StudyTools.aiActiveTab; };
+window.setQConclDirty   = function(v) { UI.setQConclDirty(v); };
+window.setQOutlineDirty = function(v) { UI.setQOutlineDirty(v); };
+
 // DELETED_TAGS bridge — sync.js reads via window.DELETED_TAGS after merges.
 // The live binding getter ensures sync.js always sees ui.js's current array.
 // When sync.js does window.DELETED_TAGS = merged, ui.js must pick it up:
@@ -97,7 +102,7 @@ setInterval(autoSave, 30000);
         if (found) { window.location.reload(); }
       });
     }
-  } // sw.js not present on dev branch — register omitted
+  }
 })();
 
 // ── startPilgrim ─────────────────────────────────────────────────────────────

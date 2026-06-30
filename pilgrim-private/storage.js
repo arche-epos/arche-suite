@@ -27,6 +27,16 @@ var _cbs = {
   markDeleted: null     // sync.js — adds id to _deletedStudyIds tombstone map
 };
 
+// ── Gist sync debounce ───────────────────────────────────────────────────────
+// Shared timer across saveStudy/deleteStudy/duplicateStudy — rapid-fire calls
+// (e.g. quick screen navigation) coalesce into a single push 3s after the last one.
+var _gistSyncTimer = null;
+function _queueGistSync() {
+  if (!online || !_cbs.syncToGist) return;
+  if (_gistSyncTimer) clearTimeout(_gistSyncTimer);
+  _gistSyncTimer = setTimeout(function() { _gistSyncTimer = null; _cbs.syncToGist(true); }, 3000);
+}
+
 /**
  * Injects UI and sync callbacks to break circular import chains.
  * Called once by app.js after all modules are loaded.
@@ -131,7 +141,7 @@ export function saveStudy(silent) {
   setStudies(updated);
   persist();
   if (!silent) toastSuccess('\u2713 Saved');
-  if (online && _cbs.syncToGist) { setTimeout(function() { _cbs.syncToGist(true); }, 800); }
+  _queueGistSync();
 }
 
 /**
@@ -165,7 +175,7 @@ export function deleteStudy() {
   closeOverlay('del-overlay');
   if (_cbs.navTo) _cbs.navTo('library');
   toast('Study deleted');
-  if (online && _cbs.syncToGist) { setTimeout(function() { _cbs.syncToGist(true); }, 800); }
+  _queueGistSync();
 }
 
 /**
@@ -203,7 +213,7 @@ export function duplicateStudy(id) {
   persist();
   if (_cbs.renderLib) _cbs.renderLib();
   toast('Study duplicated');
-  if (online && _cbs.syncToGist) { setTimeout(function() { _cbs.syncToGist(true); }, 800); }
+  _queueGistSync();
 }
 
 /**

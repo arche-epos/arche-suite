@@ -355,7 +355,26 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.2',date:'June 23, 2026',label:'Latest',
+    version:'4.13.3',date:'June 29, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: TTS restart race condition — added session counter to tts.js; stale onend/onboundary/onerror callbacks from a cancelled utterance no longer hijack the new playback session (fixes Listen/Pause button reverting incorrectly on AI, Field Notes, Conclusions, Outline, and Scripture restart)',
+      'fix: AI panel _aiResults/_aiActiveTab bridges wired in app.js — silences ttsToggleAI console errors',
+      'fix: deleteAIResult ReferenceError — aiActiveTab/aiPanelResults now imported into ui.js from studyTools.js',
+      'fix: AI panel Share button — restored missing opening <button> tag in index.html (was breaking panel layout/DOM structure)',
+      'fix: navigation auto-save — navTo() now silently saves (persist + debounced Gist sync) instead of only syncing in-memory state; switching screens via bottom nav no longer loses unsaved edits',
+      'feat: debounced Gist sync — saveStudy/deleteStudy/duplicateStudy now coalesce rapid pushes into a single sync 3s after the last change, reducing redundant network calls during fast navigation',
+      'fix: outline/conclusions dirty-flag reset — populateDeep() now uses setQConclDirty/setQOutlineDirty setters via window bridge instead of silently assigning undeclared module-scope names',
+      'chore: removed dead duplicate aiPanelResults/aiActiveTab declaration in studyTools.js (line 697, leftover from refactor)',
+      'fix: Deep Scripture collapsible always visible in Study Tools — shows clear empty-state message with direct link to Notes tab when no scripture loaded yet, instead of silently hiding the entire section and toggle',
+      'fix: Copy Scripture button — copyScrip() was reading cur.scriptureText (does not exist); scripture text lives on activeRef(), button was always a silent no-op',
+      'fix: Rename Resource modal rendering behind Resources modal — both shared z-index:500, later-DOM element won ties; bumped rename overlay to z-index:510',
+      'fix: Resources modal close (×) button now sticky at top while scrolling long content',
+      'fix: Gist pull failure (sync.js) — syncFromGist/syncToGist called window._persistDeletedTags() and window._applyTagTombstones(), which do not exist on window (these are local module-scope wrapper functions); pull silently threw and surfaced as "Pull failed"',
+      'fix: Insert OCR Text into Notes (resInsertText) — referenced undeclared bare _qFN in studyTools.js (ReferenceError under strict mode); now reads window._qFN via the established cross-module bridge pattern'
+    ]},
+  {
+    version:'4.13.2',date:'June 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'chore: pre-ES-module pass — JSDoc added to parseRef, speakNext, shareApp, confirmForcePull, runTest; dead openVerseModal (targeting nonexistent verse-overlay) removed from S20; openVerseModal/closeVerseModal in S22 reassigned to ui.js module map'

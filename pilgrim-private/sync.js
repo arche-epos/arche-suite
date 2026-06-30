@@ -165,7 +165,7 @@ async function syncToGist(silent){
             var mergedDeleted=_mergeDeletedTags(_DELETED_TAGS(),remote.deletedTags||[]);
             mergedTags=_applyTagTombstones(mergedTags,mergedDeleted);
             window.DELETED_TAGS=mergedDeleted;
-            if(window.persistDeletedTags)window._persistDeletedTags();
+            _persistDeletedTags();
           }
         }
       }
@@ -179,7 +179,7 @@ async function syncToGist(silent){
     setStudies(mergedStudies);
     setTags(mergedTags);
     persist();
-    if(window.persistTags)window._persistTags();
+    if(window.persistTags)_persistTags();
     if(!silent){gistSetStatus('Pushed — '+new Date().toLocaleTimeString(),'var(--sagebright)');toast('Pushed ✓');}
   }catch(e){
     // Detect GitHub rate limit from multiple possible error string formats across primary and secondary limits
@@ -220,11 +220,11 @@ async function syncFromGist(){
         if(!mergedTags.find(function(r){return r.id===t.id;}))mergedTags.push(t);
       });
       var mergedDeleted=_mergeDeletedTags(_DELETED_TAGS(),remote.deletedTags||[]);
-      setTags(window.applyTagTombstones?window._applyTagTombstones(mergedTags,mergedDeleted):mergedTags);
+      setTags(_applyTagTombstones(mergedTags,mergedDeleted));
       TAGS.forEach(function(t){_repairTagColor(t);});
       window.DELETED_TAGS=mergedDeleted;
-      if(window.persistDeletedTags)window._persistDeletedTags();
-      if(window.persistTags)window._persistTags();
+      _persistDeletedTags();
+      if(window.persistTags)_persistTags();
       if(window.renderTagManager)window.renderTagManager();
       if(window.renderTagPicker)window.renderTagPicker();
     }
@@ -296,7 +296,7 @@ async function syncFromGistForce(){
     if(!remote.studies||!Array.isArray(remote.studies))throw new Error('Invalid Gist format');
     setStudies(remote.studies.map(function(s){migrateStudy(s);return s;}))
     persist();
-    if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)window._persistTags();}
+    if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)_persistTags();}
     if(cur){var fc=studies.find(function(s){return s.id===cur.id;});if(fc){setCur(fc);if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}if(window.renderRefs)window.renderRefs();}}
     if(window.renderLib)window.renderLib();
     gistSetStatus('Force pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
