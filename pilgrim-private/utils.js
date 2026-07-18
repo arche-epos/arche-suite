@@ -359,7 +359,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.14.1',date:'July 18, 2026',label:'Latest',
+    version:'4.14.2',date:'July 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: OCR extraction showed raw "<think>" reasoning block instead of extracted text, and took 1-2 minutes per scan — qwen/qwen3.6-27b is a hybrid reasoning model and defaults to thinking mode. Added reasoning_effort:\'none\' and reasoning_format:\'hidden\' to the /ocr call to force direct, fast, clean output'
+    ]},
+  {
+    version:'4.14.1',date:'July 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: all AI Study Tools (Word Study, Language & Structure, Snapshot, Sync ping, etc.) broken — Groq deprecated llama-3.3-70b-versatile on June 17, 2026; every /groq call still referenced it and failed. Migrated all 7 text-completion calls to openai/gpt-oss-120b',

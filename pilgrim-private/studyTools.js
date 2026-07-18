@@ -1459,7 +1459,7 @@ async function resRunOCR(id){
   try{
     // Data URL format: 'data:image/jpeg;base64,<b64>' — split to extract mime type and raw b64
     var b64=res.dataUrl.split(',')[1],mimeType=res.dataUrl.split(';')[0].split(':')[1];
-    var body={model:'qwen/qwen3.6-27b',max_tokens:4096,messages:[{role:'user',content:[{type:'text',text:'Extract ALL text from this image exactly as it appears. Preserve line breaks, headings, bullet points, and numbered lists. Output raw extracted text only.'},{type:'image_url',image_url:{url:'data:'+mimeType+';base64,'+b64}}]}]};
+    var body={model:'qwen/qwen3.6-27b',max_tokens:4096,reasoning_effort:'none',reasoning_format:'hidden',messages:[{role:'user',content:[{type:'text',text:'Extract ALL text from this image exactly as it appears. Preserve line breaks, headings, bullet points, and numbered lists. Output raw extracted text only.'},{type:'image_url',image_url:{url:'data:'+mimeType+';base64,'+b64}}]}]};
     var resp=await fetch(WORKER_URL+'/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!resp.ok){var err=await resp.json().catch(function(){return{};});var msg=(err.error&&err.error.message)||err.message||('HTTP '+resp.status);throw new Error(msg);}
     var data=await resp.json();
