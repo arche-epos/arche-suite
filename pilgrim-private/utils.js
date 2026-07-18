@@ -359,7 +359,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.14.2',date:'July 18, 2026',label:'Latest',
+    version:'4.14.3',date:'July 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: OCR result required closing and reopening the resource modal to display — resRunOCR() only re-rendered the background tile grid, never the open detail overlay. Modal now refreshes in place the moment extraction finishes (success or error)'
+    ]},
+  {
+    version:'4.14.2',date:'July 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: OCR extraction showed raw "<think>" reasoning block instead of extracted text, and took 1-2 minutes per scan — qwen/qwen3.6-27b is a hybrid reasoning model and defaults to thinking mode. Added reasoning_effort:\'none\' and reasoning_format:\'hidden\' to the /ocr call to force direct, fast, clean output'

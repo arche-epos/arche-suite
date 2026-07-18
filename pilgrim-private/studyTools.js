@@ -1466,7 +1466,8 @@ async function resRunOCR(id){
     var text=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
     res.ocrText=text||'No text could be extracted.';res.ocrStatus='done';
     saveStudy();renderResources();toast('Text extracted');
-  }catch(e){res.ocrStatus='error';res.ocrText='Text extraction error: '+e.message;saveStudy();renderResources();}
+    resRefreshOpenView(id);
+  }catch(e){res.ocrStatus='error';res.ocrText='Text extraction error: '+e.message;saveStudy();renderResources();resRefreshOpenView(id);}
 }
 /**
  * Permanently removes a resource from the current study by id.
@@ -1485,6 +1486,16 @@ function resRetryOCR(id){if(!cur||!cur.resources)return;var res=cur.resources.fi
  */
 function resToggleText(id){var el=document.getElementById('res-ocr-'+id);if(!el)return;el.classList.toggle('collapsed');var btn=document.getElementById('res-toggle-'+id);if(btn)btn.textContent=el.classList.contains('collapsed')?'Show more':'Show less';}
 /**
+ * Refreshes the resource detail overlay in place if it's currently open and showing
+ * the given resource id. Used after async OCR completion so the modal doesn't need
+ * to be closed and reopened to see the result.
+ * @param {string} id - Resource id whose OCR just completed.
+ */
+function resRefreshOpenView(id){
+  var ov=document.getElementById('res-view-overlay');
+  if(ov&&ov.classList.contains('on')&&ov.dataset.resId===id)resViewFull(id);
+}
+/**
  * Opens the resource detail overlay showing the full image or document text for a resource.
  * @param {string} id - Resource id to display.
  */
@@ -1499,6 +1510,7 @@ function resViewFull(id){
   else ob='<div style="color:var(--txt4);font-size:12px;font-style:italic">Extracting text...</div>';
   var ov=document.getElementById('res-view-overlay');
   if(!ov){ov=document.createElement('div');ov.id='res-view-overlay';ov.className='overlay';ov.innerHTML='<div class="modal" style="max-width:520px"></div>';ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.remove('on');});document.body.appendChild(ov);}
+  ov.dataset.resId=id;
   var imgHtml=isDoc
     ?'<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg3);border-radius:var(--r);margin-bottom:14px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span style="font-size:13px;color:var(--txt3)">Document</span></div>'
     :'<img src="'+res.dataUrl+'" style="width:100%;max-height:240px;object-fit:contain;border-radius:var(--r);margin-bottom:14px;background:var(--bg3);display:block">';
