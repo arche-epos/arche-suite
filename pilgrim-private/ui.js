@@ -1979,9 +1979,9 @@ function diagUpdate(id,status,detail){
 async function runQuickTest(service){
   // Dispatch table: maps service key → label + async test function
   var serviceMap={
-    groq:{label:'AI Study Tools',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Groq responded normally':'HTTP '+r.status};}},
+    groq:{label:'AI Study Tools',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Groq responded normally':'HTTP '+r.status};}},
     // TODO: OCR test currently points to /groq (placeholder); should target its own endpoint
-    ocr:{label:'Text Extraction',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Text extraction endpoint responded normally':'HTTP '+r.status};}},
+    ocr:{label:'Text Extraction',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Text extraction endpoint responded normally':'HTTP '+r.status};}},
     sync:{label:'Study Sync',fn:async function(){var r=await fetch(WORKER_URL+'/gist?cb='+Date.now()+'&ping=1');return{pass:r.ok||r.status===404||r.status===401,detail:'HTTP '+r.status+(r.ok?' — Sync reachable':'')};}},
     esv:{label:'ESV Bible API',fn:async function(){var r=await fetch(WORKER_URL+'/esv?q=John+1:1&include-headings=false&include-footnotes=false&include-verse-numbers=false');return{pass:r.ok,detail:r.ok?'ESV API responded normally':'HTTP '+r.status};}}
   };
@@ -2080,7 +2080,7 @@ async function runDiagnostics(){
     return {pass:r.ok||r.status===404||r.status===401,detail:'HTTP '+r.status};
   });
   await runTest('groq',async function(){
-    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
+    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
     return {pass:r.ok,detail:r.ok?'Groq responded normally':'HTTP '+r.status};
   });
   await runTest('esv',async function(){

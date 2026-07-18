@@ -359,7 +359,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.14.0',date:'July 18, 2026',label:'Latest',
+    version:'4.14.1',date:'July 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: all AI Study Tools (Word Study, Language & Structure, Snapshot, Sync ping, etc.) broken — Groq deprecated llama-3.3-70b-versatile on June 17, 2026; every /groq call still referenced it and failed. Migrated all 7 text-completion calls to openai/gpt-oss-120b',
+      'fix: Resource OCR/text extraction completely broken — Groq deprecated meta-llama/llama-4-scout-17b-16e-instruct same date; migrated OCR call to qwen/qwen3.6-27b (Groq\u2019s current vision-capable model). Note: this is a Groq preview model, not yet marked production-stable \u2014 revisit if Groq issues a GA vision model later'
+    ]},
+  {
+    version:'4.14.0',date:'July 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Study Snapshot — replaced inline running label with a full progress modal listing all 6 tools and live per-tool status (pending/running/done/failed/cancelled); added a real Cancel control that aborts the in-flight AI request immediately and halts the run before the next tool',

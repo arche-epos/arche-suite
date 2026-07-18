@@ -112,7 +112,7 @@ async function testAPI(service){
   resultEl.textContent='Testing\u2026';
   try{
     if(service==='groq'){
-      var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
+      var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
       if(r.ok){resultEl.style.color='var(--sagebright)';resultEl.textContent='\u2713 AI (Groq) is responding normally.';}
       else{resultEl.style.color='var(--crimsonbright)';resultEl.textContent='\u2717 AI error \u2014 HTTP '+r.status+'.';}
     } else if(service==='esv'){
