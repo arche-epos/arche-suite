@@ -17,6 +17,7 @@ import {
 
 import { saveStudy, persist, syncFromInputs } from './storage.js';
 import { syncToGist } from './sync.js';
+import { _ttsActive, _ttsSource, ttsStop } from './tts.js';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -40,6 +41,8 @@ export var _deepScrOpen = false;
 export var aiPanelResults = {};
 export var aiActiveTab    = null;
 var _snapshotRunning = false;
+var _snapshotCancelled = false;
+var _snapshotAbortController = null;
 // S14-partial
 var _expandRunning = false;
 // S15 — Lexicon / Word List state
@@ -619,6 +622,8 @@ async function runTool(tool){
 // Results are cached and displayed in the 2×3 Snapshot grid.
 // ════════════════════════════════════════════════════════
 var _snapshotRunning=false;var _snapshotLastRun=null;
+// Fixed ordering of all 6 snapshot tools — used by the progress modal to identify rows
+var SNAPSHOT_TOOL_ORDER=['lexical','grammar','crossrefs','geography','historical','cultural'];
 /**
  * Entry point for the Study Snapshot button.
  * On mobile (≤900px), opens the snapshot confirmation overlay before running.
@@ -632,11 +637,102 @@ function snapshotIntent(){
   }
 }
 /**
- * Runs all six AI study tools in sequence for the active reference.
+ * Resolves after `ms` milliseconds, but resolves early (within one 100ms tick) if
+ * _snapshotCancelled becomes true — lets Cancel interrupt the inter-request pause
+ * immediately instead of waiting out the full delay.
+ * @param {number} ms - Delay duration in milliseconds.
+ * @returns {Promise<void>}
+ */
+function snapshotDelay(ms){
+  return new Promise(function(resolve){
+    var elapsed=0,step=100;
+    var iv=setInterval(function(){
+      elapsed+=step;
+      if(_snapshotCancelled||elapsed>=ms){clearInterval(iv);resolve();}
+    },step);
+  });
+}
+/**
+ * Opens the Snapshot progress modal and renders one row per tool in `all`.
+ * All rows start in the 'pending' state; Cancel is shown, Close is hidden.
+ * @param {Array<{tool:string,scope:string}>} all - Ordered list of tool/scope items to run.
+ */
+function openSnapshotProgressModal(all){
+  var list=document.getElementById('snap-progress-list');
+  if(!list)return;
+  list.innerHTML=all.map(function(item){
+    var scopeLbl=item.scope==='book'?'Whole Book':'This Passage';
+    return '<div class="snap-row" id="snap-row-'+item.tool+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">'
+      +'<span class="snap-icon" id="snap-icon-'+item.tool+'" style="width:16px;text-align:center;color:var(--txt4);flex-shrink:0">&#9675;</span>'
+      +'<span style="flex:1;font-size:14px;color:var(--txt2)">'+(TOOL_LABELS[item.tool]||item.tool)+' <span style="font-size:11px;color:var(--txt4)">('+scopeLbl+')</span></span>'
+      +'<span class="snap-status" id="snap-status-'+item.tool+'" style="font-size:12px;color:var(--txt4)">Pending</span>'
+      +'</div>';
+  }).join('');
+  var cancelBtn=document.getElementById('snap-cancel-btn');
+  var closeBtn=document.getElementById('snap-close-btn');
+  if(cancelBtn){cancelBtn.style.display='';cancelBtn.disabled=false;cancelBtn.textContent='Cancel';}
+  if(closeBtn)closeBtn.style.display='none';
+  var ov=document.getElementById('snapshot-progress-overlay');
+  if(ov)ov.classList.add('on');
+}
+/**
+ * Updates a single tool row's icon and status label in the Snapshot progress modal.
+ * @param {string} tool - Tool key (e.g. 'lexical').
+ * @param {'pending'|'running'|'done'|'failed'|'cancelled'} status - New row status.
+ */
+function setSnapshotRowStatus(tool,status){
+  var icon=document.getElementById('snap-icon-'+tool);
+  var label=document.getElementById('snap-status-'+tool);
+  if(!icon||!label)return;
+  var map={
+    pending:{ic:'&#9675;',color:'var(--txt4)',txt:'Pending'},
+    running:{ic:'<div class="spin" style="width:13px;height:13px;border-width:2px;margin:0 auto"></div>',color:'var(--gold)',txt:'Running\u2026'},
+    done:{ic:'&#10003;',color:'var(--sagebright)',txt:'Done'},
+    failed:{ic:'&#10005;',color:'var(--crimsonbright)',txt:'Failed'},
+    cancelled:{ic:'&#8211;',color:'var(--txt4)',txt:'Cancelled'}
+  };
+  var m=map[status]||map.pending;
+  icon.innerHTML=m.ic;icon.style.color=m.color;
+  label.textContent=m.txt;label.style.color=m.color;
+}
+/**
+ * Finalizes the Snapshot progress modal once the run loop ends.
+ * Swaps Cancel for Close, and marks any rows still 'Pending' as cancelled
+ * (covers tools that never started because the run was cancelled early).
+ * @param {boolean} cancelled - Whether the run ended via cancellation.
+ */
+function finishSnapshotProgressModal(cancelled){
+  var cancelBtn=document.getElementById('snap-cancel-btn');
+  var closeBtn=document.getElementById('snap-close-btn');
+  if(cancelBtn)cancelBtn.style.display='none';
+  if(closeBtn)closeBtn.style.display='';
+  if(cancelled){
+    SNAPSHOT_TOOL_ORDER.forEach(function(tool){
+      var label=document.getElementById('snap-status-'+tool);
+      if(label&&label.textContent==='Pending')setSnapshotRowStatus(tool,'cancelled');
+    });
+  }
+}
+/**
+ * Cancels an in-progress Snapshot run. Aborts the in-flight fetch immediately via
+ * AbortController and sets _snapshotCancelled so the run loop exits at its next check.
+ * Disables the Cancel button to prevent duplicate clicks while the run unwinds.
+ */
+function cancelSnapshot(){
+  if(!_snapshotRunning)return;
+  _snapshotCancelled=true;
+  if(_snapshotAbortController){_snapshotAbortController.abort();}
+  var cancelBtn=document.getElementById('snap-cancel-btn');
+  if(cancelBtn){cancelBtn.disabled=true;cancelBtn.textContent='Cancelling\u2026';}
+}
+/**
+ * Runs all six AI study tools in sequence for the active reference, driving the
+ * Snapshot progress modal (per-tool status + Cancel/Close control).
  * Passage-scope tools: lexical, grammar, crossrefs, geography.
  * Book-scope tools: historical, cultural.
- * Skips any tool with a cached result. Inserts a 2.5s delay between requests
- * to avoid Groq rate limits. Sets _snapshotRunning to prevent concurrent runs.
+ * Skips any tool with a cached result. Inserts a cancellable 2.5s delay between
+ * requests to avoid Groq rate limits. Sets _snapshotRunning to prevent concurrent runs.
+ * Cancel aborts the in-flight fetch immediately and stops before the next tool.
  */
 async function runSnapshot(){
   if(_snapshotRunning){toast('Snapshot already running');return;}
@@ -645,33 +741,34 @@ async function runSnapshot(){
   if(!ar||!ar.reference){toast('Add a scripture reference first');return;}
   if(!online){toast('AI tools require internet');return;}
   _snapshotRunning=true;
+  _snapshotCancelled=false;
   var btn=document.getElementById('btn-snapshot');
-  var lbl=document.getElementById('snapshot-label');
   var sub=document.getElementById('snapshot-sub');
-  btn.style.opacity='.6';btn.style.pointerEvents='none';
+  if(btn){btn.style.opacity='.6';btn.style.pointerEvents='none';}
   var passageTools=['lexical','grammar','crossrefs','geography'];
   var bookTools=['historical','cultural'];
   var all=passageTools.map(function(t){return {tool:t,scope:'passage'};}).concat(bookTools.map(function(t){return {tool:t,scope:'book'};}));
-  var total=all.length;var done=0;
+  openSnapshotProgressModal(all);
   for(var i=0;i<all.length;i++){
+    if(_snapshotCancelled)break;
     var item=all[i];
+    setSnapshotRowStatus(item.tool,'running');
     // Temporarily override studyScope so buildPrompt and cache keys use the tool's required scope
     var prevScope=studyScope;
     setStudyScope(item.scope);
     var ck=item.scope==='book'?item.tool+'_book':item.tool; // Storage key matching the tool+scope combination
-    done++;
-    lbl.textContent='Running '+TOOL_LABELS[item.tool]+'... ('+done+' of '+total+')';
-    sub.textContent=item.scope==='book'?'Whole book scope':'Passage scope';
     // Skip if cached — but NOT if the value is '__shared__' (placeholder from an imported study that needs real data)
     if(ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'){
       setStudyScope(prevScope);
-      await new Promise(function(r){setTimeout(r,200);});
+      setSnapshotRowStatus(item.tool,'done');
+      await snapshotDelay(200);
       continue;
     }
     try{
       var trans=ar.pastedTranslation||ar.translation||'ESV';
       var prompt=buildPrompt(item.tool,ar.reference,trans,item.scope);
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:2048,temperature:0.2})});
+      _snapshotAbortController=new AbortController();
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:prompt}],max_tokens:2048,temperature:0.2}),signal:_snapshotAbortController.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -679,24 +776,39 @@ async function runSnapshot(){
       var toolBtn=document.getElementById('btn-'+item.tool);
       if(toolBtn){toolBtn.classList.add('ready');if(!toolBtn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';toolBtn.appendChild(d);}}
       showAIPanel(item.tool,content2);
+      setSnapshotRowStatus(item.tool,'done');
     }catch(e){
+      if(e.name==='AbortError'){
+        setSnapshotRowStatus(item.tool,'cancelled');
+        setStudyScope(prevScope);
+        break;
+      }
+      setSnapshotRowStatus(item.tool,'failed');
       toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
     }
     setStudyScope(prevScope);
+    if(_snapshotCancelled)break;
     // 2.5s inter-request delay to avoid hitting the Groq free-tier rate limit (30 req/min)
-    if(i<all.length-1)await new Promise(function(r){setTimeout(r,2500);});
+    if(i<all.length-1)await snapshotDelay(2500);
   }
-  lbl.textContent='Study Snapshot';
   _snapshotRunning=false;
-  _snapshotLastRun=new Date();
-  var fmtT=_snapshotLastRun.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  sub.textContent='Last run: '+fmtT+' \u2014 tap to refresh any tool';
-  btn.style.opacity='';btn.style.pointerEvents='';
-  // Restore passage scope after snapshot — book-scope tools temporarily override it during the run
-  if(ar&&ar.deep)ar.deep.studyScope='passage';
-  setStudyScope('passage');
-  persist();
-  toast('Snapshot complete \u2014 all tools loaded');
+  _snapshotAbortController=null;
+  var wasCancelled=_snapshotCancelled;
+  _snapshotCancelled=false;
+  finishSnapshotProgressModal(wasCancelled);
+  if(btn){btn.style.opacity='';btn.style.pointerEvents='';}
+  if(!wasCancelled){
+    _snapshotLastRun=new Date();
+    if(sub){var fmtT=_snapshotLastRun.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});sub.textContent='Last run: '+fmtT+' \u2014 tap to refresh any tool';}
+    // Restore passage scope after snapshot — book-scope tools temporarily override it during the run
+    if(ar&&ar.deep)ar.deep.studyScope='passage';
+    setStudyScope('passage');
+    persist();
+    toast('Snapshot complete \u2014 all tools loaded');
+  } else {
+    setStudyScope('passage');
+    toast('Snapshot cancelled');
+  }
 }
 /**
  * Caches an AI result, sets it as the active tab, and renders the AI panel.
@@ -1484,7 +1596,7 @@ export {
   toggleResSection, setScope, getBookFromRef, updateToolDots,
   buildPrompt, geminiErrMsg, groqErrMsg, runTool,
   // S13 — Study Snapshot + AI Panel
-  snapshotIntent, runSnapshot, showAIPanel, renderAITabs,
+  snapshotIntent, runSnapshot, cancelSnapshot, showAIPanel, renderAITabs,
   switchAITab, renderAIPanelContent, closeAIPanel,
   // S14-partial — Expand / Copy / Share
   updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,

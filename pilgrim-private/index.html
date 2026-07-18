@@ -160,7 +160,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl) var(--rl) 0 0;padding:20px 16px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto}
 .modal::-webkit-scrollbar{display:none}
 .modal-title{font-family:'EB Garamond',serif;font-size:20px;color:var(--txt1);margin-bottom:14px}
-.toast{position:fixed;top:calc(14px + var(--safe-t));left:50%;transform:translateX(-50%) translateY(-90px);background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);border-radius:50px;padding:9px 20px;font-size:14px;z-index:200;transition:transform .28s ease;white-space:nowrap;pointer-events:none;font-family:'Crimson Pro',serif}
+.toast{position:fixed;top:calc(14px + var(--safe-t));left:50%;transform:translateX(-50%) translateY(-90px);background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);border-radius:50px;padding:9px 20px;font-size:14px;z-index:600;transition:transform .28s ease;white-space:nowrap;pointer-events:none;font-family:'Crimson Pro',serif}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .update-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:var(--bg3);border-bottom:1px solid var(--golddim);padding:10px 14px;padding-top:calc(10px + var(--safe-t));align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-family:'Crimson Pro',serif;font-size:13px;color:var(--txt1);text-align:center}
 .update-banner.on{display:flex}
@@ -1608,6 +1608,17 @@ select option{background:var(--bg2);color:var(--txt1)}
     <div style="display:flex;gap:10px">
       <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('snapshot-overlay')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="closeOverlay('snapshot-overlay');runSnapshot()">Run Snapshot</button>
+    </div>
+  </div>
+</div>
+<!-- Snapshot progress modal — full overlay, shown for the entire run duration -->
+<div class="overlay" id="snapshot-progress-overlay" style="z-index:250">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Study Snapshot</div>
+    <div id="snap-progress-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-danger" id="snap-cancel-btn" style="flex:1" onclick="cancelSnapshot()">Cancel</button>
+      <button class="btn btn-primary" id="snap-close-btn" style="flex:1;display:none" onclick="closeOverlay('snapshot-progress-overlay')">Close</button>
     </div>
   </div>
 </div>

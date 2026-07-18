@@ -262,8 +262,12 @@ function migrateStudy(s){
     // Already on multi-ref schema — repair defaults only
     s.refs.forEach(function(r){
       if(!r.type)r.type='primary'; // Back-fill missing type field from pre-type-toggle schema
-      // studyScope 'book' with no AI content is an orphaned legacy state — reset it
-      if(r.deep&&r.deep.studyScope==='book'&&!r.deep.historical)r.deep.studyScope='passage';
+      // studyScope 'book' is only an orphaned legacy state if NO book-scope content exists
+      // across any tool. All 6 tools support both scopes — never key on one tool's field.
+      if(r.deep&&r.deep.studyScope==='book'){
+        var _hasBook=r.deep.lexical_book||r.deep.grammar_book||r.deep.historical_book||r.deep.cultural_book||r.deep.crossrefs_book||r.deep.geography_book;
+        if(!_hasBook)r.deep.studyScope='passage';
+      }
     });
     return;
   }
@@ -355,7 +359,21 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.13.5',date:'June 30, 2026',label:'Latest',
+    version:'4.14.0',date:'July 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Study Snapshot — replaced inline running label with a full progress modal listing all 6 tools and live per-tool status (pending/running/done/failed/cancelled); added a real Cancel control that aborts the in-flight AI request immediately and halts the run before the next tool',
+      'fix: toast notifications rendered behind modal overlays (toast z-index:200 vs overlay z-index:500) — failure/success toasts fired but were invisible any time a modal was open, including the new Snapshot progress modal. Toast z-index raised to 600, above every overlay in the app'
+    ]},
+  {
+    version:'4.13.6',date:'July 18, 2026',label:'',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Whole Book scope broken — closeAIPanel()/switchAITab() referenced TTS state (_ttsActive, _ttsSource, ttsStop) never imported into studyTools.js, throwing ReferenceError on every scope toggle and AI tab switch. Scope toggle, tool dots, and panel state now work correctly in both scopes',
+      'fix: saved Whole Book scope silently reset to This Passage on study open — migrateStudy() keyed its orphan-state check on Historical Context content only; now checks all six tools\u2019 book-scope fields before resetting'
+    ]},
+  {
+    version:'4.13.5',date:'June 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: 3 leftover "Field Mode" strings (pre-rename terminology) replaced with "Notes tab" — Notes-tab resource caption, Study Tools empty-state message, and resInsertText() toast'
