@@ -358,7 +358,16 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.15.0',date:'July 19, 2026',label:'Latest',
+    version:'4.15.1',date:'July 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Notes-tab resource tile strip showed nothing at all when a study had no resources — now shows "No resources yet." (Study Tools tab\'s fuller Resources list already had correct empty-state text; only this tile strip was missing it)',
+      'fix: Diagnostics → Run Tests no longer auto-opens/populates the Send Feedback form afterward — feedback form now only opens via the explicit Submit Feedback button',
+      'feat: Send Feedback screenshot picker now supports multi-select — choose multiple images in one picker action (still capped at 3 total)',
+      'feat: "This Passage" scope toggle in Study Tools now shows the loaded scripture reference (e.g. "This Passage: Joshua 1:8") instead of a static label, so scope is verifiable before running AI Study Tools'
+    ]},
+  {
+    version:'4.15.0',date:'July 19, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: feedback form now files a GitHub Issue directly instead of posting to Discord — auto-labeled by category, screenshots committed to feedback-attachments/, full diagnostic JSON embedded in the issue body',

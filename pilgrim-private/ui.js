@@ -2131,10 +2131,9 @@ async function runDiagnostics(){
   // Cap log at 20 entries
   if(log.length>20)log=log.slice(0,20);
   saveDiagLog(log);
-  // Show feedback form if enabled
-  var fb=document.getElementById('diag-feedback-form');
-  if(fb)fb.style.display=sett.diagFeedback?'block':'none';
-  if(sett.diagFeedback){diagFbReset();}
+  // Feedback form is intentionally NOT auto-shown here — it should only open
+  // via the explicit Submit Feedback button (openFeedbackDirect()), never as
+  // a side effect of running diagnostics.
 }
 /**
  * Loads the diagnostic history log from localStorage.
@@ -2233,6 +2232,7 @@ function diagFbPickImage(){
   var tmp=document.createElement('input');
   tmp.type='file';
   tmp.accept='image/*';
+  tmp.multiple=true;
   tmp.style.display='none';
   tmp.onchange=function(){
     if(tmp.files&&tmp.files.length){

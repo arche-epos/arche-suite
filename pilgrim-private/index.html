@@ -714,7 +714,7 @@ select option{background:var(--bg2);color:var(--txt1)}
     </div>
     <div style="display:flex;align-items:center;margin-bottom:10px"><div class="seclabel" style="margin-bottom:0;flex:1">AI Study Tools</div></div>
     <div class="scope-toggle">
-      <button class="scope-btn on" id="scope-passage" onclick="setScope('passage')">&#128214; This Passage</button>
+      <button class="scope-btn on" id="scope-passage" onclick="setScope('passage')">&#128214; <span id="scope-passage-label">This Passage</span></button>
       <button class="scope-btn" id="scope-book" onclick="setScope('book')">&#128218; Whole Book</button>
     </div>
     <p style="font-size:14px;color:var(--txt4);font-style:italic;margin-bottom:12px;line-height:1.5">Analyzing <strong style="color:var(--txt3)" id="scope-context-label">this passage</strong> -- tap any tool. AI provides data only, no theological conclusions.</p>

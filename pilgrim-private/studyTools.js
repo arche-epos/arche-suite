@@ -322,6 +322,7 @@ function populateDeep(){
   if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
   setStudyScope((ar&&ar.deep&&ar.deep.studyScope)||'passage');
+  updateScopeBtnLabel();
   _renderRefPills('d-ref-pills','deep');
   // Snapshot ready indicator
   var snapSub=document.getElementById('snapshot-sub');
@@ -478,6 +479,17 @@ function toggleResSection(sectionId,chevId){
 }
 // insertOutlinePrefix removed — Quill toolbar handles formatting
 /**
+ * Updates the "This Passage" scope toggle button to show the currently loaded
+ * scripture reference (e.g. "This Passage: Joshua 1:8") instead of a static
+ * label, so scope is verifiable before running AI Study Tools.
+ */
+function updateScopeBtnLabel(){
+  var lbl=document.getElementById('scope-passage-label');
+  if(!lbl)return;
+  var ar=activeRef();
+  lbl.textContent=(ar&&ar.reference)?'This Passage: '+ar.reference:'This Passage';
+}
+/**
  * Sets the AI tool scope to 'passage' or 'book' and updates the UI accordingly.
  * Updates studyScope, the active reference's deep.studyScope, scope toggle buttons,
  * and the scope context label. Closes the AI panel and refreshes tool dot indicators.
@@ -491,6 +503,7 @@ function setScope(s){
   var book=cur?getBookFromRef((activeRef()&&activeRef().reference)||''):'';
   var lbl=document.getElementById('scope-context-label');
   if(lbl)lbl.textContent=s==='book'?'the book of '+book:'this passage';
+  updateScopeBtnLabel();
   closeAIPanel();updateToolDots();
 }
 /**
@@ -1560,7 +1573,7 @@ function renderResources(){
  */
 function renderFieldTiles(){
   var el=document.getElementById('field-res-tiles');if(!el)return;
-  if(!cur||!cur.resources||!cur.resources.length){el.innerHTML='';return;}
+  if(!cur||!cur.resources||!cur.resources.length){el.innerHTML='<p style="font-size:12px;color:var(--txt4);font-style:italic">No resources yet.</p>';return;}
   el.innerHTML='<div class="res-tile-grid">'+cur.resources.map(function(r){
     var badge=r.ocrStatus==='done'&&r.ocrText?'<div class="res-tile-badge" title="Text ready"></div>':'';
     if(r.type==='doc'){
