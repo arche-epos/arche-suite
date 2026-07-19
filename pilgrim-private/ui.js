@@ -5,7 +5,7 @@
 
 import {
   // Section 01 — constants
-  WORKER_URL, APP_SHARE_URL, DISCORD_WEBHOOK_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
+  WORKER_URL, APP_SHARE_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_UPDATE_SKIP,
   SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
@@ -1872,7 +1872,7 @@ var TOUR_B_STEPS=[
   {target:'#settings-sec-share',title:'Share Archē · Pilgrim',body:'Sharing sends the Public version link, not this Private tester build — your tester access is PIN-gated and limited to the approved list only.'},
   {target:'#settings-sec-backup',title:'Manual JSON Backup',body:'Your data syncs automatically, but since Pilgrim is in active beta development we recommend downloading a manual backup every so often — just in case. Tap Download Backup to save a copy to your device any time.'},
   {target:'#settings-sec-changelog',title:'What\u2019s New',body:'The full history of changes to Arch\u0113 \u00b7 Pilgrim, newest first — tap to expand.'},
-  {target:'#diag-settings-section',title:'Diagnostics',body:"Connection test buttons for AI tools, text extraction, sync, and the ESV API. The feedback button isn't wired up yet — reach out to Jesse directly with feedback for now."}
+  {target:'#diag-settings-section',title:'Diagnostics',body:"Connection test buttons for AI tools, text extraction, sync, and the ESV API. Use the feedback form below to report a bug or issue directly — it files straight to the dev team."}
 ];
 
 // ════════════════════════════════════════════════════════
@@ -2303,8 +2303,61 @@ function diagFbReset(){
   document.getElementById('diag-fb-text').maxLength=2000;
 }
 /**
- * Validates and submits the feedback form to the Discord webhook.
- * Attaches a diagnostic JSON file, optional extended description, and up to 3 screenshots.
+ * Resizes and compresses an image File down to a JPEG data URL, capping the
+ * longest dimension at 1280px and iterating quality downward until the
+ * result is under ~1MB (or quality bottoms out at 0.5). Keeps screenshot
+ * uploads small and fast regardless of the original phone-camera resolution.
+ * @param {File} file - Source image file.
+ * @returns {Promise<string>} data:image/jpeg;base64,... string.
+ */
+function compressImageFile(file){
+  return new Promise(function(resolve,reject){
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      URL.revokeObjectURL(url);
+      var maxDim=1280;
+      var scale=Math.min(1,maxDim/Math.max(img.width,img.height));
+      var canvas=document.createElement('canvas');
+      canvas.width=Math.round(img.width*scale);
+      canvas.height=Math.round(img.height*scale);
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      var quality=0.7;
+      var dataUrl=canvas.toDataURL('image/jpeg',quality);
+      // Rough size check on the base64 payload; step quality down if still large.
+      while(dataUrl.length*0.75>1024*1024&&quality>0.5){
+        quality-=0.1;
+        dataUrl=canvas.toDataURL('image/jpeg',quality);
+      }
+      resolve(dataUrl);
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Could not load image for compression'));};
+    img.src=url;
+  });
+}
+/**
+ * Posts a feedback payload to the arche-proxy /feedback route, which files
+ * a GitHub Issue (screenshots committed to feedback-attachments/, diagnostic
+ * JSON embedded in the issue body). Isolated on purpose — this is the swap
+ * point if the feedback destination changes again before public launch.
+ * @param {Object} payload - Feedback payload built by submitFeedback().
+ * @returns {Promise<Object>} Parsed JSON response from the worker.
+ */
+async function sendFeedback(payload){
+  var r=await fetch(WORKER_URL+'/feedback',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  var data=await r.json();
+  if(!r.ok||data.ok===false)throw new Error(data.error||'HTTP '+r.status);
+  return data;
+}
+/**
+ * Validates and submits the feedback form, filing a GitHub Issue via arche-proxy.
+ * Compresses up to 3 screenshots client-side before send; includes the full
+ * diagnostic JSON and description in the issue body.
  */
 async function submitFeedback(){
   var btn=document.getElementById('diag-send-btn');
@@ -2322,8 +2375,6 @@ async function submitFeedback(){
   if(!category){document.getElementById('fbg-category').classList.add('error');valid=false;}
   if(!desc){document.getElementById('fbg-desc').classList.add('error');valid=false;}
   if(!valid){statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Please complete all required fields.';return;}
-  if(DISCORD_WEBHOOK_URL==='YOUR_DISCORD_WEBHOOK_URL_HERE'){statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Discord webhook not configured.';return;}
-  var extended=document.getElementById('diag-fb-extended').checked;
   var imageFiles=_fbImages.slice(0,3);
   btn.disabled=true;
   statusEl.style.color='var(--txt3)';
@@ -2344,37 +2395,29 @@ async function submitFeedback(){
       language:navigator.language,
       ts:new Date().toISOString()
     };
-    var diagJson=JSON.stringify({
+    // Compress screenshots (if any) before sending
+    var images=[];
+    for(var i=0;i<imageFiles.length;i++){
+      var dataUrl=await compressImageFile(imageFiles[i]);
+      images.push({name:imageFiles[i].name,dataUrl:dataUrl});
+    }
+    var payload={
+      app:'pilgrim-private',
       systemInfo:systemInfo,
       category:category,
       when:diagGetPill('fb-when')||'not specified',
       frequency:diagGetPill('fb-freq')||'not specified',
       diagnosticSummary:{pass:passCount,fail:failCount},
-      diagnosticResults:_diagResults
-    },null,2);
-    var msgContent='**\ud83d\udd0d Pilgrim Feedback — v'+systemInfo.appVersion+'**\n'+
-      '**'+new Date().toLocaleString()+'**\n'+
-      '**Device:** '+device+' · '+os+' · '+browser+'\n'+
-      '**Category:** '+category+'\n'+
-      '**Diagnostics:** '+passCount+' passed, '+failCount+' failed'+
-      (extended?'\n**Description:** *(see attachment)*':'\n**Description:** '+desc);
-    var form=new FormData();
-    form.append('payload_json',JSON.stringify({content:msgContent}));
-    form.append('files[0]',new Blob([diagJson],{type:'application/json'}),'diagnostic-'+Date.now()+'.json');
-    var fileIdx=1;
-    // Extended mode: send long description as a .txt attachment rather than inline message
-    if(extended)form.append('files['+(fileIdx++)+']',new Blob([desc],{type:'text/plain'}),'description-'+Date.now()+'.txt');
-    imageFiles.forEach(function(f,i){form.append('files['+(fileIdx++)+']',f,'screenshot-'+(i+1)+'-'+Date.now()+'.'+f.name.split('.').pop());});
-    var r=await fetch(DISCORD_WEBHOOK_URL,{method:'POST',body:form});
-    // Discord webhooks return 204 No Content on success
-    if(r.ok||r.status===204){
-      statusEl.style.color='var(--sagebright)';
-      statusEl.textContent='\u2713 Feedback sent!';
-      // Reset pills/text/images after a brief delay so the confirmation is visible first.
-      // diagFbReset() also clears diag-send-status — that's fine once the 2s window has passed.
-      setTimeout(diagFbReset,2000);
-    }
-    else{throw new Error('HTTP '+r.status);}
+      diagnosticResults:_diagResults,
+      description:desc,
+      images:images
+    };
+    await sendFeedback(payload);
+    statusEl.style.color='var(--sagebright)';
+    statusEl.textContent='\u2713 Feedback sent!';
+    // Reset pills/text/images after a brief delay so the confirmation is visible first.
+    // diagFbReset() also clears diag-send-status — that's fine once the 2s window has passed.
+    setTimeout(diagFbReset,2000);
   }catch(e){statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Failed: '+e.message;}
   finally{btn.disabled=false;}
 }

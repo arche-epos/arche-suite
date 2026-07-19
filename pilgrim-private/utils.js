@@ -27,7 +27,6 @@ function parseRef(ref){
   if(!bookId)return null;
   return{book:bookId,chapter:parseInt(m[2]),startVerse:m[3]?parseInt(m[3]):null,endVerse:m[4]?parseInt(m[4]):null};
 }
-var DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/1508999899113324655/3PsMmsIdRf-6IoSVhKfmBtx0h6CJ9vSXJB9quVaNSwZTvDxaN6kWSCNOa5cl3mV1CjNl';
 var APP_SHARE_URL='https://www.archestudytools.com/pilgrim-public/';
 var SK_DIAG='bsn_diag_log';
 var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TAGS_DEL='bsn_tags_deleted_v1';
@@ -359,7 +358,15 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.14.3',date:'July 18, 2026',label:'Latest',
+    version:'4.15.0',date:'July 19, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: feedback form now files a GitHub Issue directly instead of posting to Discord — auto-labeled by category, screenshots committed to feedback-attachments/, full diagnostic JSON embedded in the issue body',
+      'feat: feedback screenshots are now resized/compressed client-side (max 1280px, JPEG) before send',
+      'fix: Guided Tour B (Settings) step 9 copy was stale, still describing the feedback button as unwired — corrected now that it\'s live'
+    ]},
+  {
+    version:'4.14.3',date:'July 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: OCR result required closing and reopening the resource modal to display — resRunOCR() only re-rendered the background tile grid, never the open detail overlay. Modal now refreshes in place the moment extraction finishes (success or error)'
@@ -1322,7 +1329,7 @@ function renderRefPills(containerId,mode){
 export {
   // Section 01 — constants
   WORKER_URL, ACTIVE_USER, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
-  DISCORD_WEBHOOK_URL, APP_SHARE_URL,
+  APP_SHARE_URL,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
   SK_UPDATE_SKIP,
