@@ -52,7 +52,7 @@ Debug trail this session:
 
 **PAT for reference (from MKB P5, expires Sep 21, 2026):**
 ```
-[REDACTED — see MKB P5 for current live token]
+[REDACTED — token exposed in chat this session, rotated per hygiene rule]
 ```
 
 **Next session start: confirm whether Boss re-saved `GITHUB_PAT` on `github-proxy`, then re-run the live feedback test** (Settings → Diagnostics → Feedback, real screenshot, submit). If still failing after a clean re-paste, next suspects in order:
