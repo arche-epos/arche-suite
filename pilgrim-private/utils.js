@@ -311,7 +311,19 @@ function activeRef(){if(!cur||!cur.refs||!cur.refs.length)return null;return cur
 function migrateLegacyKey(legacyKey,namespacedKey){
   if(localStorage.getItem(namespacedKey)===null){
     var legacyVal=localStorage.getItem(legacyKey);
-    if(legacyVal!==null)localStorage.setItem(namespacedKey,legacyVal);
+    if(legacyVal!==null){
+      try{
+        localStorage.setItem(namespacedKey,legacyVal);
+        localStorage.removeItem(legacyKey); // move not copy — free legacy key after migration
+      }catch(e){
+        // Quota exceeded — remove legacy key first to free space, then retry
+        if(e.name==='QuotaExceededError'||e.code===22){
+          localStorage.removeItem(legacyKey);
+          try{localStorage.setItem(namespacedKey,legacyVal);}
+          catch(e2){console.warn('[Pilgrim] migrateLegacyKey: storage full, could not migrate '+legacyKey);}
+        }
+      }
+    }
   }
 }
 /**
@@ -358,7 +370,11 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.15.1',date:'July 20, 2026',label:'Latest',
+    version:'4.15.2',date:'July 19, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:['fix: migrateLegacyKey — ported forward main v4.13.2 fix that was missed during ES Modules extraction; now moves (copy+delete) instead of copying, with QuotaExceededError catch-and-retry — prevents pre-merge regression of a previously-fixed data-loss bug']},
+  {
+    version:'4.15.1',date:'July 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Notes-tab resource tile strip showed nothing at all when a study had no resources — now shows "No resources yet." (Study Tools tab\'s fuller Resources list already had correct empty-state text; only this tile strip was missing it)',
