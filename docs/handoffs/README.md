@@ -24,6 +24,7 @@ Full content preserved where recoverable; summary stubs otherwise.
 | session-handoff-june18d-2026.md | Jun 18 SD | GitHub migration complete | **Full** |
 | session-handoff-june22a-2026.md | Jun 22 SA | Pilgrim v4.13.0, PAT fix, Issues updated | Partial |
 | session-handoff-june25-2026.md | Jun 25 | Mentor v0.3.0, Pilgrim ES Modules QA | **Full** |
+| session-handoff-july20-2026.md | Jul 20 | PAT resolution, OCR provider research, Gemini backup spec | **Full** |
 
 ---
 **Going forward:** Current handoff stays in Project Knowledge.
