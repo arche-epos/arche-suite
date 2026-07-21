@@ -370,7 +370,11 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.15.2',date:'July 19, 2026',label:'Latest',
+    version:'4.15.3',date:'July 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:['feat: OCR (Resources tab) switched from Groq (qwen/qwen3.6-27b) to Gemini 3.5 Flash via new /gemini-ocr Worker route — resolves TPM rate-limit hit during manual testing; AI Study Tools unaffected, still on Groq (openai/gpt-oss-120b); Groq /ocr route kept live for rollback']},
+  {
+    version:'4.15.2',date:'July 19, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:['fix: migrateLegacyKey — ported forward main v4.13.2 fix that was missed during ES Modules extraction; now moves (copy+delete) instead of copying, with QuotaExceededError catch-and-retry — prevents pre-merge regression of a previously-fixed data-loss bug']},
   {

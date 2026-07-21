@@ -1459,7 +1459,7 @@ function resCompressImage(dataUrl,callback){var img=new Image();img.onload=funct
  */
 function resAddResource(dataUrl){if(!cur.resources)cur.resources=[];var res={id:'r'+Date.now(),dataUrl:dataUrl,ocrText:'',ocrStatus:'pending',title:'Resource '+(cur.resources.length+1),date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};cur.resources.push(res);saveStudy();renderResources();resRunOCR(res.id);}
 /**
- * Runs OCR on a resource image via the arche-proxy /ocr endpoint (Llama 4 Scout).
+ * Runs OCR on a resource image via the arche-proxy /gemini-ocr endpoint (Gemini 3.5 Flash).
  * Updates the resource's ocrText and ocrStatus, saves, and re-renders resources.
  * @param {string} id - Resource id within cur.resources.
  */
@@ -1472,11 +1472,11 @@ async function resRunOCR(id){
   try{
     // Data URL format: 'data:image/jpeg;base64,<b64>' — split to extract mime type and raw b64
     var b64=res.dataUrl.split(',')[1],mimeType=res.dataUrl.split(';')[0].split(':')[1];
-    var body={model:'qwen/qwen3.6-27b',max_tokens:4096,reasoning_effort:'none',reasoning_format:'hidden',messages:[{role:'user',content:[{type:'text',text:'Extract ALL text from this image exactly as it appears. Preserve line breaks, headings, bullet points, and numbered lists. Output raw extracted text only.'},{type:'image_url',image_url:{url:'data:'+mimeType+';base64,'+b64}}]}]};
-    var resp=await fetch(WORKER_URL+'/ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var body={image:b64,mimeType:mimeType};
+    var resp=await fetch(WORKER_URL+'/gemini-ocr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!resp.ok){var err=await resp.json().catch(function(){return{};});var msg=(err.error&&err.error.message)||err.message||('HTTP '+resp.status);throw new Error(msg);}
     var data=await resp.json();
-    var text=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+    var text=data.text;
     res.ocrText=text||'No text could be extracted.';res.ocrStatus='done';
     saveStudy();renderResources();toast('Text extracted');
     resRefreshOpenView(id);
