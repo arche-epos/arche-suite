@@ -789,6 +789,12 @@ select option{background:var(--bg2);color:var(--txt1)}
           <span id="expand-btn-label">Expand — more detail</span>
         </button>
       </div>
+      <div id="continue-btn-row" style="display:none;margin-top:10px">
+        <button id="btn-continue" onclick="continueCurrentTool()" style="background:none;border:1px solid var(--crimsonbright);border-radius:var(--r);padding:6px 14px;font-family:'Crimson Pro',serif;font-size:12px;color:var(--crimsonbright);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="12 5 19 12 12 19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span id="continue-btn-label">Continue — response was cut off</span>
+        </button>
+      </div>
       <div class="aidisclaim">AI provides linguistic, historical, and cultural data only. All theological conclusions are yours to draw.</div>
     </div>
     <div class="seclabel" style="margin-top:4px;">Passage / Book Outline</div>

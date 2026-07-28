@@ -370,7 +370,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.15.4',date:'July 23, 2026',label:'Latest',
+    version:'4.16.0',date:'July 28, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Word Study prompt was requesting 6-8 fully-detailed words, regularly exceeding the 2048-token response cap and silently cutting off after the first word — now requests 4-5 words and drops the redundant "Additional sources" field to fit reliably',
+      'feat: added a Continue button to all six AI Study Tools (Word Study, Language & Structure, Historical Context, Cultural Context, Cross-References, Places & Geography) — appears whenever a result is cut off by the token cap (incl. results generated via Study Snapshot) and sends a follow-up request to complete the response, appending the continuation in place'
+    ]},
+  {
+    version:'4.15.4',date:'July 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:['chore: AI Study Tools and OCR requests now send an X-Tester-Id header (PIN-authenticated user) to arche-proxy — enables per-tester rate-limit attribution vs. aggregate usage; no change to visible behavior']},
   {

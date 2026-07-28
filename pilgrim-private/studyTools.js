@@ -45,6 +45,10 @@ var _snapshotCancelled = false;
 var _snapshotAbortController = null;
 // S14-partial
 var _expandRunning = false;
+// Tracks which AI result keys (ck) were cut off by the model's max_tokens cap
+// (finish_reason==='length'), so the Continue button can be shown/hidden per tab.
+var _truncatedTabs = {};
+var _continueRunning = false;
 // S15 — Lexicon / Word List state
 var libTab = 'studies';
 var _lexLastResult  = null;
@@ -554,7 +558,7 @@ function buildPrompt(tool,ref,trans,scope){
   var noC='\n\nCRITICAL: Provide ONLY the data requested. Do NOT draw theological conclusions, make doctrinal interpretations, or express any theological opinion. The student draws all conclusions.';
   var intro=isBook?'Provide a complete analysis of the book of '+book+'.':'Provide a complete analysis of '+ref+'.';
   var prompts={
-    lexical:base+intro+' Lexical study of 6-8 key words -- do not truncate. For EACH word:\n\nWORD N: [English word]\n- Language: Greek (NT) or Hebrew (OT)\n- Transliteration: [form]\n- Strong\'s: G#### or H####\n- Primary definition: [cite BDAG for Greek or BDB for Hebrew by name]\n- Additional sources: [where Thayer, Vine\'s, or Liddell-Scott agree or differ]\n- Semantic range: [full range in biblical usage]\n- Plain reading in this text: [most natural meaning as written]\n- Disputed: [note any scholarly disagreement with sources]\n- Key occurrences: [2-3 references]\n\nComplete all words.'+noC,
+    lexical:base+intro+' Lexical study of 4-5 key words -- do not truncate. For EACH word:\n\nWORD N: [English word]\n- Language: Greek (NT) or Hebrew (OT)\n- Transliteration: [form]\n- Strong\'s: G#### or H####\n- Primary definition: [cite BDAG for Greek or BDB for Hebrew by name]\n- Semantic range: [full range in biblical usage]\n- Plain reading in this text: [most natural meaning as written]\n- Disputed: [note any scholarly disagreement with sources]\n- Key occurrences: [2-3 references]\n\nComplete all words.'+noC,
     grammar:base+intro+' Complete grammar and syntax analysis -- do not truncate:\n\nSENTENCE STRUCTURE\n[Overall syntax and logical flow]\n\nVERB ANALYSIS\n[Tense, mood, voice for each significant verb — note where grammatical form directly affects meaning]\n\nNOTABLE CONSTRUCTIONS\n[Participles, infinitives, conditionals and their function]\n\nDISPUTED GRAMMATICAL READINGS\n[Where two or more valid readings exist, present each — cite Wallace, Moulton, or BDF where applicable — note which reading aligns with the plain text]\n\nCONJUNCTIONS AND PARTICLES\n[Each conjunction and its logical function]\n\nSYNTACTICAL SUMMARY\n[Additional grammatical features]\n\nComplete all sections.'+noC,
     historical:base+intro+' Complete historical background -- do not truncate:\n\nTIME PERIOD & DATING DEBATE\nPresent ALL major scholarly positions on date of composition. Name specific scholars and their primary evidence for each position. Clearly distinguish: (a) critical/liberal scholarship, (b) conservative/evangelical scholarship, (c) traditional church position. Do NOT state any debated date as settled fact. Note what the internal evidence of the text itself suggests.\n\nPOLITICAL LANDSCAPE\n[Empires, rulers, and political tensions at the time]\n\nAUTHOR BACKGROUND\nState the traditionally attributed author. Summarize evidence for and against, naming specific scholars on each side. Where the text\'s own claims about authorship are clear, state them as primary evidence.\n\nORIGINAL AUDIENCE\n[Geographic, social, and religious context of the original recipients]\n\nKEY HISTORICAL EVENTS\n[Events surrounding or referenced in the text — note what is archaeologically confirmed vs scholarly reconstruction]\n\nARCHAEOLOGICAL ATTESTATION\n[Relevant findings — note where archaeology confirms the biblical record]\n\nSCHOLARLY SOURCES\nName 4-6 specific scholars, commentaries, or reference works spanning both critical and conservative traditions.\n\nComplete all sections.'+noC,
     cultural:base+intro+' Complete cultural background -- do not truncate:\n\nCULTURAL CUSTOMS\n[For each custom: describe it, note if well-attested or debated, and cite the source]\n\nSOCIAL STRUCTURES\n[Hierarchies, conventions, honor-shame dynamics]\n\nGEOGRAPHIC SETTING\n[Location, physical description, historical and cultural significance]\n\nECONOMIC CONDITIONS\n[Trade, currency, occupations relevant to the text]\n\nRELIGIOUS AND CIVIC PRACTICES\nDistinguish: (a) practices confirmed by multiple sources, (b) known from limited sources, (c) scholarly reconstruction. Note where the text itself is the primary confirming source.\n\nCULTURAL IDIOMS\n[Expressions requiring cultural context]\n\nARCHAEOLOGICAL CONFIRMATION\n[Where physical evidence confirms the cultural picture in the text]\n\nComplete all sections.'+noC,
@@ -618,6 +622,8 @@ async function runTool(tool){
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
+    var finishReason=data.choices&&data.choices[0]&&data.choices[0].finish_reason;
+    _truncatedTabs[ck]=(finishReason==='length');
     if(!ar.deep)ar.deep={};
     ar.deep[ck]=content;saveStudy();showAIPanel(tool,content);
     btn.classList.remove('busy');btn.classList.add('ready');
@@ -785,6 +791,8 @@ async function runSnapshot(){
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
+      var finishReason2=data.choices&&data.choices[0]&&data.choices[0].finish_reason;
+      _truncatedTabs[ck]=(finishReason2==='length');
       if(content2){if(!ar.deep)ar.deep={};ar.deep[ck]=content2;saveStudy(true);}
       var toolBtn=document.getElementById('btn-'+item.tool);
       if(toolBtn){toolBtn.classList.add('ready');if(!toolBtn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';toolBtn.appendChild(d);}}
@@ -836,6 +844,7 @@ function showAIPanel(tool,content){
   renderAITabs();
   renderAIPanelContent(ck);
   updateExpandBtn();
+  updateContinueBtn();
   document.getElementById('aipanel').classList.add('on');
   setTimeout(function(){document.getElementById('aipanel').scrollIntoView({behavior:'smooth',block:'nearest'});},120);
 }
@@ -876,6 +885,7 @@ function switchAITab(ck){
   renderAITabs();
   renderAIPanelContent(ck);
   updateExpandBtn();
+  updateContinueBtn();
 }
 /**
  * Renders the markdown content for the given result key into the AI panel body.
@@ -895,7 +905,7 @@ function renderAIPanelContent(ck){
  * Closes the AI results panel and clears the active tab state.
  * Stops TTS if it is currently reading from the AI panel.
  */
-function closeAIPanel(){if(window.speechSynthesis&&_ttsActive&&_ttsSource==='ai')ttsStop();document.getElementById('aipanel').classList.remove('on');aiActiveTab=null;updateExpandBtn();}
+function closeAIPanel(){if(window.speechSynthesis&&_ttsActive&&_ttsSource==='ai')ttsStop();document.getElementById('aipanel').classList.remove('on');aiActiveTab=null;updateExpandBtn();updateContinueBtn();}
 
 // ════════════════════════════════════════════════════════
 
@@ -905,6 +915,12 @@ function closeAIPanel(){if(window.speechSynthesis&&_ttsActive&&_ttsSource==='ai'
  * has an expandable result (historical or cultural, either scope).
  */
 function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(!row)return;var expandable=['historical','historical_book','cultural','cultural_book'];row.style.display=(aiActiveTab&&expandable.indexOf(aiActiveTab)>=0)?'block':'none';var lbl=document.getElementById('expand-btn-label');if(lbl)lbl.textContent='Expand \u2014 more detail';}
+/**
+ * Shows or hides the "Continue" button row based on whether the active AI tab's
+ * result was cut off by the model's max_tokens cap (finish_reason==='length').
+ * Applies to all six AI Study Tools, any scope.
+ */
+function updateContinueBtn(){var row=document.getElementById('continue-btn-row');if(!row)return;row.style.display=(aiActiveTab&&_truncatedTabs[aiActiveTab])?'block':'none';}
 /**
  * Appends genuinely new content to the current AI result using a follow-up Groq prompt.
  * Targets historical and cultural results only. Merges the expansion into ar.deep and
@@ -932,6 +948,51 @@ async function expandCurrentTool(){
     if(more){var combined=existing+'\n\n---\n\n'+more;if(!ar.deep)ar.deep={};ar.deep[aiActiveTab]=combined;aiPanelResults[aiActiveTab]=combined;saveStudy(true);renderAIPanelContent(aiActiveTab);toast('Expanded');}
   }catch(e){toast('Expand failed: '+e.message);}
   btn.style.opacity='';btn.style.pointerEvents='';lbl.textContent='Expand \u2014 more detail';_expandRunning=false;
+}
+/**
+ * Sends a follow-up Groq request to complete a result that was cut off by the
+ * model's max_tokens cap (finish_reason==='length'). Rebuilds the original
+ * prompt for the active tab's tool+scope, includes the partial content already
+ * shown, and asks the model to continue exactly where it left off. Appends the
+ * continuation to the cached result and re-renders. Works for all six AI Study
+ * Tools (Word Study, Language & Structure, Historical Context, Cultural Context,
+ * Cross-References, Places & Geography). Guards against concurrent runs via
+ * _continueRunning flag.
+ */
+async function continueCurrentTool(){
+  if(_continueRunning){toast('Continue already running');return;}
+  if(!aiActiveTab||!_truncatedTabs[aiActiveTab])return;
+  var ar=activeRef();if(!ar)return;
+  var ck=aiActiveTab;
+  var base=ck.replace('_book','');
+  var scope=ck.endsWith('_book')?'book':'passage';
+  var existing=aiPanelResults[ck]||(ar.deep&&ar.deep[ck])||'';
+  if(!existing){toast('Run the tool first');return;}
+  _continueRunning=true;
+  var btn2=document.getElementById('btn-continue');var lbl2=document.getElementById('continue-btn-label');
+  if(btn2){btn2.style.opacity='.5';btn2.style.pointerEvents='none';}
+  if(lbl2)lbl2.textContent='Continuing...';
+  try{
+    var trans2=ar.pastedTranslation||ar.translation||'ESV';
+    var origPrompt=buildPrompt(base,ar.reference,trans2,scope);
+    var contPrompt=origPrompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
+    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:contPrompt}],max_tokens:2048,temperature:0.2})});
+    if(!res2.ok){var err2=await res2.json().catch(function(){return{};});throw new Error(err2.error?err2.error.message:'HTTP '+res2.status);}
+    var data2=await res2.json();
+    var addition=data2.choices&&data2.choices[0]&&data2.choices[0].message&&data2.choices[0].message.content||'';
+    var finishReason3=data2.choices&&data2.choices[0]&&data2.choices[0].finish_reason;
+    var merged=existing+addition;
+    aiPanelResults[ck]=merged;
+    if(!ar.deep)ar.deep={};
+    ar.deep[ck]=merged;saveStudy(true);
+    _truncatedTabs[ck]=(finishReason3==='length');
+    renderAIPanelContent(ck);
+    updateContinueBtn();
+    toast(_truncatedTabs[ck]?'Continued \u2014 still cut off, tap Continue again':'Continued');
+  }catch(e){toast('Continue failed: '+e.message);}
+  _continueRunning=false;
+  if(btn2){btn2.style.opacity='';btn2.style.pointerEvents='';}
+  if(lbl2)lbl2.textContent='Continue \u2014 response was cut off';
 }
 /**
  * Copies the active AI result to the clipboard with a header line showing tool name and reference.
@@ -1624,7 +1685,7 @@ export {
   snapshotIntent, runSnapshot, cancelSnapshot, showAIPanel, renderAITabs,
   switchAITab, renderAIPanelContent, closeAIPanel,
   // S14-partial — Expand / Copy / Share
-  updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,
+  updateExpandBtn, expandCurrentTool, updateContinueBtn, continueCurrentTool, copyAIResult, shareAIResult,
   // S15 — Lexicon & Word List
   libTab, switchLibTab, renderWordList, wlView, wlRemove,
   renderStudyWords, swView, swRemove,
