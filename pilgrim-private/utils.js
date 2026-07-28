@@ -370,7 +370,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.16.0',date:'July 28, 2026',label:'Latest',
+    version:'4.16.1',date:'July 28, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: trimmed the remaining 5 AI Study Tools prompts (Language & Structure, Historical Context, Cultural Context, Cross-References, Places & Geography) the same way Word Study was — reduced/merged redundant sections and lowered open-ended reference counts (e.g. Cross-References\' allusion counts) to fit reliably within the 2048-token response cap; Cross-References was the most likely to cut off given how many reference entries it requested',
+      'fix: Study Snapshot\'s inter-request delay increased from 2.5s to 5s — the prior delay only accounted for Groq\'s 30 RPM cap; this spreads Snapshot\'s 6 calls across the 60s rolling window for Groq\'s 8,000 TPM free-tier cap as well'
+    ]},
+  {
+    version:'4.16.0',date:'July 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Word Study prompt was requesting 6-8 fully-detailed words, regularly exceeding the 2048-token response cap and silently cutting off after the first word — now requests 4-5 words and drops the redundant "Additional sources" field to fit reliably',
