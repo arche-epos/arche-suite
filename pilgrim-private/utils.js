@@ -370,7 +370,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.16.1',date:'July 28, 2026',label:'Latest',
+    version:'4.17.0',date:'Aug 3, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Share Study Link now requests a short server-side link (archestudytools.com/s/...) instead of a raw base64 URL — fixes Gmail and other native share targets rejecting long study links with a 400 Bad Request error',
+      'Shared links are stored for 90 days, then expire automatically; if the short-link request fails for any reason, sharing falls back to the previous raw-link behavior so Share never breaks'
+    ]},
+  {
+    version:'4.16.1',date:'July 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: trimmed the remaining 5 AI Study Tools prompts (Language & Structure, Historical Context, Cultural Context, Cross-References, Places & Geography) the same way Word Study was — reduced/merged redundant sections and lowered open-ended reference counts (e.g. Cross-References\' allusion counts) to fit reliably within the 2048-token response cap; Cross-References was the most likely to cut off given how many reference entries it requested',

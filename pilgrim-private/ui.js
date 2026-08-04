@@ -977,30 +977,54 @@ function shareStudyLinkById(id){
   var AI_KEYS=['lexical','grammar','historical','cultural','crossrefs','lexical_book','grammar_book','historical_book','cultural_book','crossrefs_book'];
   var copy=JSON.parse(JSON.stringify(s));
   if(copy.resources)copy.resources=copy.resources.map(function(r){return Object.assign({},r,{dataUrl:'',ocrStatus:r.ocrStatus==='done'?'done':'pending'});});
-  // Stub AI results as '__shared__' and strip scripture text — keeps the URL short
+  // Stub AI results as '__shared__' and strip scripture text — keeps the payload short
   if(copy.refs)copy.refs=copy.refs.map(function(ref){var r=Object.assign({},ref);r.scriptureText='';if(r.deep){r.deep=Object.assign({},r.deep);AI_KEYS.forEach(function(k){if(r.deep[k])r.deep[k]='__shared__';});}return r;});
   try{
     var json=JSON.stringify(copy);
     // encodeURIComponent handles non-ASCII; unescape converts to Latin-1 for btoa
     var encoded=btoa(unescape(encodeURIComponent(json)));
-    var base=APP_SHARE_URL;
-    var url=base+'#study='+encoded;
     var title=s.title||'Bible Study';
     var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||'';
     var shareText='Check out this study'+(ref0?' on '+ref0:'')+' from Arché · Pilgrim:';
-    // 1. Native share sheet — best on iOS and Android, handles URL cleanly
-    if(navigator.share){
-      navigator.share({title:title,text:shareText,url:url}).catch(function(e){
-        if(e.name!=='AbortError'){
-          // share failed for non-cancel reason — fall to clipboard
-          _copyUrlToClipboard(url);
-        }
-      });
-      return;
-    }
-    // 2. Clipboard — works on PC and Android Chrome
-    _copyUrlToClipboard(url);
+    // Try a short server-side link first (fixes Gmail/native-target 400 on long URLs);
+    // fall back to the raw base64 hash link if the proxy call fails for any reason.
+    _getShortShareUrl(encoded).then(function(shortUrl){
+      var url=shortUrl||(APP_SHARE_URL+'#study='+encoded);
+      _dispatchShare(url,title,shareText);
+    });
   }catch(e){toast('Could not generate link: '+e.message);}
+}
+/**
+ * Requests a short share slug from the arche-proxy /share route.
+ * Returns null (never rejects) so the caller can fall back to the raw-hash URL.
+ * @param {string} encoded - The base64-encoded study payload.
+ * @returns {Promise<string|null>}
+ */
+function _getShortShareUrl(encoded){
+  return fetch(WORKER_URL+'/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:encoded})})
+    .then(function(r){if(!r.ok)throw new Error('share http '+r.status);return r.json();})
+    .then(function(d){return d&&d.slug?'https://archestudytools.com/s/'+d.slug:null;})
+    .catch(function(){return null;});
+}
+/**
+ * Hands a finished share URL to the native share sheet, falling back to clipboard copy.
+ * @param {string} url - The URL to share.
+ * @param {string} title - Share sheet title.
+ * @param {string} shareText - Share sheet body text.
+ */
+function _dispatchShare(url,title,shareText){
+  // 1. Native share sheet — best on iOS and Android, handles URL cleanly
+  if(navigator.share){
+    navigator.share({title:title,text:shareText,url:url}).catch(function(e){
+      if(e.name!=='AbortError'){
+        // share failed for non-cancel reason — fall to clipboard
+        _copyUrlToClipboard(url);
+      }
+    });
+    return;
+  }
+  // 2. Clipboard — works on PC and Android Chrome
+  _copyUrlToClipboard(url);
 }
 /**
  * Copies a URL to the clipboard, falling back to the copy-link modal if unavailable.
@@ -2645,7 +2669,7 @@ export {
   // S19 — Backup & Import
   importDataPrompt, importDataFromFile, openVerseModal, closeVerseModal,
   // S20 — Share & Deep Links
-  shareApp, shareStudyLink, shareStudyLinkById,
+  shareApp, shareStudyLink, shareStudyLinkById, _getShortShareUrl, _dispatchShare,
   copyLinkFromModal, promptCopyFallback, checkImportHash, confirmImportLink,
   fetchAllMissingScripture, clearAll, confirmClearAll,
   // S21 — Settings
