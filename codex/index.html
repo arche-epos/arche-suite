@@ -437,7 +437,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.3.2<br>© 2026 Jesse Caldwell
+      Codex Arête v3.3.3<br>© 2026 Jesse Caldwell
     </div>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
@@ -602,7 +602,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.3.0';
+var CODEX_VERSION = '3.3.3';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -1101,7 +1101,7 @@ function buildLesson_m4l3(){
   return [
     {type:'text',title:'The App Leaving the Device',body:'<p>Most of what Pilgrim does is local — localStorage reads and writes, DOM manipulation, event handling. The API call pattern is the exception: it is the moment the app reaches out to the internet and hands control to an external server.</p><p>Every API call in your apps follows the same structure. Understanding it once means you can read, debug, and write any variation of it.</p>'},
     {type:'text',title:'The Four Phases of an API Call',body:'<p>Every API call has four phases:</p><ol><li><strong>Prepare</strong> — build the request: URL, method, headers, body</li><li><strong>Send</strong> — fire the request with <code>fetch()</code></li><li><strong>Wait</strong> — the event loop keeps running; a loading indicator shows the user something is happening</li><li><strong>Handle</strong> — when the response arrives, process it: update data, re-render, handle errors</li></ol><p>Bugs occur in all four phases. Knowing which phase broke is half the diagnosis.</p>'},
-    {type:'text',title:'The fetch() Pattern',body:'<p>Pilgrim routes all external API calls through the arche-proxy Cloudflare Worker — no API keys on the device. The pattern:</p><pre>fetch(WORKER_URL + \'/groq\', {\n  method: \'POST\',\n  headers: { \'Content-Type\': \'application/json\' },\n  body: JSON.stringify({ model: \'llama-3.3-70b-versatile\', messages: msgs })\n})\n.then(function(res){ return res.json(); })\n.then(function(data){\n  var reply = data.choices[0].message.content;\n  displayAIResponse(reply);\n})\n.catch(function(err){\n  console.error(\'API call failed:\', err);\n  showError(\'Could not reach AI. Check your connection.\');\n});</pre><p>Three chained handlers: parse the response, use the data, catch any failure. The <code>.catch()</code> at the end handles network failures and any error thrown in the chain above it.</p>'},
+    {type:'text',title:'The fetch() Pattern',body:'<p>Pilgrim routes all external API calls through the arche-proxy Cloudflare Worker — no API keys on the device. The pattern:</p><pre>fetch(WORKER_URL + \'/groq\', {\n  method: \'POST\',\n  headers: { \'Content-Type\': \'application/json\' },\n  body: JSON.stringify({ model: \'openai/gpt-oss-120b\', messages: msgs })\n})\n.then(function(res){ return res.json(); })\n.then(function(data){\n  var reply = data.choices[0].message.content;\n  displayAIResponse(reply);\n})\n.catch(function(err){\n  console.error(\'API call failed:\', err);\n  showError(\'Could not reach AI. Check your connection.\');\n});</pre><p>Three chained handlers: parse the response, use the data, catch any failure. The <code>.catch()</code> at the end handles network failures and any error thrown in the chain above it.</p>'},
     {type:'text',title:'Reading the Response Shape',body:'<p>Every API has a specific response shape — the structure of the JSON it returns. Groq returns:</p><pre>{\n  choices: [\n    { message: { content: "AI reply here" } }\n  ]\n}</pre><p>So Pilgrim reads <code>data.choices[0].message.content</code>. If the shape changes, or if the response is an error object instead of a success object, this line crashes.</p><p>Always log <code>data</code> before reading from it when debugging an API call. See what actually came back before assuming the shape you expect.</p>'},
     {type:'text',title:'The Loading State',body:'<p>An API call takes time — anywhere from 200ms to several seconds. During that time the user needs feedback. Pilgrim shows a loading indicator in the AI panel. The pattern:</p><ol><li>Before <code>fetch()</code>: set loading state, show spinner, disable the send button</li><li>In <code>.then()</code> (success): clear loading state, show response, re-enable button</li><li>In <code>.catch()</code> (failure): clear loading state, show error, re-enable button</li></ol><p>If you forget to clear loading state in the catch branch, a single failed request leaves the UI permanently stuck in loading. This is a common bug in every app with API calls.</p>'},
     {type:'checkpoint',title:'Confidence Checkpoint',body:'<ul><li>Find the Groq API call in Pilgrim. Identify all four phases.</li><li>What does the Network panel show when fetch() fires? When it succeeds? When it fails?</li><li>What happens to the UI if loading state is cleared in .then() but not in .catch()?</li></ul>'}
@@ -1799,7 +1799,7 @@ async function callGroqQuizEnrich(lesson,mcQuestions,needNew){
     task2+
     'Existing questions:\n'+JSON.stringify(qData)+'\n\n'+
     'Respond with this exact JSON structure:\n{"improved":[{"index":0,"newWrongOpts":["wrong1","wrong2","wrong3"]}],"newQuestions":[{"q":"...","opts":["correct","w1","w2","w3"],"correct":0,"explain":"..."}]}';
-  var resp=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:2500,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
+  var resp=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:2500,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
   if(!resp.ok) throw new Error('Groq HTTP '+resp.status);
   var data=await resp.json();
   var text=data.choices[0].message.content.trim().replace(/^```json\s*/,'').replace(/\s*```$/,'').trim();
@@ -1883,7 +1883,7 @@ function makeTutorHelpBtn(q, userAnswer, correctAnswer, feedbackText){
       var correctLine = correctAnswer ? 'Correct answer: "'+correctAnswer+'"\n' : '';
       var sys = 'You are a patient, encouraging coding tutor helping a student who just got a quiz question wrong. Be specific and concrete. Keep your response under 120 words.';
       var prompt = 'Question: '+q.q+'\n\nStudent answered: "'+userAnswer+'"\n'+correctLine+'Explanation already shown: "'+feedbackText+'"\n\nThe student still does not understand. Break it down:\n1. Why is the correct answer right? Use a concrete example or analogy if helpful.\n2. What misconception does the student\'s answer reveal?';
-      var resp = await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:250,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
+      var resp = await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:250,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
       var data = await resp.json();
       responseEl.textContent = data.choices[0].message.content.trim();
     } catch(e) {
@@ -1990,7 +1990,7 @@ async function gradeWithGroq(q,userAnswer,type){
   } else {
     prompt=(type==='bug'||type==='spotbug'?'Buggy code shown to student:\n'+q.code+'\n\n':'')+'Question: '+q.q+'\nRubric (must address these to pass): '+q.rubric+'\nStudent\'s answer: '+userAnswer;
   }
-  var resp=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:500,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
+  var resp=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:500,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})});
   var data=await resp.json();
   var txt=(data.choices&&data.choices[0]&&data.choices[0].message)?data.choices[0].message.content:'';
   try { return JSON.parse(txt.replace(/```json|```/g,'').trim()); }
@@ -2360,7 +2360,7 @@ async function _callAi(lessonId, secIdx, displayText, promptText){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         max_tokens: 700,
         messages: [{ role:'system', content: systemPrompt }].concat(history)
       })
@@ -2903,7 +2903,7 @@ async function generateImpromptuTest(){
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         max_tokens: 1400,
         messages: [{role:'system',content:sys},{role:'user',content:prompt}]
       })
@@ -3238,7 +3238,7 @@ async function evaluateWithGroq(){
     var resp=await fetch(WORKER_URL+'/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:900,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:900,messages:[{role:'system',content:sys},{role:'user',content:prompt}]})
     });
     var data=await resp.json();
     var reply=(data.choices&&data.choices[0]&&data.choices[0].message)?data.choices[0].message.content:'Could not retrieve analysis. Please try again.';
