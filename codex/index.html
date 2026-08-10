@@ -633,11 +633,14 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.4.1';
+var CODEX_VERSION = '3.5.0';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
-var EBBINGHAUS = [1,3,7,14,30,60]; // days by confidence 1-5 (conf 5 = index 4 = 30 days, then 60)
+var PACE_PRESETS = {
+  accelerated: [1,2,4,7,12,21],  // default — tuned for frequent (1-3x/week), teen-paced study
+  standard:    [1,3,7,14,30,60]  // classic Ebbinghaus/SM-2 curve — better for infrequent adult review
+};
 
 // ── CURRICULUM ────────────────────────────────────────────────
 var PATHWAYS = [
@@ -1436,7 +1439,8 @@ function setLessonProgress(lessonId, data){
 
 // ── EBBINGHAUS SCHEDULER ─────────────────────────────────────
 function getDaysUntilReview(conf){
-  var days = [1,3,7,14,30,60];
+  var pace = (currentUser && currentUser.pace) || 'accelerated';
+  var days = PACE_PRESETS[pace] || PACE_PRESETS.accelerated;
   return days[Math.min(conf-1, days.length-1)] || 1;
 }
 function scheduleReview(lessonId, confidence){
@@ -2543,6 +2547,7 @@ function renderAdminDash(){
       }); });
       var pct=totalLessons?Math.round(100*passed/totalLessons):0;
       var updated=s.updatedAt?new Date(s.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'\u2014';
+      var pace=s.pace||'accelerated';
       return '<div class="card" style="margin-bottom:10px">'+
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
           '<div style="font-size:16px;color:var(--txt1);font-family:\'EB Garamond\',serif">'+escHtml(s.name)+'</div>'+
@@ -2551,7 +2556,12 @@ function renderAdminDash(){
         '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px">'+
           '<div style="height:100%;width:'+pct+'%;background:var(--amber)"></div>'+
         '</div>'+
-        '<div style="font-size:11px;color:var(--txt4)">Last activity: '+updated+'</div>'+
+        '<div style="font-size:11px;color:var(--txt4);margin-bottom:10px">Last activity: '+updated+'</div>'+
+        '<div style="font-size:11px;color:var(--txt4);margin-bottom:4px;font-family:\'Inter\',sans-serif">Study Pace</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button onclick="codexAdminSetPace(\''+s.id+'\',\'accelerated\')" style="flex:1;background:var(--bg3);border:1px solid '+(pace==='accelerated'?'var(--amber)':'var(--borderlit)')+';border-radius:6px;color:'+(pace==='accelerated'?'var(--amber)':'var(--txt2)')+';font-size:12px;padding:6px;cursor:pointer;font-family:\'Inter\',sans-serif">Accelerated</button>'+
+          '<button onclick="codexAdminSetPace(\''+s.id+'\',\'standard\')" style="flex:1;background:var(--bg3);border:1px solid '+(pace==='standard'?'var(--amber)':'var(--borderlit)')+';border-radius:6px;color:'+(pace==='standard'?'var(--amber)':'var(--txt2)')+';font-size:12px;padding:6px;cursor:pointer;font-family:\'Inter\',sans-serif">Standard</button>'+
+        '</div>'+
       '</div>';
     }).join('');
   }).catch(function(e){
@@ -2593,6 +2603,16 @@ function codexSubmitPin(){
 function codexLogout(){
   currentUser=null;
   location.reload();
+}
+
+// Admin-only: change a specific student's study pace from the dashboard.
+function codexAdminSetPace(studentId, pace){
+  fetch(WORKER_URL+'/codex/user/update', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ id:studentId, pace:pace })
+  }).then(function(){ showToast('Study pace updated'); renderAdminDash(); })
+    .catch(function(e){ console.error('[codex] admin pace update failed', e); showToast('Pace update failed'); });
 }
 
 window.addEventListener('load', function(){
