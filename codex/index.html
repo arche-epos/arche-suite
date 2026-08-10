@@ -437,7 +437,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.3.4<br>© 2026 Jesse Caldwell
+      Codex Arête v3.3.5<br>© 2026 Jesse Caldwell
     </div>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
@@ -602,7 +602,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.3.4';
+var CODEX_VERSION = '3.3.5';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -2548,6 +2548,8 @@ function cdxExtractText(node){
   var SKIP_CLASSES=['ai-bar','code-block','ai-btns'];
   function walk(n){
     var out='';
+    var isOrdered=n.tagName==='OL';
+    var liIndex=0;
     n.childNodes.forEach(function(child){
       if(child.nodeType===3){ out+=child.textContent; return; }
       if(child.nodeType!==1) return;
@@ -2555,8 +2557,15 @@ function cdxExtractText(node){
       if(SKIP_TAGS[tag]) return;
       if(child.classList&&SKIP_CLASSES.some(function(c){return child.classList.contains(c);})) return;
       if(tag==='LI'){
+        liIndex++;
         var t=walk(child).replace(/\s+/g,' ').trim();
-        if(t){ if(!/[.!?]$/.test(t)) t+='.'; out+=' '+t+'|LP|'; }
+        if(t){
+          if(!/[.!?]$/.test(t)) t+='.';
+          // Ordered lists: speak the number ("1, HTML first...") — comma not period,
+          // so the sentence-splitter below doesn't chop the number off as its own utterance.
+          var prefix=isOrdered?(liIndex+', '):'';
+          out+=' '+prefix+t+'|LP|';
+        }
       } else if(tag==='P'){
         var t=walk(child).replace(/\s+/g,' ').trim();
         if(t){ if(!/[.!?]$/.test(t)) t+='.'; out+=' '+t; }
@@ -2574,7 +2583,10 @@ function cdxBuildTracks(){
   var sections=document.querySelectorAll('#lesson-content .lesson-section');
   sections.forEach(function(sec){
     var titleEl=sec.querySelector('.lesson-section-title');
-    var title=titleEl?titleEl.textContent.trim():'Section';
+    var rawTitle=titleEl?titleEl.textContent.trim():'Section';
+    // Strip leading decorative icon/symbol chars (e.g. the ▶ on checkpoint sections) so
+    // TTS doesn't vocalize them (some engines read ▶ aloud as "Play button").
+    var title=rawTitle.replace(/^[^\p{L}\p{N}]+/u,'').trim()||rawTitle;
     // Build body text — exclude title, code blocks, and button elements
     var bodyText='';
     sec.childNodes.forEach(function(node){
