@@ -318,13 +318,20 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     <input type="password" inputmode="numeric" maxlength="4" id="codex-pin-input" style="width:100%;font-size:24px;text-align:center;letter-spacing:8px;padding:14px;border-radius:10px;border:1px solid var(--amberpale);background:var(--bg1);color:var(--txt1);margin-bottom:16px;box-sizing:border-box" placeholder="&#8226;&#8226;&#8226;&#8226;">
     <button id="codex-pin-submit" onclick="codexSubmitPin()" style="width:100%;padding:14px;border-radius:10px;border:none;background:var(--amber);color:var(--bg0);font-size:16px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Enter</button>
     <div id="codex-pin-error" style="color:var(--crimsonbright);font-size:13px;margin-top:12px;min-height:18px;font-family:'Inter',sans-serif"></div>
+    <div id="login-version" style="font-size:11px;color:var(--txt4);font-family:'JetBrains Mono',monospace;margin-top:24px"></div>
   </div>
 </div>
 
 <!-- ═══ SCREEN: ADMIN DASHBOARD ═══ -->
 <div class="scr" id="scr-admin" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg0);overflow:auto">
   <div class="topbar">
-    <div class="topbar-title">Student Progress</div>
+    <div style="flex:1">
+      <div class="topbar-title">Student Progress</div>
+    </div>
+    <div id="admin-version" style="font-size:11px;color:var(--txt4);font-family:'JetBrains Mono',monospace"></div>
+  </div>
+  <div style="padding:16px 16px 0">
+    <button class="btn btn-primary" style="width:100%" onclick="codexShowAddStudent()">&#43; Add Student</button>
   </div>
   <div class="scroll" id="admin-dash-content" style="padding:16px"></div>
   <div style="padding:0 16px 12px">
@@ -403,36 +410,30 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
   </div>
   <div class="scroll">
     <div class="sethead">Codex Arête</div>
-    <div class="setsub">Your personal code literacy school — built around your own apps, using the Ebbinghaus spaced repetition method to lock in knowledge over time.</div>
+    <div class="setsub">Your personal code literacy school — built around your own apps, using a review schedule that brings lessons back right before you'd forget them.</div>
     <div class="divider"></div>
     <div class="sethead" style="font-size:16px">How It Works</div>
     <div class="card" style="margin-top:10px">
       <div style="font-size:13px;color:var(--txt2);line-height:1.75">
         <p style="margin-bottom:8px"><strong style="color:var(--amber)">1. Read</strong> — Each lesson explains a concept in detail, with real code examples from your own apps.</p>
-        <p style="margin-bottom:8px"><strong style="color:var(--amber)">2. Quiz</strong> — Pass at 70% to mark a lesson complete. Three attempts before a cooldown.</p>
+        <p style="margin-bottom:8px"><strong style="color:var(--amber)">2. Quiz</strong> — Pass at 75% to mark a lesson complete. Three attempts before a cooldown.</p>
         <p style="margin-bottom:8px"><strong style="color:var(--amber)">3. Rate Confidence</strong> — 1–5 stars after passing. Your rating sets the next review date.</p>
         <p style="margin-bottom:0"><strong style="color:var(--amber)">4. Review</strong> — The Ebbinghaus scheduler brings concepts back at the right intervals so they stick.</p>
       </div>
     </div>
     <div class="divider"></div>
-    <div class="sethead" style="font-size:16px">Spaced Repetition Intervals</div>
+    <div class="sethead" style="font-size:16px">Review Schedule</div>
     <div class="card" style="margin-top:10px">
       <div style="font-size:13px;color:var(--txt2);line-height:1.9">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px">
-          <span style="color:var(--txt3)">★☆☆☆☆ Unsure</span><span>Next day</span>
-          <span style="color:var(--txt3)">★★☆☆☆ Shaky</span><span>3 days</span>
-          <span style="color:var(--txt3)">★★★☆☆ Getting it</span><span>7 days</span>
-          <span style="color:var(--txt3)">★★★★☆ Solid</span><span>14 days</span>
-          <span style="color:var(--txt3)">★★★★★ Confident</span><span>30 days</span>
-        </div>
+        <div id="about-review-schedule" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px"></div>
       </div>
     </div>
     <div class="divider"></div>
     <div class="sethead" style="font-size:16px">Study Sync</div>
-    <div class="setsub">Sync your progress across all devices via GitHub Gist. Push after studying, Pull on a new device.</div>
+    <div class="setsub">Sync your progress across devices. Back up after studying, Restore on a new device.</div>
     <div style="display:flex;gap:8px;margin-bottom:8px">
-      <button class="btn btn-sec" style="flex:1" onclick="codexPull()">&#8595; Pull</button>
-      <button class="btn btn-primary" style="flex:1" onclick="codexPush()">&#8593; Push</button>
+      <button class="btn btn-sec" style="flex:1" onclick="codexPull()">&#8595; Restore</button>
+      <button class="btn btn-primary" style="flex:1" onclick="codexPush()">&#8593; Backup</button>
     </div>
     <div id="codex-sync-status" style="font-size:12px;color:var(--txt4);min-height:16px;text-align:center;margin-bottom:4px"></div>
     <div class="divider"></div>
@@ -627,13 +628,27 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   </button>
 </div>
+<!-- ═══ ADD STUDENT MODAL ═══ -->
+<div id="cdx-addstudent-overlay" onclick="closeAddStudentModal()" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6)"></div>
+<div id="cdx-addstudent-panel" style="display:none;position:fixed;z-index:201;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:340px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:20px;box-sizing:border-box">
+  <div style="font-size:16px;color:var(--txt1);margin-bottom:14px;font-family:'EB Garamond',serif">Add Student</div>
+  <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">Name</div>
+  <input type="text" id="addstudent-name" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif">
+  <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">4-Digit PIN</div>
+  <input type="password" inputmode="numeric" maxlength="4" id="addstudent-pin" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:16px;box-sizing:border-box;letter-spacing:6px;text-align:center;font-family:'Inter',sans-serif">
+  <div id="addstudent-error" style="color:var(--crimsonbright);font-size:12px;margin-bottom:10px;min-height:16px;font-family:'Inter',sans-serif"></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-sec" style="flex:1" onclick="closeAddStudentModal()">Cancel</button>
+    <button class="btn btn-primary" style="flex:1" id="addstudent-submit" onclick="codexSubmitAddStudent()">Create</button>
+  </div>
+</div>
 <div id="toast" class="toast"></div>
 
 </div><!-- /app -->
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.5.0';
+var CODEX_VERSION = '3.6.1';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -1443,6 +1458,24 @@ function getDaysUntilReview(conf){
   var days = PACE_PRESETS[pace] || PACE_PRESETS.accelerated;
   return days[Math.min(conf-1, days.length-1)] || 1;
 }
+function getConfLabels(){
+  var pace = (currentUser && currentUser.pace) || 'accelerated';
+  var d = PACE_PRESETS[pace] || PACE_PRESETS.accelerated;
+  var dl = function(n){ return n===1 ? 'tomorrow' : 'in '+n+' days'; };
+  return ['','Very unsure — review '+dl(d[0]),'Shaky — review '+dl(d[1]),'Getting it — review '+dl(d[2]),'Solid — review '+dl(d[3]),'Confident — review '+dl(d[4])];
+}
+function renderReviewSchedule(){
+  var el=document.getElementById('about-review-schedule');
+  if(!el) return;
+  var pace = (currentUser && currentUser.pace) || 'accelerated';
+  var d = PACE_PRESETS[pace] || PACE_PRESETS.accelerated;
+  var stars=['\u2605\u2606\u2606\u2606\u2606','\u2605\u2605\u2606\u2606\u2606','\u2605\u2605\u2605\u2606\u2606','\u2605\u2605\u2605\u2605\u2606','\u2605\u2605\u2605\u2605\u2605'];
+  var names=['Unsure','Shaky','Getting it','Solid','Confident'];
+  var dayText=function(n){ return n===1?'Next day':n+' days'; };
+  el.innerHTML=stars.map(function(s,i){
+    return '<span style="color:var(--txt3)">'+s+' '+names[i]+'</span><span>'+dayText(d[i])+'</span>';
+  }).join('');
+}
 function scheduleReview(lessonId, confidence){
   var days = getDaysUntilReview(confidence);
   var next = new Date();
@@ -1507,7 +1540,7 @@ function nav(screen){
   if(screen==='dash') renderDash();
   if(screen==='progress') renderProgress();
   if(screen==='review') renderReview();
-  if(screen==='about') cdxInitAboutVoices();
+  if(screen==='about'){ cdxInitAboutVoices(); renderReviewSchedule(); }
   if(screen==='insights') renderInsights();
 }
 function openPathway(pathwayId){
@@ -1827,7 +1860,7 @@ function renderQuizReady(){
   var dots=document.getElementById('quiz-dots');
   var area=document.getElementById('quiz-question-area');
   if(!meta||!dots||!area) return;
-  meta.innerHTML='<div class="quiz-sub">Pass at 70% ('+Math.ceil(pool.length*.7)+'/'+pool.length+' correct). Questions drawn randomly — each retry is a fresh set.</div>';
+  meta.innerHTML='<div class="quiz-sub">Pass at 75% ('+Math.ceil(pool.length*.75)+'/'+pool.length+' correct). Questions drawn randomly — each retry is a fresh set.</div>';
   dots.style.display='';
   dots.innerHTML=pool.map(function(_,i){return '<div class="quiz-dot" id="qdot-'+i+'"></div>';}).join('');
   area.innerHTML=renderQuestion(0);
@@ -2038,7 +2071,7 @@ async function submitFree(qIdx){
 }
 
 async function gradeWithGroq(q,userAnswer,type){
-  var sys='You are a strict but fair coding instructor grading a student\'s answer. Require genuine understanding — vague, incomplete, or partly-correct answers do NOT pass. Pass threshold: 70/100.\n\nRespond ONLY with valid JSON (no markdown): {"pass":true/false,"score":0-100,"feedback":"what was right, what was missing/wrong, and the complete correct answer"}';
+  var sys='You are a strict but fair coding instructor grading a student\'s answer. Require genuine understanding — vague, incomplete, or partly-correct answers do NOT pass. Pass threshold: 75/100.\n\nRespond ONLY with valid JSON (no markdown): {"pass":true/false,"score":0-100,"feedback":"what was right, what was missing/wrong, and the complete correct answer"}';
   var prompt='';
   if(type==='fitb'){
     prompt='Fill-in-the-blank question: '+q.q+'\nExpected answer: '+q.answer+(q.alt?'\nAlso acceptable: '+q.alt.join(', '):'')+'\nStudent wrote: '+userAnswer+'\n\nIs this a correct or close-enough equivalent?';
@@ -2056,13 +2089,13 @@ function finishQuiz(lesson){
   var pool=_quizState.pool;
   var correct=Object.values(_quizState.answers).filter(function(a){return a.correct;}).length;
   var pct=correct/pool.length;
-  var passed=pct>=0.70;
+  var passed=pct>=0.75;
   var p=getLessonProgress(lesson.id);
   setLessonProgress(lesson.id,{status:passed?'passed':'attempted',score:Math.round(pct*100),attempts:(p.attempts||0)+1});
   var area=document.getElementById('quiz-area');
   area.innerHTML='<div class="quiz-wrap">'+
     '<div class="quiz-title">'+(passed?'&#10003; Passed':'&#10007; Not Yet')+'</div>'+
-    '<div class="quiz-sub">'+correct+'/'+pool.length+' correct ('+Math.round(pct*100)+'%)'+(passed?' \u2014 lesson complete!':' \u2014 need 70% to pass')+'</div>'+
+    '<div class="quiz-sub">'+correct+'/'+pool.length+' correct ('+Math.round(pct*100)+'%)'+(passed?' \u2014 lesson complete!':' \u2014 need 75% to pass')+'</div>'+
     '<div class="quiz-feedback '+(passed?'quiz-pass':'quiz-fail')+'">'+
       (passed?'Well done. Rate your confidence below to set your next review date.':'Review the lesson carefully. Each retry draws a fresh random set of questions.')+
     '</div>'+
@@ -2080,10 +2113,10 @@ function retryQuiz(){
 function initConfidenceRating(lessonId){
   var p = getLessonProgress(lessonId);
   var existing = p.confidence || 0;
-  var labels = ['','Very unsure — review tomorrow','Shaky — review in 3 days','Getting it — review in 7 days','Solid — review in 14 days','Confident — review in 30 days'];
+  var labels = getConfLabels();
   var confHtml = '<div class="conf-wrap">'+
     '<div class="conf-title">How confident do you feel?</div>'+
-    '<div class="conf-sub">This sets your next review date using spaced repetition.</div>'+
+    '<div class="conf-sub">This sets when you\'ll review it again.</div>'+
     '<div class="conf-stars" id="conf-stars">'+
       [1,2,3,4,5].map(function(i){
         return '<span class="conf-star'+(i<=existing?' active':'')+'" onclick="setConf('+i+')" onmouseover="hoverConf('+i+')" onmouseout="unhoverConf()">&#9733;</span>';
@@ -2102,7 +2135,7 @@ function initConfidenceRating(lessonId){
 
 var _selectedConf = 0;
 function hoverConf(n){
-  var labels=['','Very unsure — review tomorrow','Shaky — review in 3 days','Getting it — review in 7 days','Solid — review in 14 days','Confident — review in 30 days'];
+  var labels=getConfLabels();
   var stars = document.querySelectorAll('.conf-star');
   stars.forEach(function(s,i){ s.className='conf-star'+(i<n?' active':''); });
   var lbl=document.getElementById('conf-label'); if(lbl)lbl.textContent=labels[n]||'';
@@ -2110,7 +2143,7 @@ function hoverConf(n){
 function unhoverConf(){
   var stars=document.querySelectorAll('.conf-star');
   stars.forEach(function(s,i){ s.className='conf-star'+(i<_selectedConf?' active':''); });
-  var labels=['','Very unsure — review tomorrow','Shaky — review in 3 days','Getting it — review in 7 days','Solid — review in 14 days','Confident — review in 30 days'];
+  var labels=getConfLabels();
   var lbl=document.getElementById('conf-label'); if(lbl)lbl.textContent=_selectedConf?labels[_selectedConf]:'Tap a star';
 }
 function setConf(n){
@@ -2451,44 +2484,44 @@ function setSyncStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color || 'var(--txt4)'; }
 }
 async function codexPush(silent){
-  if(!silent) setSyncStatus('Pushing\u2026', 'var(--txt3)');
+  if(!silent) setSyncStatus('Backing up\u2026', 'var(--txt3)');
   try {
     var payload = JSON.stringify({ progress: progress, aiNotes: aiNotes, updatedAt: new Date().toISOString() });
     var body = { description:'Codex Arête Progress', public:false, files:{} };
     body.files[GIST_FILE] = { content: payload };
     var r = await fetch(WORKER_URL + '/gist', { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
     if(r.ok){
-      if(!silent) setSyncStatus('Pushed \u2713 ' + new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}), 'var(--sagebright)');
+      if(!silent) setSyncStatus('Backed up \u2713 ' + new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}), 'var(--sagebright)');
     } else {
-      if(!silent) setSyncStatus('Push failed \u2014 HTTP ' + r.status, 'var(--crimsonbright)');
+      if(!silent) setSyncStatus('Backup failed \u2014 HTTP ' + r.status, 'var(--crimsonbright)');
     }
   } catch(e) {
-    if(!silent) setSyncStatus('Push error \u2014 ' + e.message, 'var(--crimsonbright)');
+    if(!silent) setSyncStatus('Backup error \u2014 ' + e.message, 'var(--crimsonbright)');
   }
 }
 async function codexPull(){
-  setSyncStatus('Pulling\u2026', 'var(--txt3)');
+  setSyncStatus('Restoring\u2026', 'var(--txt3)');
   try {
     var metaR = await fetch(WORKER_URL + '/gist?cb=' + Date.now());
-    if(!metaR.ok){ setSyncStatus('Pull failed \u2014 HTTP ' + metaR.status, 'var(--crimsonbright)'); return; }
+    if(!metaR.ok){ setSyncStatus('Restore failed \u2014 HTTP ' + metaR.status, 'var(--crimsonbright)'); return; }
     var meta = await metaR.json();
     var file = meta.files && meta.files[GIST_FILE];
-    if(!file){ setSyncStatus('No Codex progress found in Gist yet \u2014 Push first.', 'var(--txt4)'); return; }
+    if(!file){ setSyncStatus('No backup found yet \u2014 Backup first.', 'var(--txt4)'); return; }
     var rawR = await fetch(WORKER_URL + '/gist-raw?url=' + encodeURIComponent(file.raw_url));
-    if(!rawR.ok){ setSyncStatus('Could not read Gist data', 'var(--crimsonbright)'); return; }
+    if(!rawR.ok){ setSyncStatus('Could not read backup data', 'var(--crimsonbright)'); return; }
     var data = await rawR.json();
     if(data && data.progress){
       progress = data.progress;
       if(data.aiNotes) aiNotes = data.aiNotes;
       saveProgress();
       renderDash();
-      setSyncStatus('Pulled \u2713 ' + new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}), 'var(--sagebright)');
+      setSyncStatus('Restored \u2713 ' + new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}), 'var(--sagebright)');
       showToast('Progress synced \u2713');
     } else {
       setSyncStatus('No valid progress data found', 'var(--txt4)');
     }
   } catch(e) {
-    setSyncStatus('Pull error \u2014 ' + e.message, 'var(--crimsonbright)');
+    setSyncStatus('Restore error \u2014 ' + e.message, 'var(--crimsonbright)');
   }
 }
 
@@ -2509,6 +2542,7 @@ function startCodexApp(){
 
 function codexShowAdminDash(){
   document.getElementById('scr-admin').style.display='block';
+  var v=document.getElementById('admin-version'); if(v) v.textContent='v'+CODEX_VERSION;
   renderAdminDash();
 }
 
@@ -2615,12 +2649,62 @@ function codexAdminSetPace(studentId, pace){
     .catch(function(e){ console.error('[codex] admin pace update failed', e); showToast('Pace update failed'); });
 }
 
+// Admin-only: create a new student account. No setup passphrase required here —
+// the Worker authorizes this using the signed-in admin's own account (requestedBy).
+// The passphrase is only needed for the very first (bootstrap) admin account.
+function codexShowAddStudent(){
+  document.getElementById('addstudent-name').value='';
+  document.getElementById('addstudent-pin').value='';
+  document.getElementById('addstudent-error').textContent='';
+  document.getElementById('cdx-addstudent-overlay').style.display='block';
+  document.getElementById('cdx-addstudent-panel').style.display='block';
+  document.getElementById('addstudent-name').focus();
+}
+function closeAddStudentModal(){
+  document.getElementById('cdx-addstudent-overlay').style.display='none';
+  document.getElementById('cdx-addstudent-panel').style.display='none';
+}
+function codexSubmitAddStudent(){
+  var name=document.getElementById('addstudent-name').value.trim();
+  var pin=document.getElementById('addstudent-pin').value.trim();
+  var errEl=document.getElementById('addstudent-error');
+  errEl.textContent='';
+  if(!name){ errEl.textContent='Enter a name'; return; }
+  if(!/^\d{4}$/.test(pin)){ errEl.textContent='PIN must be 4 digits'; return; }
+  var btn=document.getElementById('addstudent-submit');
+  btn.disabled=true; btn.textContent='Creating\u2026';
+  fetch(WORKER_URL+'/codex/user/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ name:name, pin:pin, role:'student', requestedBy: currentUser ? currentUser.id : null })
+  }).then(function(r){
+    if(!r.ok){
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        var msg = d.error==='pin_in_use' ? 'That PIN is already in use' :
+                  d.error==='invalid_setup_key' ? 'Could not verify admin session \u2014 try logging out and back in' :
+                  d.error==='missing_fields' ? 'Missing required fields' :
+                  'Could not create student (HTTP '+r.status+')';
+        throw new Error(msg);
+      });
+    }
+    return r.json();
+  }).then(function(){
+    closeAddStudentModal();
+    showToast('Student created \u2713');
+    renderAdminDash();
+  }).catch(function(e){
+    errEl.textContent = e.message || 'Could not create student';
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='Create';
+  });
+}
+
 window.addEventListener('load', function(){
   var pinInput=document.getElementById('codex-pin-input');
   if(pinInput){
     pinInput.addEventListener('keydown', function(e){ if(e.key==='Enter') codexSubmitPin(); });
     pinInput.focus();
   }
+  var lv=document.getElementById('login-version'); if(lv) lv.textContent='v'+CODEX_VERSION;
 });
 
 // ── CODEX TTS ENGINE ─────────────────────────────────────────
@@ -3137,7 +3221,7 @@ function renderTestBody(){
   var q = _testState.questions || [];
   var dots = q.map(function(_,i){ return '<div class="quiz-dot" id="tdot-'+i+'"></div>'; }).join('');
   body.innerHTML =
-    '<div class="test-meta">AI-generated \u00b7 '+q.length+' questions \u00b7 Pass at 70%</div>'+
+    '<div class="test-meta">AI-generated \u00b7 '+q.length+' questions \u00b7 Pass at 75%</div>'+
     '<div class="quiz-progress" style="margin-bottom:16px">'+dots+'</div>'+
     '<div id="test-question-area">'+renderTestQuestion(0)+'</div>';
 }
@@ -3279,7 +3363,7 @@ function finishTest(){
   var correct=Object.values(_testState.answers).filter(function(a){return a.correct;}).length;
   var total=questions.length;
   var score=total?Math.round(correct/total*100):0;
-  var passed=score>=70;
+  var passed=score>=75;
   var record={
     id:Date.now().toString(),
     lessonId:_testState.lessonId,
@@ -3362,7 +3446,7 @@ function renderInsights(){
   } else {
     testHistHtml=aiTests.slice(0,10).map(function(t){
       var d=new Date(t.date).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-      var sc=t.score>=70?'var(--sagebright)':'var(--crimsonbright)';
+      var sc=t.score>=75?'var(--sagebright)':'var(--crimsonbright)';
       return '<div class="test-hist-row">'+
         '<div class="test-hist-score" style="color:'+sc+'">'+t.score+'%</div>'+
         '<div class="test-hist-info">'+
@@ -3389,11 +3473,11 @@ function renderInsights(){
       '<div class="stat-row">'+
         statBox(passedLessons+'/'+totalLessons,'Lessons')+
         statBox(avgScore?avgScore+'%':'\u2014','Avg Score')+
-        statBox(avgConf,'Avg Conf')+
+        statBox(avgConf,'Confidence')+
       '</div>'+
     '</div>'+
     '<div class="insights-section">'+
-      '<div class="dash-label">&#9670; Impromptu Test History</div>'+
+      '<div class="dash-label">&#9670; Practice Test History</div>'+
       testHistHtml+
     '</div>'+
     weakHtml+
@@ -3403,7 +3487,7 @@ function renderInsights(){
         '<span style="font-size:22px;flex-shrink:0">&#128269;</span>'+
         '<div>'+
           '<div>Evaluate My Learning</div>'+
-          '<div style="font-size:13px;color:var(--txt3);font-family:\'Inter\',sans-serif;font-weight:400;margin-top:3px">Groq reads your progress, gaps &amp; patterns</div>'+
+          '<div style="font-size:13px;color:var(--txt3);font-family:\'Inter\',sans-serif;font-weight:400;margin-top:3px">AI reads your progress, gaps &amp; patterns</div>'+
         '</div>'+
       '</button>'+
       evalHtml+
