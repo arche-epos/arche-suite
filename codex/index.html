@@ -340,6 +340,20 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
   <div style="padding:0 16px 24px">
     <button class="btn btn-sec" style="width:100%" onclick="codexLogout()">Log Out</button>
   </div>
+  <!-- ═══ ADD STUDENT MODAL ═══ -->
+  <div id="cdx-addstudent-overlay" onclick="closeAddStudentModal()" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6)"></div>
+  <div id="cdx-addstudent-panel" style="display:none;position:fixed;z-index:201;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:340px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:20px;box-sizing:border-box">
+    <div style="font-size:16px;color:var(--txt1);margin-bottom:14px;font-family:'EB Garamond',serif">Add Student</div>
+    <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">Name</div>
+    <input type="text" id="addstudent-name" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif">
+    <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">4-Digit PIN</div>
+    <input type="password" inputmode="numeric" maxlength="4" id="addstudent-pin" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:16px;box-sizing:border-box;letter-spacing:6px;text-align:center;font-family:'Inter',sans-serif">
+    <div id="addstudent-error" style="color:var(--crimsonbright);font-size:12px;margin-bottom:10px;min-height:16px;font-family:'Inter',sans-serif"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sec" style="flex:1" onclick="closeAddStudentModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="addstudent-submit" onclick="codexSubmitAddStudent()">Create</button>
+    </div>
+  </div>
 </div>
 
 <div id="app" style="display:none">
@@ -628,27 +642,13 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
   </button>
 </div>
-<!-- ═══ ADD STUDENT MODAL ═══ -->
-<div id="cdx-addstudent-overlay" onclick="closeAddStudentModal()" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6)"></div>
-<div id="cdx-addstudent-panel" style="display:none;position:fixed;z-index:201;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:340px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:20px;box-sizing:border-box">
-  <div style="font-size:16px;color:var(--txt1);margin-bottom:14px;font-family:'EB Garamond',serif">Add Student</div>
-  <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">Name</div>
-  <input type="text" id="addstudent-name" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:12px;box-sizing:border-box;font-family:'Inter',sans-serif">
-  <div style="font-size:12px;color:var(--txt4);margin-bottom:6px;font-family:'Inter',sans-serif">4-Digit PIN</div>
-  <input type="password" inputmode="numeric" maxlength="4" id="addstudent-pin" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--txt1);margin-bottom:16px;box-sizing:border-box;letter-spacing:6px;text-align:center;font-family:'Inter',sans-serif">
-  <div id="addstudent-error" style="color:var(--crimsonbright);font-size:12px;margin-bottom:10px;min-height:16px;font-family:'Inter',sans-serif"></div>
-  <div style="display:flex;gap:8px">
-    <button class="btn btn-sec" style="flex:1" onclick="closeAddStudentModal()">Cancel</button>
-    <button class="btn btn-primary" style="flex:1" id="addstudent-submit" onclick="codexSubmitAddStudent()">Create</button>
-  </div>
-</div>
 <div id="toast" class="toast"></div>
 
 </div><!-- /app -->
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.6.3';
+var CODEX_VERSION = '3.6.4';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
