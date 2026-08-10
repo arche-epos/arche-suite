@@ -437,7 +437,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.3.3<br>© 2026 Jesse Caldwell
+      Codex Arête v3.3.4<br>© 2026 Jesse Caldwell
     </div>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
@@ -602,7 +602,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.3.3';
+var CODEX_VERSION = '3.3.4';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -2121,10 +2121,17 @@ function renderStars(n, size){
   size=size||14;
   return [1,2,3,4,5].map(function(i){ return '<span style="font-size:'+size+'px;color:'+(i<=n?'var(--amber)':'var(--bg4)')+'">&#9733;</span>'; }).join('');
 }
-function showToast(msg){
+function showToast(msg, ms){
   var t=document.getElementById('toast');
   t.innerHTML=msg; t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+  setTimeout(function(){ t.classList.remove('show'); }, ms||2000);
+}
+// TTS feature detection — DuckDuckGo Android (and some in-app browsers) don't expose the Web Speech API
+function cdxTTSSupported(){
+  return !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+}
+function cdxTTSWarn(){
+  showToast('Read-aloud isn\'t supported in this browser. Try Chrome or Edge.', 4000);
 }
 function copyCode(btn){
   var code=btn.closest('.code-block').querySelector('.code-body').innerText;
@@ -2513,7 +2520,7 @@ function cdxSyncAboutRate(){
   cdxUpdateRateUI();
 }
 function cdxTestVoice(){
-  if(!window.speechSynthesis)return;
+  if(!cdxTTSSupported()){ cdxTTSWarn(); return; }
   window.speechSynthesis.cancel();
   var btn=document.getElementById('about-tts-test');
   if(btn&&btn.textContent.indexOf('Stop')>=0){window.speechSynthesis.cancel();btn.textContent='▶ Test Voice';return;}
@@ -2651,7 +2658,7 @@ function cdxSetPlayIcon(playing){
 }
 
 function cdxPlayTrack(){
-  if(!window.speechSynthesis)return;
+  if(!cdxTTSSupported()){ cdxTTSWarn(); return; }
   if(!_cdxTracks.length)return;
   // If current track not selected, jump to first active
   if(_cdxSelected.indexOf(_cdxTrackIdx)<0){
@@ -2822,6 +2829,7 @@ function cdxHighlightSection(idx){
 
 function cdxOpenPlayer(){
   cdxStop();
+  if(!cdxTTSSupported()){ cdxTTSWarn(); }
   _cdxTrackIdx=0;
   _cdxRepeat=false;
   _cdxPlaylistMode=false;
