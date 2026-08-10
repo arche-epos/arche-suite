@@ -648,7 +648,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.6.1';
+var CODEX_VERSION = '3.6.3';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -2363,6 +2363,7 @@ function deleteAiPair(lessonId, secIdx, pairIdx){
 function formatAiText(txt){
   var s = txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/\n/g, '<br>');
   return s;
 }
@@ -2372,7 +2373,7 @@ function aiInputKeydown(e){
 }
 
 function sendAiMessage(){
-  if(_aiLoading || _aiLesson === null) return;
+  if(_aiLoading) return;
   var input = document.getElementById('ai-input');
   if(!input) return;
   var text = input.value.trim();
@@ -2423,12 +2424,14 @@ async function _callAi(lessonId, secIdx, displayText, promptText){
       '- Section: '+_aiSecTitle+'\n\n'+
       'Section content the student is studying:\n'+_aiSecText+'\n\n'+
       'Your teaching guidelines:\n'+
+      '- Seek first to understand. If the student\'s message is vague or general (\"I need help,\" \"I\'m stuck,\" \"explain this\"), do NOT dump a full explanation. Ask one short, specific question to find out exactly what they\'re stuck on first, then answer that.\n'+
+      '- Stay on topic like a teacher during class \u2014 friendly, but focused. If the student asks about something unrelated to this curriculum (another subject, general trivia, or anything off-topic), don\'t answer it. Give one brief, warm redirect back to the lesson, and don\'t re-open the offer \u2014 e.g. \"That\'s a fun question, but let\'s stay focused on the lesson \u2014 what part of this are you working through?\" Do not answer the off-topic question first and redirect after.\n'+
       '- Be direct, practical, and hands-on \u2014 this student learns by doing\n'+
       '- Use real examples from their actual repos (Pilgrim Public, Pilgrim Private, DPS, Codex on GitHub)\n'+
       '- Relate every concept to their actual workflow: switch branch \u2192 upload file \u2192 write commit message \u2192 open PR \u2192 review \u2192 merge\n'+
       '- If they seem confused, walk through the exact GitHub UI steps one at a time\n'+
-      '- Keep responses focused and digestible \u2014 not too long\n'+
-      '- Use inline backtick formatting for branch names, file names, and Git terms\n'+
+      '- Keep responses short \u2014 a few sentences or a short list, not a full lesson\n'+
+      '- Write in plain conversational text. No markdown tables, headers, or bold text \u2014 this is a chat bubble, not a document. Inline backticks for branch names, file names, and Git terms are fine.\n'+
       '- Never be condescending or assume they should already know something'
       :
       'You are a patient, encouraging coding tutor. Your student is learning web development by studying their own real-world app called \"Pilgrim\" \u2014 a biblical study tool they personally built using HTML, CSS, and vanilla JavaScript.\n\n'+
@@ -2438,12 +2441,14 @@ async function _callAi(lessonId, secIdx, displayText, promptText){
       '- Section: '+_aiSecTitle+'\n\n'+
       'Section content the student is studying:\n'+_aiSecText+'\n\n'+
       'Your teaching guidelines:\n'+
+      '- Seek first to understand. If the student\'s message is vague or general (\"I need help,\" \"I\'m stuck,\" \"explain this\"), do NOT dump a full explanation. Ask one short, specific question to find out exactly what they\'re stuck on first, then answer that.\n'+
+      '- Stay on topic like a teacher during class \u2014 friendly, but focused. If the student asks about something unrelated to this curriculum (another subject, general trivia, or anything off-topic), don\'t answer it. Give one brief, warm redirect back to the lesson, and don\'t re-open the offer \u2014 e.g. \"That\'s a fun question, but let\'s stay focused on the lesson \u2014 what part of this are you working through?\" Do not answer the off-topic question first and redirect after.\n'+
       '- Be warm, patient, and encouraging at all times\n'+
       '- Use simple analogies and real-world comparisons to make abstract ideas concrete\n'+
       '- Relate concepts back to what they\'ve seen in their Pilgrim app whenever possible\n'+
       '- If they seem confused, try a completely different approach or analogy\n'+
-      '- Keep responses focused and digestible \u2014 not too long\n'+
-      '- Use inline backtick formatting for code terms and short snippets\n'+
+      '- Keep responses short \u2014 a few sentences or a short list, not a full lesson\n'+
+      '- Write in plain conversational text. No markdown tables, headers, or bold text \u2014 this is a chat bubble, not a document. Inline backticks for code terms and short snippets are fine.\n'+
       '- Never be condescending or assume they should already know something';
     var history = chat.slice(-12).map(function(m){
       return { role: m.role === 'user' ? 'user' : 'assistant', content: m.content };
