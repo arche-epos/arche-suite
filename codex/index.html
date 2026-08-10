@@ -309,7 +309,30 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ═══ LOGIN GATE ═══ -->
+<div id="codex-login-gate" style="position:fixed;inset:0;z-index:9999;background:var(--bg0);display:flex;align-items:center;justify-content:center;padding:24px">
+  <div style="max-width:340px;width:100%;text-align:center">
+    <div style="font-family:'EB Garamond',serif;font-size:28px;color:var(--amber);margin-bottom:8px">Codex</div>
+    <div style="color:var(--txt3);font-size:14px;margin-bottom:24px;font-family:'Inter',sans-serif">Enter your PIN</div>
+    <input type="password" inputmode="numeric" maxlength="4" id="codex-pin-input" style="width:100%;font-size:24px;text-align:center;letter-spacing:8px;padding:14px;border-radius:10px;border:1px solid var(--amberpale);background:var(--bg1);color:var(--txt1);margin-bottom:16px;box-sizing:border-box" placeholder="&#8226;&#8226;&#8226;&#8226;">
+    <button id="codex-pin-submit" onclick="codexSubmitPin()" style="width:100%;padding:14px;border-radius:10px;border:none;background:var(--amber);color:var(--bg0);font-size:16px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif">Enter</button>
+    <div id="codex-pin-error" style="color:var(--crimsonbright);font-size:13px;margin-top:12px;min-height:18px;font-family:'Inter',sans-serif"></div>
+  </div>
+</div>
+
+<!-- ═══ SCREEN: ADMIN DASHBOARD ═══ -->
+<div class="scr" id="scr-admin" style="display:none;position:fixed;inset:0;z-index:100;background:var(--bg0);overflow:auto">
+  <div class="topbar">
+    <div class="topbar-title">Student Progress</div>
+  </div>
+  <div class="scroll" id="admin-dash-content" style="padding:16px"></div>
+  <div style="padding:0 16px 24px">
+    <button class="btn btn-sec" style="width:100%" onclick="codexLogout()">Log Out</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
 
 <!-- ═══ MAIN CONTENT WRAPPER (desktop sidebar layout) ═══ -->
 <div id="app-main" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
@@ -439,8 +462,11 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     </div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--txt4);text-align:center;line-height:1.9">
-      Codex Arête v3.3.5<br>© 2026 Jesse Caldwell
+      Codex Arête v<span id="about-version-lbl"></span><br>© 2026 Jesse Caldwell
     </div>
+    <div style="height:12px"></div>
+    <div id="about-current-user" style="font-size:12px;color:var(--txt3);text-align:center;margin-bottom:10px;font-family:'Inter',sans-serif"></div>
+    <button class="btn btn-sec" style="width:100%" onclick="codexLogout()">Log Out</button>
     <div style="height:12px"></div>
     <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
     <div style="height:16px"></div>
@@ -604,7 +630,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.3.8';
+var CODEX_VERSION = '3.4.0';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -1365,19 +1391,37 @@ function quiz_m6l5(){
   ];
 }
 
-// ── PROGRESS STORAGE ─────────────────────────────────────────
+// ── PROGRESS STORAGE (PIN/KV-backed, per student) ──────────────
 var progress = {};
 var aiNotes = {}; // aiNotes[lessonId][secIdx] = [{role,content,ts}]
-var aiTests = []; // [{id,lessonId,lessonTitle,date,score,correct,total,questions}]
+var aiTests = []; // [{id,lessonId,lessonTitle,date,score,correct,total,questions}] — device-local, not yet per-student
+var currentUser = null; // {id,name,role,progress,aiNotes} — set on PIN login
 
+// Populates progress/aiNotes from the already-fetched currentUser record
+// (currentUser is loaded via /codex/auth at login — no extra network call here).
 function loadProgress(){
-  try { progress = JSON.parse(localStorage.getItem(SK) || '{}'); } catch(e){ progress = {}; }
-  try { aiNotes = JSON.parse(localStorage.getItem('arche-codex-ainotes') || '{}'); } catch(e){ aiNotes = {}; }
+  if(currentUser){
+    progress = currentUser.progress || {};
+    aiNotes = currentUser.aiNotes || {};
+  } else {
+    progress = {}; aiNotes = {};
+  }
   loadAiTests();
 }
+// Writes to a per-user localStorage cache (instant, offline-safe fallback) and
+// fires an async update to KV via arche-proxy (fire-and-forget — callers of
+// saveProgress() stay synchronous, matching every existing call site).
 function saveProgress(){
-  localStorage.setItem(SK, JSON.stringify(progress));
-  localStorage.setItem('arche-codex-ainotes', JSON.stringify(aiNotes));
+  if(!currentUser) return;
+  try {
+    localStorage.setItem('arche-codex-progress:'+currentUser.id, JSON.stringify(progress));
+    localStorage.setItem('arche-codex-ainotes:'+currentUser.id, JSON.stringify(aiNotes));
+  } catch(e){}
+  fetch(WORKER_URL+'/codex/user/update', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ id:currentUser.id, progress:progress, aiNotes:aiNotes })
+  }).catch(function(e){ console.error('[codex] progress sync failed', e); });
 }
 function getLessonProgress(lessonId){
   return progress[lessonId] || { status:'locked', score:0, attempts:0, confidence:0, nextReview:null, lastPassed:null };
@@ -1560,6 +1604,8 @@ function renderDash(){
   }
 
   document.getElementById('dash-version').textContent='v'+CODEX_VERSION;
+  var aboutVerEl=document.getElementById('about-version-lbl');
+  if(aboutVerEl) aboutVerEl.textContent=CODEX_VERSION;
 }
 function statBox(num, label){
   return '<div class="stat-box"><div class="stat-num">'+num+'</div><div class="stat-lbl">'+label+'</div></div>';
@@ -2440,13 +2486,105 @@ async function codexPull(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────
-window.addEventListener('load', function(){
+// App no longer auto-starts on window load — it waits behind the PIN gate.
+// codexSubmitPin() sets currentUser, then routes to startCodexApp() (student)
+// or codexShowAdminDash() (admin).
+
+function startCodexApp(){
   loadProgress();
   // Unlock first lesson if no progress yet
   var firstLesson = PATHWAYS[0].modules[0].lessons[0];
   var fp = getLessonProgress(firstLesson.id);
   if(fp.status==='locked'){ setLessonProgress(firstLesson.id, {status:'active'}); }
+  document.getElementById('app').style.display='';
   renderDash();
+}
+
+function codexShowAdminDash(){
+  document.getElementById('scr-admin').style.display='block';
+  renderAdminDash();
+}
+
+function renderAdminDash(){
+  var el=document.getElementById('admin-dash-content');
+  if(!el) return;
+  el.innerHTML='<div class="empty-state"><div class="empty-icon">&#9203;</div>Loading students&hellip;</div>';
+  fetch(WORKER_URL+'/codex/users/list', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+  }).then(function(r){ return r.json(); }).then(function(data){
+    var students=(data.users||[]).filter(function(u){ return u.role==='student'; });
+    if(!students.length){
+      el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128100;</div>No students yet.</div>';
+      return;
+    }
+    var totalLessons=0;
+    getAllModules().forEach(function(m){ totalLessons+=m.lessons.length; });
+    el.innerHTML=students.map(function(s){
+      var passed=0;
+      getAllModules().forEach(function(m){ m.lessons.forEach(function(l){
+        var p=(s.progress||{})[l.id];
+        if(p && p.status==='passed') passed++;
+      }); });
+      var pct=totalLessons?Math.round(100*passed/totalLessons):0;
+      var updated=s.updatedAt?new Date(s.updatedAt).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'\u2014';
+      return '<div class="card" style="margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+          '<div style="font-size:16px;color:var(--txt1);font-family:\'EB Garamond\',serif">'+escHtml(s.name)+'</div>'+
+          '<div style="font-size:13px;color:var(--txt3)">'+passed+'/'+totalLessons+' lessons</div>'+
+        '</div>'+
+        '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px">'+
+          '<div style="height:100%;width:'+pct+'%;background:var(--amber)"></div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--txt4)">Last activity: '+updated+'</div>'+
+      '</div>';
+    }).join('');
+  }).catch(function(e){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">&#9888;&#65039;</div>Could not load students.<br>'+escHtml(e.message)+'</div>';
+  });
+}
+
+function codexSubmitPin(){
+  var input=document.getElementById('codex-pin-input');
+  var errEl=document.getElementById('codex-pin-error');
+  var pin=input.value.trim();
+  errEl.textContent='';
+  if(pin.length!==4){ errEl.textContent='Enter a 4-digit PIN'; return; }
+  var btn=document.getElementById('codex-pin-submit');
+  btn.disabled=true; btn.textContent='Checking\u2026';
+  fetch(WORKER_URL+'/codex/auth', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({pin:pin})
+  }).then(function(r){
+    if(!r.ok) throw new Error(r.status===401?'Incorrect PIN':'Login failed');
+    return r.json();
+  }).then(function(user){
+    currentUser=user;
+    document.getElementById('codex-login-gate').style.display='none';
+    var uLbl=document.getElementById('about-current-user');
+    if(uLbl) uLbl.textContent='Logged in as '+user.name;
+    if(user.role==='admin'){
+      codexShowAdminDash();
+    } else {
+      startCodexApp();
+    }
+  }).catch(function(e){
+    errEl.textContent=e.message||'Login failed';
+    input.value='';
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='Enter';
+  });
+}
+
+function codexLogout(){
+  currentUser=null;
+  location.reload();
+}
+
+window.addEventListener('load', function(){
+  var pinInput=document.getElementById('codex-pin-input');
+  if(pinInput){
+    pinInput.addEventListener('keydown', function(e){ if(e.key==='Enter') codexSubmitPin(); });
+    pinInput.focus();
+  }
 });
 
 // ── CODEX TTS ENGINE ─────────────────────────────────────────
