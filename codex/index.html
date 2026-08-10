@@ -327,6 +327,9 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     <div class="topbar-title">Student Progress</div>
   </div>
   <div class="scroll" id="admin-dash-content" style="padding:16px"></div>
+  <div style="padding:0 16px 12px">
+    <button class="btn btn-sec" style="width:100%" onclick="codexAdminTestMode()">&#128295; Enter App (Dev Test Mode)</button>
+  </div>
   <div style="padding:0 16px 24px">
     <button class="btn btn-sec" style="width:100%" onclick="codexLogout()">Log Out</button>
   </div>
@@ -468,7 +471,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
     <div id="about-current-user" style="font-size:12px;color:var(--txt3);text-align:center;margin-bottom:10px;font-family:'Inter',sans-serif"></div>
     <button class="btn btn-sec" style="width:100%" onclick="codexLogout()">Log Out</button>
     <div style="height:12px"></div>
-    <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
+    <button id="dev-unlock-btn" onclick="DEV_UNLOCK=!DEV_UNLOCK;document.getElementById('dev-unlock-btn').textContent=DEV_UNLOCK?'🔓 DEV: All Lessons Unlocked':'🔒 DEV: Normal Lock Mode';renderDash();" style="display:none;width:100%;background:var(--bg3);border:1px solid var(--crimsonbright);border-radius:6px;color:var(--crimsonbright);font-size:11px;padding:8px;cursor:pointer">🔓 DEV: All Lessons Unlocked</button>
     <div style="height:16px"></div>
   </div>
 </div>
@@ -630,7 +633,7 @@ code,pre,.mono{font-family:'JetBrains Mono',monospace}
 
 <script>
 // ── CONSTANTS ─────────────────────────────────────────────────
-var CODEX_VERSION = '3.4.0';
+var CODEX_VERSION = '3.4.1';
 var SK = 'arche-codex-progress';
 var WORKER_URL = 'https://arche-proxy.archestudytools.workers.dev';
 var GIST_FILE = 'arche-codex-progress.json';
@@ -1456,7 +1459,7 @@ function getDueReviews(){
 }
 
 // ── PREREQUISITE CHECKING ────────────────────────────────────
-var DEV_UNLOCK = true; // set true to bypass all prereqs for testing
+var DEV_UNLOCK = false; // Admin-only test mode toggles this true; real accounts stay gated
 
 function prereqsMet(prereqs){
   if(DEV_UNLOCK) return true;
@@ -2503,6 +2506,19 @@ function startCodexApp(){
 function codexShowAdminDash(){
   document.getElementById('scr-admin').style.display='block';
   renderAdminDash();
+}
+
+// Admin-only: enter the student-facing app with DEV_UNLOCK on and the dev
+// toggle button visible, for testing lessons without a real student PIN.
+function codexAdminTestMode(){
+  DEV_UNLOCK = true;
+  document.getElementById('scr-admin').style.display='none';
+  startCodexApp();
+  var devBtn=document.getElementById('dev-unlock-btn');
+  if(devBtn){
+    devBtn.style.display='';
+    devBtn.textContent='🔓 DEV: All Lessons Unlocked';
+  }
 }
 
 function renderAdminDash(){
