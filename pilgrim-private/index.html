@@ -579,6 +579,10 @@ select option{background:var(--bg2);color:var(--txt1)}
     <button class="btn btn-sec btn-sm" style="flex:1" onclick="readPrevChapter()">&#8592; Prev Chapter</button>
     <button class="btn btn-sec btn-sm" style="flex:1" onclick="readNextChapter()">Next Chapter &#8594;</button>
   </div>
+  <div id="read-acts" style="display:none;padding:8px 16px 0" class="scractions">
+    <button id="listen-read-btn" onclick="ttsToggleRead()" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-read-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-read-label">Listen</span></button>
+    <button id="tts-restart-read" onclick="ttsRestart('read')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button>
+  </div>
   <div class="scroll" id="read-scroll">
     <div id="read-display"><div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above, or tap the book icon to browse</p></div></div>
   </div>

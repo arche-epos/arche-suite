@@ -25,6 +25,8 @@ function _qFN() { return window._qFN || null; }
 function _qConcl() { return window._qConcl || null; }
 /** @returns {Object|null} Outline Quill instance */
 function _qOutline() { return window._qOutline || null; }
+/** @returns {string} Currently loaded Read tab scripture text, or empty string */
+function _readText() { return (window.getReadText && window.getReadText()) || ''; }
 
 // ── TTS state ───────────────────────────────────────────────────────────────
 export var _ttsSentences = [];
@@ -68,6 +70,7 @@ function ttsGetText(source){
   if(source==='concl'){return (_qConcl()&&_qConcl().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.conclusions)||'';}
   if(source==='outline'){return (_qOutline()&&_qOutline().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.outline)||'';}
   if(source==='scr'){var ar=activeRef();var t=(ar&&ar.scriptureText)||'';return t.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();}
+  if(source==='read'){var rt=_readText();return rt.replace(/\[\d+\]/g,' ').replace(/\s+/g,' ').trim();}
   return '';
 }
 /**
@@ -77,7 +80,7 @@ function ttsGetText(source){
  * @param {string} state - Playback state: 'playing' | 'paused' | 'stopped'.
  */
 function ttsUpdateBtn(source,state){
-  var ids={ai:['listen-ai-btn','listen-ai-icon','listen-ai-label','tts-restart-ai'],fn:['listen-fn-btn','listen-fn-icon','listen-fn-label','tts-restart-fn'],concl:['listen-concl-btn','listen-concl-icon','listen-concl-label','tts-restart-concl'],outline:['listen-outline-btn','listen-outline-icon','listen-outline-label','tts-restart-outline'],scr:['listen-scr-btn','listen-scr-icon','listen-scr-label','tts-restart-scr']};
+  var ids={ai:['listen-ai-btn','listen-ai-icon','listen-ai-label','tts-restart-ai'],fn:['listen-fn-btn','listen-fn-icon','listen-fn-label','tts-restart-fn'],concl:['listen-concl-btn','listen-concl-icon','listen-concl-label','tts-restart-concl'],outline:['listen-outline-btn','listen-outline-icon','listen-outline-label','tts-restart-outline'],scr:['listen-scr-btn','listen-scr-icon','listen-scr-label','tts-restart-scr'],read:['listen-read-btn','listen-read-icon','listen-read-label','tts-restart-read']};
   // Reset all sources to stopped state first — ensures no stale playing/paused state bleeds through
   Object.keys(ids).forEach(function(s){var parts=ids[s];var icon=document.getElementById(parts[1]);var lbl=document.getElementById(parts[2]);var rst=document.getElementById(parts[3]);if(icon)icon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';if(lbl)lbl.textContent='Listen';if(rst)rst.style.display='none';});
   if(state==='stopped'||!ids[source])return;
@@ -168,6 +171,14 @@ function ttsToggleScr(){
   ttsStop();var text=ttsGetText('scr');if(!text){toast('No scripture loaded');return;}_ttsSentences=ttsSplit(text);ttsPlay('scr',0);
 }
 /**
+ * Toggles TTS for the Read tab's loaded chapter. Pause if playing, resume if paused, or start fresh.
+ * Shows a toast if no chapter is loaded.
+ */
+function ttsToggleRead(){
+  if(_ttsSource==='read'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('read',_ttsIdx,_ttsCharOffset);return;}}
+  ttsStop();var text=ttsGetText('read');if(!text){toast('No chapter loaded');return;}_ttsSentences=ttsSplit(text);ttsPlay('read',0);
+}
+/**
  * Plays a short test utterance (John 1:1) using the current voice and rate settings.
  * Toggles the test button between "▶ Test Voice" and "■ Stop" during playback.
  */
@@ -248,7 +259,7 @@ function setTTSVoice(name){_ttsVoice=name;saveTTSSett();}
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
-  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsTestVoice,
+  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
   adjustTTSRate, initTTSVoices, setTTSVoice
 };

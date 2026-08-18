@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.18.0',date:'Aug 17, 2026',label:'Latest',
+    version:'4.18.1',date:'Aug 17, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Listen (text-to-speech) added to the Read tab — reads the loaded chapter aloud using the same voice/rate settings and Pause/Resume/Restart controls as everywhere else in the app'
+    ]},
+  {
+    version:'4.18.0',date:'Aug 17, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: new standalone Read tab — browse or type a reference, read the full chapter in context (not just the requested verse), auto-scrolls to the exact verse you asked for. Prev/Next Chapter paging rolls across book boundaries (John 21 → Acts 1). "Start a Study from this Passage" hands the exact reference, translation, and already-fetched text straight into a new study — no re-fetch',

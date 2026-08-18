@@ -1401,6 +1401,7 @@ async function fetchReadChapter(){
     _readScriptureText=text;
     renderReadChapter(text,_readTargetVerse);
     if(btn)btn.style.display='';
+    var acts=document.getElementById('read-acts');if(acts)acts.style.display='flex';
   }catch(e){
     disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load passage.</p></div>';
   }
@@ -1469,6 +1470,12 @@ function startStudyFromReading(){
   _readHandoff={reference:_readReference,translation:_readTranslation,scriptureText:_readScriptureText,type:'primary'};
   newStudy();
 }
+/**
+ * Cross-module accessor so tts.js can read the Read tab's loaded chapter text
+ * without a circular import (same pattern as _qFN/_aiResults on window.*).
+ * @returns {string} The currently loaded Read tab scripture text, or empty string.
+ */
+function getReadText(){return _readScriptureText||'';}
 // ── END READ TAB ───────────────────────────────────────────────
 /**
  * Opens the export backup modal and renders a checkbox list of all studies.
@@ -2814,7 +2821,7 @@ export {
   bpOpen, bpClose, bpSetTestament, bpPickBook, bpPickChapter, bpUpdatePreview,
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
-  fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading,
+  fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
   exportData, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
