@@ -370,7 +370,24 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.18.1',date:'Aug 17, 2026',label:'Latest',
+    version:'4.20.0',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Read tab now accepts scripture ranges — type something like "John 1:1 - John 2:5" (or "John 1:1-2:5", or a same-chapter range like "Romans 8:28-30") and it loads exactly that range, the same way Notes/ESV already does. A bare chapter or single-verse reference still widens to the full chapter for in-context reading',
+      'Prev/Next Chapter are disabled while a range is loaded, since "next chapter" isn\u2019t well-defined for an arbitrary passage range — retype a reference to move elsewhere',
+      'feat: tap any verse number in the Read tab to jump playback straight to that verse',
+      'feat: Read tab playback now auto-continues into the next chapter when the last verse finishes, instead of stopping (chapter mode only — doesn\u2019t apply to a loaded range)'
+    ]},
+  {
+    version:'4.19.0',date:'Aug 18, 2026',label:'',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Read tab Listen upgraded to a full audio player — fixed, non-scrolling bar between the reference row and Prev/Next Chapter with Play/Pause, Skip Prev/Next Verse, a tap-to-cycle speed control (.5×/1×/1.5×/2×/3×), and a voice picker',
+      'Playback is now verse-by-verse instead of sentence-chunked, so Skip Verse lands cleanly on verse boundaries. The verse being read is highlighted and auto-scrolled into view as it plays, and a fresh Play starts at the verse you searched for rather than always the top of the chapter',
+      'Speed and voice controls are shared with the rest of the app — changing them here (or in Settings) applies everywhere Listen is used'
+    ]},
+  {
+    version:'4.18.1',date:'Aug 17, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Listen (text-to-speech) added to the Read tab — reads the loaded chapter aloud using the same voice/rate settings and Pause/Resume/Restart controls as everywhere else in the app'

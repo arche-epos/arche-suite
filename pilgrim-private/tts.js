@@ -25,8 +25,10 @@ function _qFN() { return window._qFN || null; }
 function _qConcl() { return window._qConcl || null; }
 /** @returns {Object|null} Outline Quill instance */
 function _qOutline() { return window._qOutline || null; }
-/** @returns {string} Currently loaded Read tab scripture text, or empty string */
-function _readText() { return (window.getReadText && window.getReadText()) || ''; }
+/** @returns {string[]} Currently loaded Read tab chapter, split into one chunk per verse */
+function _readVerseChunks() { return (window.getReadVerseChunks && window.getReadVerseChunks()) || []; }
+/** @returns {number} Chunk index Read tab playback should start from (the requested entry verse) */
+function _readStartIdx() { return (window.getReadStartIdx && window.getReadStartIdx()) || 0; }
 
 // ── TTS state ───────────────────────────────────────────────────────────────
 export var _ttsSentences = [];
@@ -70,7 +72,6 @@ function ttsGetText(source){
   if(source==='concl'){return (_qConcl()&&_qConcl().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.conclusions)||'';}
   if(source==='outline'){return (_qOutline()&&_qOutline().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.outline)||'';}
   if(source==='scr'){var ar=activeRef();var t=(ar&&ar.scriptureText)||'';return t.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();}
-  if(source==='read'){var rt=_readText();return rt.replace(/\[\d+\]/g,' ').replace(/\s+/g,' ').trim();}
   return '';
 }
 /**
@@ -80,7 +81,7 @@ function ttsGetText(source){
  * @param {string} state - Playback state: 'playing' | 'paused' | 'stopped'.
  */
 function ttsUpdateBtn(source,state){
-  var ids={ai:['listen-ai-btn','listen-ai-icon','listen-ai-label','tts-restart-ai'],fn:['listen-fn-btn','listen-fn-icon','listen-fn-label','tts-restart-fn'],concl:['listen-concl-btn','listen-concl-icon','listen-concl-label','tts-restart-concl'],outline:['listen-outline-btn','listen-outline-icon','listen-outline-label','tts-restart-outline'],scr:['listen-scr-btn','listen-scr-icon','listen-scr-label','tts-restart-scr'],read:['listen-read-btn','listen-read-icon','listen-read-label','tts-restart-read']};
+  var ids={ai:['listen-ai-btn','listen-ai-icon','listen-ai-label','tts-restart-ai'],fn:['listen-fn-btn','listen-fn-icon','listen-fn-label','tts-restart-fn'],concl:['listen-concl-btn','listen-concl-icon','listen-concl-label','tts-restart-concl'],outline:['listen-outline-btn','listen-outline-icon','listen-outline-label','tts-restart-outline'],scr:['listen-scr-btn','listen-scr-icon','listen-scr-label','tts-restart-scr'],read:['read-playpause-btn','read-playpause-icon','','']};
   // Reset all sources to stopped state first — ensures no stale playing/paused state bleeds through
   Object.keys(ids).forEach(function(s){var parts=ids[s];var icon=document.getElementById(parts[1]);var lbl=document.getElementById(parts[2]);var rst=document.getElementById(parts[3]);if(icon)icon.innerHTML='<polygon points="5 3 19 12 5 21 5 3"/>';if(lbl)lbl.textContent='Listen';if(rst)rst.style.display='none';});
   if(state==='stopped'||!ids[source])return;
@@ -126,7 +127,13 @@ function ttsPlay(source,fromIdx,charOffset){
    */
   function speakNext(){
     if(mySession!==_ttsSession)return;
-    if(!_ttsActive||_ttsIdx>=_ttsSentences.length){_ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;}
+    if(!_ttsActive||_ttsIdx>=_ttsSentences.length){
+      // Reached the end naturally (still active, not paused/stopped) while reading —
+      // hand off to readAutoAdvance() to continue into the next chapter, if available.
+      if(_ttsActive&&source==='read'&&_ttsIdx>=_ttsSentences.length&&window.readAutoAdvance){window.readAutoAdvance();return;}
+      _ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;
+    }
+    if(source==='read'&&window.highlightReadVerse)window.highlightReadVerse(_ttsIdx);
     var sentence=_ttsSentences[_ttsIdx].trim();
     // If resuming mid-sentence, slice off already-spoken characters (tracked via onboundary)
     var spokenText=resumeOffset>0?sentence.slice(resumeOffset):sentence;
@@ -171,12 +178,31 @@ function ttsToggleScr(){
   ttsStop();var text=ttsGetText('scr');if(!text){toast('No scripture loaded');return;}_ttsSentences=ttsSplit(text);ttsPlay('scr',0);
 }
 /**
- * Toggles TTS for the Read tab's loaded chapter. Pause if playing, resume if paused, or start fresh.
- * Shows a toast if no chapter is loaded.
+ * Toggles TTS for the Read tab's loaded chapter/range. Pause if playing, resume if
+ * paused, or start fresh — playback is chunked one verse at a time (not sentence-
+ * split) so Skip Prev/Next Verse and the karaoke-style highlight can track a
+ * specific verse index. Fresh starts begin at the requested entry verse (chapter
+ * mode) or the first verse of the range (range mode) — see ttsPlayReadFrom().
  */
 function ttsToggleRead(){
   if(_ttsSource==='read'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('read',_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText('read');if(!text){toast('No chapter loaded');return;}_ttsSentences=ttsSplit(text);ttsPlay('read',0);
+  if(!_readVerseChunks().length){toast('No chapter loaded');return;}
+  ttsPlayReadFrom(_readStartIdx());
+}
+/**
+ * Starts Read tab TTS playback fresh from a specific verse chunk index — shared by
+ * ttsToggleRead() (fresh play), readSkipVerse() (Skip Prev/Next Verse), tapping a
+ * verse number to jump-and-play, and readAutoAdvance() (continuing into the next
+ * chapter). Always (re)loads the current verse chunk array first, so it's safe to
+ * call even if the loaded chapter/range changed since the last play.
+ * @param {number} idx - Index into the Read tab's verse chunk array.
+ */
+function ttsPlayReadFrom(idx){
+  var chunks=_readVerseChunks();
+  if(!chunks.length||idx<0||idx>=chunks.length)return;
+  ttsStop();
+  _ttsSentences=chunks;
+  ttsPlay('read',idx);
 }
 /**
  * Plays a short test utterance (John 1:1) using the current voice and rate settings.
@@ -200,7 +226,11 @@ function ttsTestVoice(){
  * Stops any active playback, re-fetches the text, and re-splits into sentences.
  * @param {string} source - TTS source key.
  */
-function ttsRestart(source){ttsStop();var text=ttsGetText(source);if(!text)return;_ttsSentences=ttsSplit(text);ttsPlay(source,0);}
+function ttsRestart(source){
+  if(source==='read'){ttsPlayReadFrom(0);return;}
+  ttsStop();
+  var text=ttsGetText(source);if(!text)return;_ttsSentences=ttsSplit(text);ttsPlay(source,0);
+}
 /**
  * Loads TTS rate and voice preferences from localStorage and applies them.
  * Silently no-ops on parse failure. Calls updateTTSRateUI after loading.
@@ -222,11 +252,24 @@ function setTTSRate(r){_ttsRate=r;saveTTSSett();updateTTSRateUI();}
 function updateTTSRateUI(){
   var el=document.getElementById('tts-rate-display');
   if(el)el.textContent=_ttsRate+'×';
+  var rb=document.getElementById('read-speed-btn');
+  if(rb)rb.textContent=_ttsRate+'×'; // Read tab player bar mirrors the same global rate
   [0.5,1,1.5,2,2.5,3].forEach(function(r){
     var id='tts-pre-'+r.toString().replace('.','_'); // e.g. 1.5 → 'tts-pre-1_5' (period replaced to make valid DOM id)
     var btn=document.getElementById(id);
     if(btn){btn.style.color=(_ttsRate===r)?'var(--gold)':'var(--txt3)';btn.style.borderColor=(_ttsRate===r)?'var(--gold)':'var(--border)';}
   });
+}
+/**
+ * Advances the global TTS rate to the next preset in the Read tab's compact
+ * cycle — 0.5 → 1 → 1.5 → 2 → 3 → back to 0.5. Shares the same _ttsRate as
+ * every other Listen control in the app (Settings' 6-preset row included).
+ */
+function readCycleSpeed(){
+  var presets=[0.5,1,1.5,2,3];
+  var idx=presets.indexOf(_ttsRate);
+  var next=presets[(idx+1+presets.length)%presets.length];
+  setTTSRate(next);
 }
 /**
  * Increments or decrements the TTS rate by the given delta, clamped to [0.5, 3.0].
@@ -239,16 +282,21 @@ function adjustTTSRate(delta){
   _ttsRate=next;saveTTSSett();updateTTSRateUI();
 }
 /**
- * Populates the TTS voice selector dropdown with available browser voices.
- * No-op if the selector element is absent or the Speech Synthesis API is unavailable.
+ * Populates the TTS voice selector dropdown(s) with available browser voices.
+ * Populates both #tts-voice-sel (Settings) and #read-voice-sel (Read tab player
+ * bar) if present — both control the same global _ttsVoice.
+ * No-op if the Speech Synthesis API is unavailable or no voices are loaded yet.
  * Marks the default voice with a ★ symbol.
  */
 function initTTSVoices(){
-  var sel=document.getElementById('tts-voice-sel');
-  if(!sel||!window.speechSynthesis)return;
+  if(!window.speechSynthesis)return;
   var voices=window.speechSynthesis.getVoices();
   if(!voices.length)return;
-  sel.innerHTML='<option value="">Default</option>'+voices.map(function(v){return '<option value="'+v.name+'"'+(v.name===_ttsVoice?' selected':'')+'>'+v.name+(v.default?' ★':'')+'</option>';}).join('');
+  var optionsHtml='<option value="">Default</option>'+voices.map(function(v){return '<option value="'+v.name+'"'+(v.name===_ttsVoice?' selected':'')+'>'+v.name+(v.default?' ★':'')+'</option>';}).join('');
+  ['tts-voice-sel','read-voice-sel'].forEach(function(id){
+    var sel=document.getElementById(id);
+    if(sel)sel.innerHTML=optionsHtml;
+  });
 }
 /**
  * Sets the TTS voice by name and persists the preference.
@@ -259,7 +307,7 @@ function setTTSVoice(name){_ttsVoice=name;saveTTSSett();}
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
-  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsTestVoice,
+  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
-  adjustTTSRate, initTTSVoices, setTTSVoice
+  adjustTTSRate, initTTSVoices, setTTSVoice, readCycleSpeed
 };

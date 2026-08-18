@@ -34,9 +34,10 @@ import {
 } from './storage.js';
 
 import {
-  ttsStop, ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr,
+  ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
-  setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause
+  setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
+  _ttsSource, _ttsIdx
 } from './tts.js';
 
 import {
@@ -1369,66 +1370,138 @@ function bpGoStage(n){
 // Fetches the FULL chapter containing the requested reference (not just the
 // verse range) so the user can read in context, then scrolls to and briefly
 // highlights the specific verse that was the entry point. Translation choice
-// here is session-only — never written back to sett.defaultTrans.
+// here is session-only — never written back to sett.defaultTrans. TTS plays
+// back verse-by-verse (not sentence-chunked) so Skip Prev/Next Verse and the
+// karaoke-style highlight can track a specific verse index.
+//
+// RANGE MODE: if the typed reference specifies an explicit range — same-chapter
+// ("Romans 8:28-30") or cross-chapter ("John 1:1-2:5" / "John 1:1 - John 2:5") —
+// the exact range is fetched and shown as-is (matching Notes/ESV behavior),
+// instead of widening to the full containing chapter. Prev/Next Chapter paging
+// doesn't apply to an arbitrary range, so it's disabled while in range mode.
 // ════════════════════════════════════════════════════════
 var _bpFlatBooks=BP_BOOKS.OT.concat(BP_BOOKS.NT); // BOLLS_BOOKS ids 1-66 map 1:1 to this order
-var _readBook=null,_readChapter=null,_readTargetVerse=null;
+var _readBook=null,_readChapter=null,_readTargetVerse=null,_readRangeMode=false;
 var _readReference='',_readTranslation='esv',_readScriptureText='';
+var _readVerses=[]; // [{num:'1',text:'...'}, ...] — parsed once per fetch, shared by render + TTS
 var _readHandoff=null; // set by startStudyFromReading(), consumed once by createFromTemplate()
 
 /**
- * Fetches and renders the full chapter for the reference typed/picked into #read-ref.
- * Auto-scrolls to the specific verse requested as the entry point.
+ * Splits a verse-numbered chapter/range text (e.g. "[1] In the beginning...") into an
+ * ordered array of {num, text} verse objects. Shared by renderReadChapter() and
+ * the verse-level TTS chunk builder so both agree on exactly the same verse split.
+ * Note: verse numbers reset at each chapter boundary in a cross-chapter range (this
+ * mirrors exactly how the Notes screen already renders such ranges) — DOM element
+ * ids use the array index rather than v.num so they stay unique even when a range
+ * spans chapters and a verse number repeats.
+ * @param {string} text - Raw verse-numbered chapter/range text.
+ * @returns {{num:string,text:string}[]}
+ */
+function parseReadVerses(text){
+  var parts=text.split(/(\[\d+\])/g);
+  var out=[],curNum=null,buf='';
+  parts.forEach(function(part){
+    var m=part.match(/^\[(\d+)\]$/);
+    if(m){
+      if(curNum!==null)out.push({num:curNum,text:buf.trim()});
+      curNum=m[1];buf='';
+    }else{buf+=part;}
+  });
+  if(curNum!==null)out.push({num:curNum,text:buf.trim()});
+  return out;
+}
+/**
+ * Determines whether a typed Read-tab reference specifies an explicit scripture
+ * range — same-chapter ("Romans 8:28-30") or cross-chapter/cross-book ("John
+ * 1:1-2:5", "John 1:1 - John 2:5") — as opposed to a bare chapter or single-verse
+ * entry point. Range refs are fetched and shown exactly as typed; non-range refs
+ * widen to the full containing chapter.
+ * @param {string} ref - Raw typed reference string.
+ * @returns {boolean}
+ */
+function isReadRangeRef(ref){
+  var p=parseRef(ref);
+  if(!p)return false;
+  if(p.endVerse)return true; // parseRef already captured a same-chapter "16-18" style range
+  // Anything left over after the first book/chapter[:verse] match, starting with
+  // a dash, indicates a cross-chapter/cross-book range parseRef doesn't capture.
+  var m=ref.trim().match(/^(\d?\s*[a-zA-Z]+(?:\s+[a-zA-Z]+)*)\s+(\d+)(?::(\d+))?/);
+  if(!m)return false;
+  var rest=ref.slice(m[0].length).trim();
+  return /^-/.test(rest)&&rest.length>1;
+}
+/**
+ * Fetches and renders the reference typed/picked into #read-ref. A bare chapter
+ * or single-verse reference widens to the full containing chapter (reading "in
+ * context"); an explicit range fetches and shows exactly that range — see RANGE
+ * MODE note above. Auto-scrolls to the specific verse requested as the entry
+ * point (chapter mode only — an explicit range has no single "entry point").
  */
 async function fetchReadChapter(){
   var refInput=document.getElementById('read-ref');
   var ref=refInput?refInput.value.trim():'';
   if(!ref)return;
-  var p=parseRef(ref);
-  var book=p?_bpFlatBooks[p.book-1]:null;
-  if(!p||!book){toast('Could not understand that reference');return;}
-  _readBook=book.n;_readChapter=p.chapter;_readTargetVerse=p.startVerse||null;_readReference=ref;
   var transEl=document.getElementById('read-trans');
   _readTranslation=transEl?transEl.value:'esv';
   var disp=document.getElementById('read-display');
   disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
   var btn=document.getElementById('read-start-study-btn');if(btn)btn.style.display='none';
+  readSetPlayerEnabled(false);
   if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
+
+  if(isReadRangeRef(ref)){
+    _readRangeMode=true;_readBook=null;_readChapter=null;_readTargetVerse=null;_readReference=ref;
+    readSetChapterNavEnabled(false);
+    try{
+      var rtext=_readTranslation==='esv'?await getESV(ref):await getBibleAPI(ref,_readTranslation);
+      if(!rtext)throw new Error('Empty response');
+      _readScriptureText=rtext;
+      _readVerses=parseReadVerses(rtext);
+      renderReadChapter(null);
+      if(btn)btn.style.display='';
+      readSetPlayerEnabled(true);
+    }catch(e){
+      disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load that range.</p></div>';
+    }
+    return;
+  }
+
+  _readRangeMode=false;readSetChapterNavEnabled(true);
+  var p=parseRef(ref);
+  var book=p?_bpFlatBooks[p.book-1]:null;
+  if(!p||!book){toast('Could not understand that reference');return;}
+  _readBook=book.n;_readChapter=p.chapter;_readTargetVerse=p.startVerse||null;_readReference=ref;
   var chapterRef=book.n+' '+p.chapter;
   try{
     var text=_readTranslation==='esv'?await getESV(chapterRef):await getBibleAPI(chapterRef,_readTranslation);
     if(!text)throw new Error('Empty response');
     _readScriptureText=text;
-    renderReadChapter(text,_readTargetVerse);
+    _readVerses=parseReadVerses(text);
+    renderReadChapter(_readTargetVerse);
     if(btn)btn.style.display='';
-    var acts=document.getElementById('read-acts');if(acts)acts.style.display='flex';
+    readSetPlayerEnabled(true);
   }catch(e){
     disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load passage.</p></div>';
   }
 }
 /**
- * Renders a full chapter, wrapping each verse in its own span (id="read-v-N")
- * so the target verse can be scrolled to and highlighted as the entry point.
- * @param {string} text - Raw verse-numbered chapter text (e.g. "[1] In the beginning...").
- * @param {?number} targetVerse - Verse to scroll/highlight, or null to stay at chapter top.
+ * Renders the parsed _readVerses into #read-display. Each verse is wrapped in its
+ * own span, keyed by array index (id="read-v-<i>") so ids stay unique even when a
+ * cross-chapter range repeats a verse number. Tapping a verse number jumps TTS
+ * playback to that verse. The index-keyed span is also what the karaoke-style
+ * highlight and the initial "scroll to entry verse" target during playback.
+ * @param {?number} targetVerse - Verse NUMBER to scroll/highlight (chapter mode only), or null.
  */
-function renderReadChapter(text,targetVerse){
-  var parts=text.split(/(\[\d+\])/g);
-  var html='',curNum=null,buf='';
-  parts.forEach(function(part){
-    var m=part.match(/^\[(\d+)\]$/);
-    if(m){
-      if(curNum!==null)html+='<span class="readverse" id="read-v-'+curNum+'">'+buf+'</span>';
-      curNum=m[1];buf='<sup class="vnum">'+curNum+'</sup>';
-    }else{buf+=part;}
-  });
-  if(curNum!==null)html+='<span class="readverse" id="read-v-'+curNum+'">'+buf+'</span>';
-  html=html.replace(/\n\n/g,'<br><br>');
+function renderReadChapter(targetVerse){
+  var html=_readVerses.map(function(v,i){
+    return '<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="ttsPlayReadFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+  }).join(' ');
   document.getElementById('read-display').innerHTML='<div class="scrtext">'+html+'</div>';
   var scr=document.getElementById('read-scroll');
-  if(targetVerse){
+  var targetIdx=targetVerse?_readVerses.findIndex(function(v){return v.num===String(targetVerse);}):-1;
+  if(targetIdx>=0){
     setTimeout(function(){
-      var el=document.getElementById('read-v-'+targetVerse);
+      var el=document.getElementById('read-v-'+targetIdx);
       if(el){
         el.scrollIntoView({behavior:'smooth',block:'center'});
         el.classList.add('readverse-hl');
@@ -1440,6 +1513,9 @@ function renderReadChapter(text,targetVerse){
 /**
  * Pages to the previous chapter. Rolls into the prior book's last chapter at a
  * book boundary (e.g. Matthew 1 → Malachi 4), wrapping Genesis 1 → Revelation 22.
+ * No-ops in range mode (_readBook is null there) — returns the fetch promise so
+ * readAutoAdvance() can await the new chapter being ready.
+ * @returns {Promise|undefined}
  */
 function readPrevChapter(){
   if(!_readBook)return;
@@ -1447,11 +1523,14 @@ function readPrevChapter(){
   var ch=_readChapter-1,book=_bpFlatBooks[idx];
   if(ch<1){idx=idx>0?idx-1:_bpFlatBooks.length-1;book=_bpFlatBooks[idx];ch=book.c;}
   document.getElementById('read-ref').value=book.n+' '+ch;
-  fetchReadChapter();
+  return fetchReadChapter();
 }
 /**
  * Pages to the next chapter. Rolls into the next book's first chapter at a
  * book boundary (e.g. John 21 → Acts 1), wrapping Revelation 22 → Genesis 1.
+ * No-ops in range mode (_readBook is null there) — returns the fetch promise so
+ * readAutoAdvance() can await the new chapter being ready.
+ * @returns {Promise|undefined}
  */
 function readNextChapter(){
   if(!_readBook)return;
@@ -1459,11 +1538,22 @@ function readNextChapter(){
   var book=_bpFlatBooks[idx],ch=_readChapter+1;
   if(ch>book.c){idx=idx<_bpFlatBooks.length-1?idx+1:0;book=_bpFlatBooks[idx];ch=1;}
   document.getElementById('read-ref').value=book.n+' '+ch;
-  fetchReadChapter();
+  return fetchReadChapter();
+}
+/**
+ * Enables or disables the Prev/Next Chapter buttons. Disabled in range mode,
+ * where "chapter" isn't a well-defined concept for an arbitrary passage range.
+ * @param {boolean} enabled
+ */
+function readSetChapterNavEnabled(enabled){
+  ['read-prev-chapter-btn','read-next-chapter-btn'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.disabled=!enabled;
+  });
 }
 /**
  * Stores the currently-read passage as a handoff object and opens the template
  * picker to start a new study from it — no re-fetch, consumed once by createFromTemplate().
+ * Works the same in range mode — the exact typed range hands off to the new study.
  */
 function startStudyFromReading(){
   if(!_readScriptureText){toast('Load a passage first');return;}
@@ -1476,6 +1566,72 @@ function startStudyFromReading(){
  * @returns {string} The currently loaded Read tab scripture text, or empty string.
  */
 function getReadText(){return _readScriptureText||'';}
+/**
+ * Returns the plain text of each verse currently loaded, in order — the TTS
+ * engine's playback chunk array for the 'read' source (one utterance per verse).
+ * @returns {string[]}
+ */
+function getReadVerseChunks(){return _readVerses.map(function(v){return v.text;});}
+/**
+ * Returns the chunk index Play should start from — the requested entry verse
+ * (_readTargetVerse) if one was specified, else the first verse loaded.
+ * Always 0 in range mode, since _readTargetVerse is cleared there.
+ * @returns {number}
+ */
+function getReadStartIdx(){
+  if(!_readTargetVerse)return 0;
+  var idx=_readVerses.findIndex(function(v){return v.num===String(_readTargetVerse);});
+  return idx>=0?idx:0;
+}
+/**
+ * Scrolls to and highlights the verse at the given TTS chunk index — called by
+ * tts.js during 'read' playback so the visible text tracks the spoken verse.
+ * Clears any previous highlight first so exactly one verse is highlighted at a time.
+ * @param {number} idx - Index into _readVerses / the TTS chunk array.
+ */
+function highlightReadVerse(idx){
+  var el=document.getElementById('read-v-'+idx);
+  if(!el)return;
+  document.querySelectorAll('#read-display .readverse-hl').forEach(function(e){e.classList.remove('readverse-hl');});
+  el.classList.add('readverse-hl');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+/**
+ * Skips Read-tab TTS playback forward or backward by one verse.
+ * If nothing is currently playing/paused, starts playback near the current
+ * reading position instead of no-op'ing — matches expected podcast-style behavior.
+ * @param {number} dir - +1 for next verse, -1 for previous verse.
+ */
+function readSkipVerse(dir){
+  var chunks=getReadVerseChunks();
+  if(!chunks.length)return;
+  var curIdx=(_ttsSource==='read')?_ttsIdx:getReadStartIdx();
+  var nextIdx=curIdx+dir;
+  if(nextIdx<0||nextIdx>=chunks.length)return;
+  ttsPlayReadFrom(nextIdx);
+}
+/**
+ * Enables or disables the Read tab's player bar transport buttons (Skip Prev/Next,
+ * Play/Pause). Speed and Voice controls stay enabled always — they're global settings.
+ * @param {boolean} enabled
+ */
+function readSetPlayerEnabled(enabled){
+  ['read-skip-prev','read-playpause-btn','read-skip-next'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.disabled=!enabled;
+  });
+}
+/**
+ * Auto-continues Read tab TTS playback into the next chapter when the current
+ * chapter's last verse finishes speaking naturally — called by tts.js via the
+ * window.readAutoAdvance hook. No-ops in range mode: Prev/Next Chapter paging
+ * (and therefore "what's next") isn't well-defined for an arbitrary passage range.
+ */
+async function readAutoAdvance(){
+  if(_readRangeMode)return;
+  await readNextChapter();
+  if(!_readVerses.length)return; // fetch failed (offline/error) — stop quietly rather than throw
+  ttsPlayReadFrom(0);
+}
 // ── END READ TAB ───────────────────────────────────────────────
 /**
  * Opens the export backup modal and renders a checkbox list of all studies.
@@ -2822,6 +2978,7 @@ export {
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
+  getReadVerseChunks, getReadStartIdx, highlightReadVerse, readSkipVerse, readAutoAdvance,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
   exportData, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
