@@ -370,7 +370,15 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.17.0',date:'Aug 3, 2026',label:'Latest',
+    version:'4.18.0',date:'Aug 17, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: new standalone Read tab — browse or type a reference, read the full chapter in context (not just the requested verse), auto-scrolls to the exact verse you asked for. Prev/Next Chapter paging rolls across book boundaries (John 21 → Acts 1). "Start a Study from this Passage" hands the exact reference, translation, and already-fetched text straight into a new study — no re-fetch',
+      'feat: Notes and Study Tools merged into one Study tab with Notes/Study Tools sub-tabs — frees up a nav slot for Read. Progress stays independent. Swipe left/right now switches sub-tabs within Study instead of top-level screens',
+      'Guided tour retargeted for the new Study tab structure; onboarding copy updated to match'
+    ]},
+  {
+    version:'4.17.0',date:'Aug 3, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Share Study Link now requests a short server-side link (archestudytools.com/s/...) instead of a raw base64 URL — fixes Gmail and other native share targets rejecting long study links with a 400 Bad Request error',

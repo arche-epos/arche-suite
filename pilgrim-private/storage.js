@@ -123,7 +123,7 @@ export function openStudy(id) {
   var _qC = _qConcl(); if (_qC) _qC.setText('');
   if (_cbs.trackOpen) _cbs.trackOpen(cur);
   if (_cbs.populateField) _cbs.populateField();
-  if (_cbs.navTo) _cbs.navTo('field');
+  if (_cbs.navTo) _cbs.navTo('study');
 }
 
 /**

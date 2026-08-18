@@ -31,6 +31,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg0);color:var(--txt1);fo
 #app{display:flex;flex-direction:column;height:var(--app-height);max-width:480px;margin:0 auto;position:relative;overflow:hidden}
 .scr{display:none;flex-direction:column;flex:1;overflow:hidden}
 .scr.on{display:flex}
+.study-sub{display:none;flex-direction:column;flex:1;overflow:hidden}
+.study-sub.on{display:flex}
 #scr-field{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;flex-direction:column}
 #scr-field .topbar{position:sticky;top:0;z-index:20;flex-shrink:0}
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;overscroll-behavior-y:contain}
@@ -113,6 +115,8 @@ select option{background:var(--bg2);color:var(--txt1)}
 .frow{display:flex;gap:9px;margin-bottom:9px}.frow .ig{flex:1;margin-bottom:0}
 .scrtext{font-family:'EB Garamond',serif;font-size:17px;line-height:1.85;color:var(--txt1)}
 .scrtext .vnum{font-size:10px;color:var(--gold);font-weight:700;vertical-align:super;margin-right:2px}
+.readverse{transition:background-color .3s ease;border-radius:3px}
+.readverse-hl{background-color:var(--golddim)}
 .scractions{display:flex;gap:7px;margin-top:4px}
 .fnref{background:var(--bg1);border:1px solid var(--border);border-left:3px solid var(--golddim);border-radius:var(--r);padding:12px 14px;margin-bottom:16px}
 .fnref p{font-size:14px;color:var(--txt2);line-height:1.7;white-space:pre-wrap;font-style:italic}
@@ -356,6 +360,8 @@ select option{background:var(--bg2);color:var(--txt1)}
   #app{max-width:700px;height:auto;min-height:100vh;overflow:visible}
   .scr{overflow:visible;flex:none}
   .scr.on{display:flex}
+  .study-sub{overflow:visible;flex:none}
+  .study-sub.on{display:flex}
   #scr-field{overflow-y:auto}
   .scroll{overflow:visible;padding:20px 24px}
   .notespanel textarea{min-height:260px}
@@ -390,6 +396,8 @@ select option{background:var(--bg2);color:var(--txt1)}
   #desktop-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
   .scr{display:none;flex:1;overflow:hidden;min-width:0}
   .scr.on{display:flex;flex-direction:column}
+  .study-sub{display:none;flex:1;overflow:hidden;min-width:0}
+  .study-sub.on{display:flex;flex-direction:column}
   .scroll{flex:1;overflow-y:auto;padding:28px 40px;width:100%;max-width:none}
   .lib-grid{grid-template-columns:1fr 1fr 1fr}
   .topbar{padding:14px 40px;flex-shrink:0}
@@ -493,11 +501,11 @@ select option{background:var(--bg2);color:var(--txt1)}
   <button class="navbtn on" id="nav-library" onclick="navTo('library')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Library<span class="tab-hint">Browse &amp; manage your studies</span>
   </button>
-  <button class="navbtn" id="nav-field" onclick="navTo('field')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Notes<span class="tab-hint">Take notes during a lesson</span>
+  <button class="navbtn" id="nav-read" onclick="navTo('read')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Read<span class="tab-hint">Open scripture and read</span>
   </button>
-  <button class="navbtn" id="nav-deep" onclick="navTo('deep')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Study Tools<span class="tab-hint">AI-powered scripture analysis</span>
+  <button class="navbtn" id="nav-study" onclick="navTo('study')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Study<span class="tab-hint">Notes and AI-powered study tools</span>
   </button>
   <button class="navbtn" id="nav-stats" onclick="navTo('stats')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Progress<span class="tab-hint">Track your study history</span>
@@ -549,8 +557,43 @@ select option{background:var(--bg2);color:var(--txt1)}
   </div>
 </div>
 
-<!-- FIELD MODE -->
-<div class="scr" id="scr-field">
+<!-- READ -->
+<div class="scr" id="scr-read">
+  <div class="topbar"><div class="topbar-title">Read</div></div>
+  <div class="frow" style="align-items:flex-end;padding:12px 16px 0">
+    <div class="ig" style="flex:0 0 auto;margin-bottom:0"><label style="visibility:hidden">Pick</label><button class="bp-open-btn" onclick="bpOpen('read')" title="Pick book &amp; chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button></div>
+    <div class="ig" style="flex:2;margin-bottom:0"><label>Scripture Reference</label><input type="text" id="read-ref" placeholder="e.g. John 3:16" onblur="fetchReadChapter()" onkeydown="if(event.key==='Enter'){this.blur();}"></div>
+    <div class="ig" style="flex:0 0 76px;margin-bottom:0"><label>Version</label>
+      <select id="read-trans" onchange="fetchReadChapter()">
+        <option value="esv">ESV</option><option value="kjv">KJV</option>
+        <option value="asv">ASV</option><option value="web">WEB</option>
+        <option value="ylt">YLT</option><option value="darby">Darby</option>
+        <option value="nkjv">NKJV</option><option value="net">NET</option>
+        <option value="amp">AMP</option><option value="csb">CSB</option>
+        <option value="nlt">NLT</option><option value="msg">MSG</option>
+        <option value="nasb">NASB</option><option value="niv">NIV</option>
+      </select>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 16px 0">
+    <button class="btn btn-sec btn-sm" style="flex:1" onclick="readPrevChapter()">&#8592; Prev Chapter</button>
+    <button class="btn btn-sec btn-sm" style="flex:1" onclick="readNextChapter()">Next Chapter &#8594;</button>
+  </div>
+  <div class="scroll" id="read-scroll">
+    <div id="read-display"><div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above, or tap the book icon to browse</p></div></div>
+  </div>
+  <div style="padding:0 16px 20px">
+    <button class="btn btn-primary btn-full" id="read-start-study-btn" style="display:none" onclick="startStudyFromReading()">Start a Study from this Passage</button>
+  </div>
+</div>
+
+<!-- STUDY (merged Notes + Study Tools) -->
+<div class="scr" id="scr-study">
+  <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg1);">
+    <button class="lib-tab on" id="study-tab-notes" onclick="switchStudyTab('notes')">Notes</button>
+    <button class="lib-tab" id="study-tab-tools" onclick="switchStudyTab('tools')">Study Tools</button>
+  </div>
+  <div class="study-sub on" id="scr-field">
   <div class="topbar">
     <button class="backbtn" onclick="saveAndGoLib()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="19" height="19"><path d="m15 18-6-6 6-6"/></svg>Library
@@ -659,10 +702,10 @@ select option{background:var(--bg2);color:var(--txt1)}
       <div id="study-word-list" style="display:flex;flex-direction:column;gap:8px;"></div>
     </div>
   </div>
-</div>
+</div><!-- /#scr-field -->
 
 <!-- DEEP STUDY -->
-<div class="scr" id="scr-deep">
+<div class="study-sub" id="scr-deep">
   <div class="topbar">
     <div class="topbar-title">Study Tools</div>
     <button class="btn btn-sm btn-ghost" onclick="openResourcesModal()" style="margin-right:6px;">Resources</button>
@@ -831,7 +874,8 @@ select option{background:var(--bg2);color:var(--txt1)}
     </div><!-- /deep-col-right -->
     </div><!-- /deep-cols -->
   </div>
-</div>
+</div><!-- /#scr-deep -->
+</div><!-- /#scr-study -->
 
 <!-- SETTINGS -->
 <div class="scr" id="scr-settings">

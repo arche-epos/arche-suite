@@ -134,7 +134,7 @@ function initEditors(){
  * Navigates to a top-level app screen by id.
  * Cancels active TTS, syncs the current study, swaps .on classes on screens and
  * nav buttons, then calls the render function appropriate for the target screen.
- * @param {string} id - Screen id: 'library' | 'deep' | 'field' | 'stats' | 'settings'.
+ * @param {string} id - Screen id: 'library' | 'read' | 'study' | 'stats' | 'settings'.
  */
 function navTo(id){
   dismissTabHints();
@@ -148,22 +148,36 @@ function navTo(id){
   document.getElementById('nav-'+id).classList.add('on');
   var fabBtn=document.querySelector('.fab');if(fabBtn)fabBtn.style.display=(id==='library')?'':'none';
   if(id==='library')renderLib();
-  if(id==='deep'){
-    // Collapse the field notes flyout when entering Study Tools
-    if(window.setFnotesOpen)window.setFnotesOpen(false);var fb=document.getElementById('fnotes-body');if(fb)fb.classList.remove('open');var fc=document.getElementById('fnotes-chev');if(fc)fc.style.transform=''; // Reset chevron to point-down (closed) state
-    populateDeep();}
-  if(id==='field'&&cur)populateField();
+  // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
+  if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
   if(id==='settings'){renderTagManager();renderChangelog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN))setTimeout(function(){startTour('settings');},300);}
+}
+/**
+ * Switches between the Study tab's Notes and Study Tools sub-panels.
+ * @param {string} tab - 'notes' or 'tools'.
+ */
+function switchStudyTab(tab){
+  var notesOn=tab==='notes';
+  document.getElementById('scr-field').classList.toggle('on',notesOn);
+  document.getElementById('scr-deep').classList.toggle('on',!notesOn);
+  document.getElementById('study-tab-notes').classList.toggle('on',notesOn);
+  document.getElementById('study-tab-tools').classList.toggle('on',!notesOn);
+  if(notesOn){if(cur)populateField();}
+  else{
+    // Collapse the field notes flyout when entering Study Tools
+    if(window.setFnotesOpen)window.setFnotesOpen(false);var fb=document.getElementById('fnotes-body');if(fb)fb.classList.remove('open');var fc=document.getElementById('fnotes-chev');if(fc)fc.style.transform=''; // Reset chevron to point-down (closed) state
+    populateDeep();
+  }
 }
 /**
  * Saves the current study and navigates to the Library screen.
  */
 function saveAndGoLib(){saveStudy();navTo('library');}
 /**
- * Navigates to the Field Notes screen.
+ * Navigates to the Study tab (Notes sub-tab, the default landing).
  */
-function goField(){navTo('field');}
+function goField(){navTo('study');}
 
 /**
  * Opens the template selection overlay after a 50ms delay.
@@ -178,13 +192,18 @@ function newStudy(){setTimeout(function(){document.getElementById('tpl-overlay')
 function createFromTemplate(tplKey){
   closeOverlay('tpl-overlay');
   var tpl=TEMPLATES[tplKey]||TEMPLATES.blank;
-  setCur({id:'bsn_'+Date.now(),date:todayStr(),title:tpl.title||'',series:'',teacher:'',fieldNotes:tpl.fieldNotes||'',tags:(tpl.tags||[]).slice(),resources:[],refs:[makeRef()],deep:{conclusions:'',outline:''}});
+  // If "Start a Study from this Passage" was tapped on the Read tab, use that
+  // exact reference/translation/scriptureText as refs[0] — no re-fetch.
+  var refs;
+  if(_readHandoff){refs=[Object.assign(makeRef('primary'),_readHandoff)];_readHandoff=null;}
+  else{refs=[makeRef()];}
+  setCur({id:'bsn_'+Date.now(),date:todayStr(),title:tpl.title||'',series:'',teacher:'',fieldNotes:tpl.fieldNotes||'',tags:(tpl.tags||[]).slice(),resources:[],refs:refs,deep:{conclusions:'',outline:''}});
   setActiveRefIdx(0);setStudyScope('passage');
   // Reset Quill editors to empty — template content lives in fieldNotes, not the rich editors
   if(_qOutline)_qOutline.setText('');
   if(_qConcl)_qConcl.setText('');
   trackOpen(cur);
-  populateField();navTo('field');
+  populateField();navTo('study');
 }
 
 
@@ -851,7 +870,7 @@ async function exportPDF(opts){
 // ── SWIPE GESTURES ───────────────────────────────────────────────
 /**
  * Attaches horizontal swipe gesture listeners to the main content area.
- * Swipe left navigates to the AI deep-dive panel; swipe right returns to field notes.
+ * Within the Study tab, swipe left switches Notes → Study Tools; swipe right returns to Notes.
  */
 function initSwipe(){
   var el=document.getElementById('desktop-main');
@@ -862,10 +881,11 @@ function initSwipe(){
     var t=e.changedTouches[0];
     var dx=t.clientX-sx,dy=t.clientY-sy;
     if(Math.abs(dx)<threshold||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    if(!document.getElementById('scr-study').classList.contains('on'))return;
     var fieldOn=document.getElementById('scr-field').classList.contains('on');
     var deepOn=document.getElementById('scr-deep').classList.contains('on');
-    if(dx<0&&fieldOn){if(cur){syncFromInputs();populateDeep();}navTo('deep');}
-    else if(dx>0&&deepOn){navTo('field');}
+    if(dx<0&&fieldOn){if(cur)syncFromInputs();switchStudyTab('tools');}
+    else if(dx>0&&deepOn){switchStudyTab('notes');}
   },{passive:true});
 }
 
@@ -1243,11 +1263,13 @@ var BP_BOOKS={
     {n:'1 John',c:5},{n:'2 John',c:1},{n:'3 John',c:1},{n:'Jude',c:1},{n:'Revelation',c:22}
   ]
 };
-var _bpTestament='OT',_bpBook=null,_bpChapter=null;
+var _bpTestament='OT',_bpBook=null,_bpChapter=null,_bpMode='field';
 /**
  * Opens the book picker overlay, resets selection state, and displays Stage 1 (Book).
+ * @param {string} [mode] - 'field' (default, writes to Notes' #f-ref) or 'read' (writes to Read tab's #read-ref).
  */
-function bpOpen(){
+function bpOpen(mode){
+  _bpMode=mode||'field';
   _bpBook=null;_bpChapter=null;
   bpSetTestament(_bpTestament);
   bpGoStage(1);
@@ -1310,6 +1332,13 @@ function bpConfirm(){
   var v=document.getElementById('bp-verse-input').value.trim();
   if(!v){toast('Please enter a verse or range');return;}
   var ref=_bpBook+' '+_bpChapter+':'+v;
+  if(_bpMode==='read'){
+    var rref=document.getElementById('read-ref');
+    if(rref)rref.value=ref;
+    bpClose();
+    fetchReadChapter();
+    return;
+  }
   var fref=document.getElementById('f-ref');
   if(fref){fref.value=ref;var ar=activeRef();if(ar)ar.reference=ref;}
   // Re-render pills, update the bar ref label, then fetch scripture for the new reference
@@ -1335,6 +1364,112 @@ function bpGoStage(n){
   document.getElementById('bp-back-btn').style.display=n===1?'none':'flex';
 }
 // ── END BOOK PICKER ───────────────────────────────────────────
+
+// ── READ TAB — Bible Reader (standalone chapter view) ───────────────────────
+// Fetches the FULL chapter containing the requested reference (not just the
+// verse range) so the user can read in context, then scrolls to and briefly
+// highlights the specific verse that was the entry point. Translation choice
+// here is session-only — never written back to sett.defaultTrans.
+// ════════════════════════════════════════════════════════
+var _bpFlatBooks=BP_BOOKS.OT.concat(BP_BOOKS.NT); // BOLLS_BOOKS ids 1-66 map 1:1 to this order
+var _readBook=null,_readChapter=null,_readTargetVerse=null;
+var _readReference='',_readTranslation='esv',_readScriptureText='';
+var _readHandoff=null; // set by startStudyFromReading(), consumed once by createFromTemplate()
+
+/**
+ * Fetches and renders the full chapter for the reference typed/picked into #read-ref.
+ * Auto-scrolls to the specific verse requested as the entry point.
+ */
+async function fetchReadChapter(){
+  var refInput=document.getElementById('read-ref');
+  var ref=refInput?refInput.value.trim():'';
+  if(!ref)return;
+  var p=parseRef(ref);
+  var book=p?_bpFlatBooks[p.book-1]:null;
+  if(!p||!book){toast('Could not understand that reference');return;}
+  _readBook=book.n;_readChapter=p.chapter;_readTargetVerse=p.startVerse||null;_readReference=ref;
+  var transEl=document.getElementById('read-trans');
+  _readTranslation=transEl?transEl.value:'esv';
+  var disp=document.getElementById('read-display');
+  disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
+  var btn=document.getElementById('read-start-study-btn');if(btn)btn.style.display='none';
+  if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
+  var chapterRef=book.n+' '+p.chapter;
+  try{
+    var text=_readTranslation==='esv'?await getESV(chapterRef):await getBibleAPI(chapterRef,_readTranslation);
+    if(!text)throw new Error('Empty response');
+    _readScriptureText=text;
+    renderReadChapter(text,_readTargetVerse);
+    if(btn)btn.style.display='';
+  }catch(e){
+    disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load passage.</p></div>';
+  }
+}
+/**
+ * Renders a full chapter, wrapping each verse in its own span (id="read-v-N")
+ * so the target verse can be scrolled to and highlighted as the entry point.
+ * @param {string} text - Raw verse-numbered chapter text (e.g. "[1] In the beginning...").
+ * @param {?number} targetVerse - Verse to scroll/highlight, or null to stay at chapter top.
+ */
+function renderReadChapter(text,targetVerse){
+  var parts=text.split(/(\[\d+\])/g);
+  var html='',curNum=null,buf='';
+  parts.forEach(function(part){
+    var m=part.match(/^\[(\d+)\]$/);
+    if(m){
+      if(curNum!==null)html+='<span class="readverse" id="read-v-'+curNum+'">'+buf+'</span>';
+      curNum=m[1];buf='<sup class="vnum">'+curNum+'</sup>';
+    }else{buf+=part;}
+  });
+  if(curNum!==null)html+='<span class="readverse" id="read-v-'+curNum+'">'+buf+'</span>';
+  html=html.replace(/\n\n/g,'<br><br>');
+  document.getElementById('read-display').innerHTML='<div class="scrtext">'+html+'</div>';
+  var scr=document.getElementById('read-scroll');
+  if(targetVerse){
+    setTimeout(function(){
+      var el=document.getElementById('read-v-'+targetVerse);
+      if(el){
+        el.scrollIntoView({behavior:'smooth',block:'center'});
+        el.classList.add('readverse-hl');
+        setTimeout(function(){el.classList.remove('readverse-hl');},2200);
+      }
+    },50);
+  }else if(scr){scr.scrollTop=0;}
+}
+/**
+ * Pages to the previous chapter. Rolls into the prior book's last chapter at a
+ * book boundary (e.g. Matthew 1 → Malachi 4), wrapping Genesis 1 → Revelation 22.
+ */
+function readPrevChapter(){
+  if(!_readBook)return;
+  var idx=_bpFlatBooks.findIndex(function(b){return b.n===_readBook;});
+  var ch=_readChapter-1,book=_bpFlatBooks[idx];
+  if(ch<1){idx=idx>0?idx-1:_bpFlatBooks.length-1;book=_bpFlatBooks[idx];ch=book.c;}
+  document.getElementById('read-ref').value=book.n+' '+ch;
+  fetchReadChapter();
+}
+/**
+ * Pages to the next chapter. Rolls into the next book's first chapter at a
+ * book boundary (e.g. John 21 → Acts 1), wrapping Revelation 22 → Genesis 1.
+ */
+function readNextChapter(){
+  if(!_readBook)return;
+  var idx=_bpFlatBooks.findIndex(function(b){return b.n===_readBook;});
+  var book=_bpFlatBooks[idx],ch=_readChapter+1;
+  if(ch>book.c){idx=idx<_bpFlatBooks.length-1?idx+1:0;book=_bpFlatBooks[idx];ch=1;}
+  document.getElementById('read-ref').value=book.n+' '+ch;
+  fetchReadChapter();
+}
+/**
+ * Stores the currently-read passage as a handoff object and opens the template
+ * picker to start a new study from it — no re-fetch, consumed once by createFromTemplate().
+ */
+function startStudyFromReading(){
+  if(!_readScriptureText){toast('Load a passage first');return;}
+  _readHandoff={reference:_readReference,translation:_readTranslation,scriptureText:_readScriptureText,type:'primary'};
+  newStudy();
+}
+// ── END READ TAB ───────────────────────────────────────────────
 /**
  * Opens the export backup modal and renders a checkbox list of all studies.
  * Pre-selects all studies and initializes the selection count display.
@@ -1849,40 +1984,40 @@ function tourCleanupDemoData(){
 
 // ── TOUR A — "CREATE YOUR FIRST STUDY" ───────────────────────────────────
 var TOUR_A_STEPS=[
-  {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Notes, Study Tools, Progress, or Settings — to switch screens.'},
+  {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
   {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
   {screen:'library',target:'#lib-sort',title:'Sorting Your Library',body:'Sort by Date, Modified, Reference, Teacher, or Series. Choosing Reference, Teacher, or Series reveals a sub-filter bar so you can narrow things down further.'},
   {screen:'library',target:'.fab',title:'Start a New Study',body:'Tap here any time to start a new study. This button only appears on the Library tab.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
-  {screen:'field',target:'#f-date',title:'Date',body:"Today's date is filled in automatically — you can change it any time."},
-  {screen:'field',before:function(){cur.teacher='Jesse';populateField();},target:'#f-teacher',title:'Teacher / Preacher',body:"Add who taught or preached this study. We've filled in an example name."},
-  {screen:'field',before:function(){cur.series="How to Use Archē";populateField();},target:'#f-series',title:'Series',body:'Group related studies under a series name — handy for a sermon series or a class.'},
-  {screen:'field',before:function(){cur.title='First-Time Study';populateField();},target:'#f-title',title:'Title',body:'Give your study a specific title.'},
-  {screen:'field',before:function(){cur.tags=['study'];renderTagPicker();},target:'#f-tags-picker',title:'Tags',body:'Tag a study to filter and sort by it later in the Library. We selected "Study" as an example — tap any tag to toggle it.'},
-  {screen:'field',before:function(){var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
-  {screen:'field',target:'.bp-open-btn',title:'Or Browse for It',body:'Prefer not to type? Tap this book icon to open the Reference Picker — browse by Testament, Book, Chapter, and Verse, then tap Load Scripture.'},
-  {screen:'field',before:function(){bpOpen();},target:'#bp-overlay',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
-  {screen:'field',before:function(){closeOverlay('bp-overlay');var r=makeRef('secondary');r.reference='Romans 8:28';cur.refs.push(r);switchRef(cur.refs.length-1);fetchScr();},target:'.ref-pill-add',title:'Add Another Passage',body:"Tap + Add Passage to study multiple passages in one study. We've added a second one — Romans 8:28 — to show how it works."},
-  {screen:'field',before:function(){switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
-  {screen:'field',before:function(){if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
-  {screen:'field',target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
-  {screen:'field',target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
-  {screen:'field',before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
-  {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#nav-deep',title:'Getting to Study Tools',body:'Tap the Study Tools tab any time to dig deeper. On mobile it’s in the top navigation bar; on a computer it’s in the left panel.'},
-  {screen:'deep',target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dig deeper with AI-assisted research.'},
-  {screen:'deep',target:'#btn-lexical',title:TOOL_LABELS.lexical,body:TOOL_DESCS.lexical},
-  {screen:'deep',target:'#btn-grammar',title:TOOL_LABELS.grammar,body:TOOL_DESCS.grammar},
-  {screen:'deep',target:'#btn-historical',title:TOOL_LABELS.historical,body:TOOL_DESCS.historical},
-  {screen:'deep',target:'#btn-cultural',title:TOOL_LABELS.cultural,body:TOOL_DESCS.cultural},
-  {screen:'deep',target:'#btn-crossrefs',title:TOOL_LABELS.crossrefs,body:TOOL_DESCS.crossrefs},
-  {screen:'deep',target:'#btn-geography',title:TOOL_LABELS.geography,body:TOOL_DESCS.geography},
-  {screen:'deep',target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
-  {screen:'deep',target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all six tools at once — four analyze this specific passage (Word Study, Language & Structure, Cross-References, and Places & Geography) and two study the entire book (Historical Context and Cultural Context).'},
-  {screen:'deep',target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
-  {screen:'deep',target:'#d-conclusions-editor',title:'My Conclusions',body:'This space is entirely yours — no AI involved. Record your own theological conclusions, insights, and application.'},
-  {screen:'deep',target:'[onclick*="openExportModal"]',title:'Export Study to PDF',body:'Export the whole study — scripture, notes, outline, resources, conclusions, and any AI tool results — to a shareable PDF.'},
-  {screen:'deep',target:'[onclick*="shareStudyLink"]',title:'Share Study Link',body:'You can also share a study as a link — useful for sending a single study to someone without exporting a file.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#f-date',title:'Date',body:"Today's date is filled in automatically — you can change it any time."},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-teacher',title:'Teacher / Preacher',body:"Add who taught or preached this study. We've filled in an example name."},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.series="How to Use Archē";populateField();},target:'#f-series',title:'Series',body:'Group related studies under a series name — handy for a sermon series or a class.'},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.title='First-Time Study';populateField();},target:'#f-title',title:'Title',body:'Give your study a specific title.'},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.tags=['study'];renderTagPicker();},target:'#f-tags-picker',title:'Tags',body:'Tag a study to filter and sort by it later in the Library. We selected "Study" as an example — tap any tag to toggle it.'},
+  {screen:'study',before:function(){switchStudyTab('notes');var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'.bp-open-btn',title:'Or Browse for It',body:'Prefer not to type? Tap this book icon to open the Reference Picker — browse by Testament, Book, Chapter, and Verse, then tap Load Scripture.'},
+  {screen:'study',before:function(){switchStudyTab('notes');bpOpen();},target:'#bp-overlay',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
+  {screen:'study',before:function(){switchStudyTab('notes');closeOverlay('bp-overlay');var r=makeRef('secondary');r.reference='Romans 8:28';cur.refs.push(r);switchRef(cur.refs.length-1);fetchScr();},target:'.ref-pill-add',title:'Add Another Passage',body:"Tap + Add Passage to study multiple passages in one study. We've added a second one — Romans 8:28 — to show how it works."},
+  {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
+  {screen:'study',before:function(){switchStudyTab('notes');if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
+  {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
+  {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical',title:TOOL_LABELS.lexical,body:TOOL_DESCS.lexical},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-grammar',title:TOOL_LABELS.grammar,body:TOOL_DESCS.grammar},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-historical',title:TOOL_LABELS.historical,body:TOOL_DESCS.historical},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-cultural',title:TOOL_LABELS.cultural,body:TOOL_DESCS.cultural},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-crossrefs',title:TOOL_LABELS.crossrefs,body:TOOL_DESCS.crossrefs},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-geography',title:TOOL_LABELS.geography,body:TOOL_DESCS.geography},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all six tools at once — four analyze this specific passage (Word Study, Language & Structure, Cross-References, and Places & Geography) and two study the entire book (Historical Context and Cultural Context).'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#d-conclusions-editor',title:'My Conclusions',body:'This space is entirely yours — no AI involved. Record your own theological conclusions, insights, and application.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="openExportModal"]',title:'Export Study to PDF',body:'Export the whole study — scripture, notes, outline, resources, conclusions, and any AI tool results — to a shareable PDF.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="shareStudyLink"]',title:'Share Study Link',body:'You can also share a study as a link — useful for sending a single study to someone without exporting a file.'},
   {screen:'stats',before:function(){tourSeedProgressData();},target:'#stats-grid',title:'Progress',body:"Here’s your full Progress view — current streak, total studies, words written, and AI tools run; your most-studied books as a bar chart; and your seven most recently opened studies. Everything seeded for this tour disappears the moment it ends."}
 ];
 
@@ -2652,7 +2787,7 @@ export {
   setQFNDirty, setQConclDirty, setQOutlineDirty,
   initEditors,
   // S06 — Navigation
-  navTo, saveAndGoLib, goField, newStudy, createFromTemplate,
+  navTo, saveAndGoLib, goField, newStudy, createFromTemplate, switchStudyTab,
   // S09 — Library
   renderLib, setTagFilter, setLibSort,
   // S10 — Field Notes Panel
@@ -2678,6 +2813,8 @@ export {
   // S23 — Book Picker
   bpOpen, bpClose, bpSetTestament, bpPickBook, bpPickChapter, bpUpdatePreview,
   bpConfirm, bpBack, bpGoStage,
+  // S23a — Read Tab (Bible Reader)
+  fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
   exportData, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
