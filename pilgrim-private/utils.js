@@ -370,7 +370,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.20.0',date:'Aug 18, 2026',label:'Latest',
+    version:'4.20.1',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'Read tab player bar: Skip Prev/Next Verse and Play/Pause widened to a much larger touch target (100–110px, up from 34px), and the tap-to-cycle speed control replaced with a straightforward dropdown (.5×–3×) — easier to hit accurately and easier to pick an exact speed',
+      'Player bar now wraps to a second row on narrow phones instead of squeezing — the Voice picker always gets its own full-width row'
+    ]},
+  {
+    version:'4.20.0',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab now accepts scripture ranges — type something like "John 1:1 - John 2:5" (or "John 1:1-2:5", or a same-chapter range like "Romans 8:28-30") and it loads exactly that range, the same way Notes/ESV already does. A bare chapter or single-verse reference still widens to the full chapter for in-context reading',

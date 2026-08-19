@@ -252,24 +252,13 @@ function setTTSRate(r){_ttsRate=r;saveTTSSett();updateTTSRateUI();}
 function updateTTSRateUI(){
   var el=document.getElementById('tts-rate-display');
   if(el)el.textContent=_ttsRate+'×';
-  var rb=document.getElementById('read-speed-btn');
-  if(rb)rb.textContent=_ttsRate+'×'; // Read tab player bar mirrors the same global rate
+  var rs=document.getElementById('read-speed-sel');
+  if(rs)rs.value=String(_ttsRate); // Read tab player bar mirrors the same global rate
   [0.5,1,1.5,2,2.5,3].forEach(function(r){
     var id='tts-pre-'+r.toString().replace('.','_'); // e.g. 1.5 → 'tts-pre-1_5' (period replaced to make valid DOM id)
     var btn=document.getElementById(id);
     if(btn){btn.style.color=(_ttsRate===r)?'var(--gold)':'var(--txt3)';btn.style.borderColor=(_ttsRate===r)?'var(--gold)':'var(--border)';}
   });
-}
-/**
- * Advances the global TTS rate to the next preset in the Read tab's compact
- * cycle — 0.5 → 1 → 1.5 → 2 → 3 → back to 0.5. Shares the same _ttsRate as
- * every other Listen control in the app (Settings' 6-preset row included).
- */
-function readCycleSpeed(){
-  var presets=[0.5,1,1.5,2,3];
-  var idx=presets.indexOf(_ttsRate);
-  var next=presets[(idx+1+presets.length)%presets.length];
-  setTTSRate(next);
 }
 /**
  * Increments or decrements the TTS rate by the given delta, clamped to [0.5, 3.0].
@@ -309,5 +298,5 @@ export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
   ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
-  adjustTTSRate, initTTSVoices, setTTSVoice, readCycleSpeed
+  adjustTTSRate, initTTSVoices, setTTSVoice
 };
