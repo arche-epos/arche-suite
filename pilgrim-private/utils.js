@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.20.1',date:'Aug 18, 2026',label:'Latest',
+    version:'4.20.2',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Read tab player bar is back to a single row — Skip Prev/Next Verse and Play/Pause now share the same fixed width as the Speed dropdown, and the Voice picker fills the remaining space instead of wrapping to its own row. Row scrolls horizontally as a fallback on very narrow phones if all five controls don\\u2019t fit'
+    ]},
+  {
+    version:'4.20.1',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'Read tab player bar: Skip Prev/Next Verse and Play/Pause widened to a much larger touch target (100–110px, up from 34px), and the tap-to-cycle speed control replaced with a straightforward dropdown (.5×–3×) — easier to hit accurately and easier to pick an exact speed',
