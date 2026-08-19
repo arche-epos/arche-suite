@@ -1384,6 +1384,7 @@ var _bpFlatBooks=BP_BOOKS.OT.concat(BP_BOOKS.NT); // BOLLS_BOOKS ids 1-66 map 1:
 var _readBook=null,_readChapter=null,_readTargetVerse=null,_readRangeMode=false;
 var _readReference='',_readTranslation='esv',_readScriptureText='';
 var _readVerses=[]; // [{num:'1',text:'...'}, ...] — parsed once per fetch, shared by render + TTS
+var _readChapterBoundaries=[]; // range mode only: [{atIndex, book, chapter, newBook}, ...] — see computeReadChapterBoundaries()
 var _readHandoff=null; // set by startStudyFromReading(), consumed once by createFromTemplate()
 
 /**
@@ -1408,6 +1409,35 @@ function parseReadVerses(text){
     }else{buf+=part;}
   });
   if(curNum!==null)out.push({num:curNum,text:buf.trim()});
+  return out;
+}
+/**
+ * Computes chapter/book boundary markers for a multi-chapter Read-tab range, so
+ * renderReadChapter() can insert a divider between chapters/books. Walks the
+ * parsed verse array and treats each reset to verse "1" (after the first verse)
+ * as a new chapter start — verse numbers reliably reset at chapter boundaries in
+ * a range (see parseReadVerses() note). Starting book/chapter comes from parsing
+ * the range's opening reference; forward progression uses BP_BOOKS chapter counts
+ * to detect book rollovers (e.g. John 21 -> Acts 1).
+ * @param {string} ref - The raw typed range reference.
+ * @param {{num:string,text:string}[]} verses - Parsed verse array for the range.
+ * @returns {{atIndex:number,book:string,chapter:number,newBook:boolean}[]}
+ */
+function computeReadChapterBoundaries(ref,verses){
+  var p=parseRef(ref);
+  if(!p||!verses.length)return[];
+  var bookIdx=p.book-1,chapter=p.chapter;
+  var out=[];
+  for(var i=1;i<verses.length;i++){
+    if(parseInt(verses[i].num,10)===1){
+      chapter++;
+      var newBook=false;
+      var bookDef=_bpFlatBooks[bookIdx];
+      if(bookDef&&chapter>bookDef.c){bookIdx++;chapter=1;newBook=true;}
+      var curBook=_bpFlatBooks[bookIdx];
+      out.push({atIndex:i,book:curBook?curBook.n:'',chapter:chapter,newBook:newBook});
+    }
+  }
   return out;
 }
 /**
@@ -1457,6 +1487,7 @@ async function fetchReadChapter(){
       if(!rtext)throw new Error('Empty response');
       _readScriptureText=rtext;
       _readVerses=parseReadVerses(rtext);
+      _readChapterBoundaries=computeReadChapterBoundaries(ref,_readVerses);
       renderReadChapter(null);
       if(btn)btn.style.display='';
       readSetPlayerEnabled(true);
@@ -1477,6 +1508,7 @@ async function fetchReadChapter(){
     if(!text)throw new Error('Empty response');
     _readScriptureText=text;
     _readVerses=parseReadVerses(text);
+    _readChapterBoundaries=[];
     renderReadChapter(_readTargetVerse);
     if(btn)btn.style.display='';
     readSetPlayerEnabled(true);
@@ -1489,12 +1521,21 @@ async function fetchReadChapter(){
  * own span, keyed by array index (id="read-v-<i>") so ids stay unique even when a
  * cross-chapter range repeats a verse number. Tapping a verse number jumps TTS
  * playback to that verse. The index-keyed span is also what the karaoke-style
- * highlight and the initial "scroll to entry verse" target during playback.
+ * highlight and the initial "scroll to entry verse" target during playback. In
+ * range mode, a "Chapter N" (or "Book N" on a book change) divider is inserted
+ * before the verse at each boundary in _readChapterBoundaries.
  * @param {?number} targetVerse - Verse NUMBER to scroll/highlight (chapter mode only), or null.
  */
 function renderReadChapter(targetVerse){
+  var boundaries=_readChapterBoundaries||[];
   var html=_readVerses.map(function(v,i){
-    return '<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="ttsPlayReadFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+    var divider='';
+    var b=boundaries.find(function(x){return x.atIndex===i;});
+    if(b){
+      var label=b.newBook?(b.book+' '+b.chapter):('Chapter '+b.chapter);
+      divider='<div class="read-chapter-break">'+label+'</div>';
+    }
+    return divider+'<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="ttsPlayReadFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('read-display').innerHTML='<div class="scrtext">'+html+'</div>';
   var scr=document.getElementById('read-scroll');

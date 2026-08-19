@@ -370,7 +370,14 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.20.2',date:'Aug 18, 2026',label:'Latest',
+    version:'4.21.0',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Read tab range mode now shows a chapter divider when a passage range crosses a chapter or book boundary (e.g. "John 1:1-2:5") — a "Chapter 2" header appears between the text, or the new book\\u2019s name if the range crosses into a different book (e.g. "Acts 1")',
+      'fix: Read tab player bar buttons (Skip Prev/Next Verse, Play/Pause) sized up to larger, easier-to-hit touch targets (52-56px) for phone, tablet, and desktop; Voice picker fills the remaining row space'
+    ]},
+  {
+    version:'4.20.2',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Read tab player bar is back to a single row — Skip Prev/Next Verse and Play/Pause now share the same fixed width as the Speed dropdown, and the Voice picker fills the remaining space instead of wrapping to its own row. Row scrolls horizontally as a fallback on very narrow phones if all five controls don\\u2019t fit'
