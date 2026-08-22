@@ -370,32 +370,38 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.23.1',date:'Aug 18, 2026',label:'Latest',
+    version:'4.23.2',date:'Aug 22, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: corrected changelog dates for v4.20.2-4.23.1 — copy-paste error had them all dated Aug 18 (the prior session\\u2019s date) instead of the actual date those changes shipped'
+    ]},
+  {
+    version:'4.23.1',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Read tab chapter/book divider text sized up to read more like a heading (15px → 21px, switched to the same EB Garamond serif as the scripture text) — still a divider, not a big blocky banner'
     ]},
   {
-    version:'4.23.0',date:'Aug 18, 2026',label:'',
+    version:'4.23.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab Volume control changed from a cramped inline slider to a speaker icon that pops open a vertical fader — tap to open, adjust, tap anywhere else to close. Frees up the player row and gives Volume real room to work with on any device'
     ]},
   {
-    version:'4.22.0',date:'Aug 18, 2026',label:'',
+    version:'4.22.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab player bar now has a Volume slider, placed to the right of the Voice picker. Volume is persisted alongside Speed and Voice and mirrored in Settings > Listen / Text-to-Speech, matching how Speed and Voice already sync between the two'
     ]},
   {
-    version:'4.21.0',date:'Aug 18, 2026',label:'',
+    version:'4.21.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab range mode now shows a chapter divider when a passage range crosses a chapter or book boundary (e.g. "John 1:1-2:5") — a "Chapter 2" header appears between the text, or the new book\\u2019s name if the range crosses into a different book (e.g. "Acts 1")',
       'fix: Read tab player bar buttons (Skip Prev/Next Verse, Play/Pause) sized up to larger, easier-to-hit touch targets (52-56px) for phone, tablet, and desktop; Voice picker fills the remaining row space'
     ]},
   {
-    version:'4.20.2',date:'Aug 18, 2026',label:'',
+    version:'4.20.2',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Read tab player bar is back to a single row — Skip Prev/Next Verse and Play/Pause now share the same fixed width as the Speed dropdown, and the Voice picker fills the remaining space instead of wrapping to its own row. Row scrolls horizontally as a fallback on very narrow phones if all five controls don\\u2019t fit'
