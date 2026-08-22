@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.23.0',date:'Aug 18, 2026',label:'Latest',
+    version:'4.23.1',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Read tab chapter/book divider text sized up to read more like a heading (15px → 21px, switched to the same EB Garamond serif as the scripture text) — still a divider, not a big blocky banner'
+    ]},
+  {
+    version:'4.23.0',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab Volume control changed from a cramped inline slider to a speaker icon that pops open a vertical fader — tap to open, adjust, tap anywhere else to close. Frees up the player row and gives Volume real room to work with on any device'
