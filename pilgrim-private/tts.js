@@ -27,6 +27,8 @@ function _qConcl() { return window._qConcl || null; }
 function _qOutline() { return window._qOutline || null; }
 /** @returns {string[]} Currently loaded Read tab chapter, split into one chunk per verse */
 function _readVerseChunks() { return (window.getReadVerseChunks && window.getReadVerseChunks()) || []; }
+/** @returns {string[]} Currently loaded Scripture panel passage, split into one chunk per verse */
+function _scrVerseChunks() { return (window.getScrVerseChunks && window.getScrVerseChunks()) || []; }
 /** @returns {number} Chunk index Read tab playback should start from (the requested entry verse) */
 function _readStartIdx() { return (window.getReadStartIdx && window.getReadStartIdx()) || 0; }
 
@@ -135,6 +137,7 @@ function ttsPlay(source,fromIdx,charOffset){
       _ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;
     }
     if(source==='read'&&window.highlightReadVerse)window.highlightReadVerse(_ttsIdx);
+    if(source==='scr'&&window.highlightScrVerse)window.highlightScrVerse(_ttsIdx);
     var sentence=_ttsSentences[_ttsIdx].trim();
     // If resuming mid-sentence, slice off already-spoken characters (tracked via onboundary)
     var spokenText=resumeOffset>0?sentence.slice(resumeOffset):sentence;
@@ -171,12 +174,30 @@ function ttsToggleField(source){
   ttsStop();var text=ttsGetText(source);if(!text){toast('Nothing to read here');return;}_ttsSentences=ttsSplit(text);ttsPlay(source,0);
 }
 /**
- * Toggles TTS for the scripture panel. Pause if playing, resume if paused, or start fresh.
- * Shows a toast if no scripture text is loaded.
+ * Toggles TTS for the Scripture panel. Pause if playing, resume if paused, or start
+ * fresh — playback is chunked one verse at a time (not sentence-split), matching
+ * the Read tab, so tapping a verse number and Skip Prev/Next Verse can jump to an
+ * exact verse and the karaoke-style highlight can track it. Shows a toast if no
+ * scripture text is loaded.
  */
 function ttsToggleScr(){
   if(_ttsSource==='scr'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('scr',_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText('scr');if(!text){toast('No scripture loaded');return;}_ttsSentences=ttsSplit(text);ttsPlay('scr',0);
+  if(!_scrVerseChunks().length){toast('No scripture loaded');return;}
+  ttsPlayScrFrom(0);
+}
+/**
+ * Starts Scripture panel TTS playback fresh from a specific verse chunk index —
+ * shared by ttsToggleScr() (fresh play), scrSkipVerse() (Skip Prev/Next Verse),
+ * and tapping a verse number to jump-and-play. Always (re)loads the current verse
+ * chunk array first, so it's safe to call even if the loaded passage changed.
+ * @param {number} idx - Index into the Scripture panel's verse chunk array.
+ */
+function ttsPlayScrFrom(idx){
+  var chunks=_scrVerseChunks();
+  if(!chunks.length||idx<0||idx>=chunks.length)return;
+  ttsStop();
+  _ttsSentences=chunks;
+  ttsPlay('scr',idx);
 }
 /**
  * Toggles TTS for the Read tab's loaded chapter/range. Pause if playing, resume if
@@ -229,6 +250,7 @@ function ttsTestVoice(){
  */
 function ttsRestart(source){
   if(source==='read'){ttsPlayReadFrom(0);return;}
+  if(source==='scr'){ttsPlayScrFrom(0);return;}
   ttsStop();
   var text=ttsGetText(source);if(!text)return;_ttsSentences=ttsSplit(text);ttsPlay(source,0);
 }
@@ -255,6 +277,8 @@ function updateTTSRateUI(){
   if(el)el.textContent=_ttsRate+'×';
   var rs=document.getElementById('read-speed-sel');
   if(rs)rs.value=String(_ttsRate); // Read tab player bar mirrors the same global rate
+  var ss=document.getElementById('scr-speed-sel');
+  if(ss)ss.value=String(_ttsRate); // Scripture panel mini-player mirrors the same global rate
   [0.5,1,1.5,2,2.5,3].forEach(function(r){
     var id='tts-pre-'+r.toString().replace('.','_'); // e.g. 1.5 → 'tts-pre-1_5' (period replaced to make valid DOM id)
     var btn=document.getElementById(id);
@@ -314,7 +338,7 @@ function updateTTSVolumeUI(){
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
-  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
+  ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsPlayScrFrom, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
   adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI
 };

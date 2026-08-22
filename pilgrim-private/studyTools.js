@@ -12,12 +12,12 @@ import {
   cur, studies, sett, activeRef,
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
-  toast, toastSuccess
+  toast, toastSuccess, parseVerseChunks
 } from './utils.js';
 
 import { saveStudy, persist, syncFromInputs } from './storage.js';
 import { syncToGist } from './sync.js';
-import { _ttsActive, _ttsSource, ttsStop } from './tts.js';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -55,6 +55,7 @@ var _lexLastResult  = null;
 var _lexSaveContext = null;
 var _wlCache = [];
 var _swCache = [];
+var _scrVerses = []; // {num,text}[] for the currently rendered Scripture panel passage — TTS chunk source
 // S16 — Resource methods lookup (populated at bottom of section)
 var RES_METHODS;
 
@@ -180,12 +181,54 @@ async function getBibleAPI(ref,trans){
   return d.text||'';
 }
 /**
- * Renders fetched scripture text into the scrdisplay element.
- * Converts [N] verse markers to superscript and double newlines to <br><br>.
+ * Renders fetched scripture text into the scrdisplay element, one tappable span
+ * per verse (mirrors the Read tab's renderReadChapter). Tapping a verse number
+ * jumps TTS playback to that verse via ttsPlayScrFrom(). Stores the parsed verse
+ * array in _scrVerses as the TTS chunk source for this passage.
  * @param {string} text - Raw verse-numbered passage text.
  * @param {string} trans - Translation code (unused in rendering; reserved for future use).
  */
-function renderScrText(text,trans){var clean=text.replace(/\[(\d+)\]/g,'<sup class="vnum">$1</sup>').replace(/\n\n/g,'<br><br>');document.getElementById('scrdisplay').innerHTML='<div class="scrtext">'+clean+'</div>';}
+function renderScrText(text,trans){
+  _scrVerses=parseVerseChunks(text);
+  var html=_scrVerses.map(function(v,i){
+    return '<span class="readverse" id="scr-v-'+i+'"><sup class="vnum" onclick="ttsPlayScrFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+  }).join(' ');
+  document.getElementById('scrdisplay').innerHTML='<div class="scrtext">'+html+'</div>';
+}
+/**
+ * Returns the plain text of each verse currently loaded in the Scripture panel,
+ * in order — the TTS engine's playback chunk array for the 'scr' source (one
+ * utterance per verse, no verse numbers spoken).
+ * @returns {string[]}
+ */
+function getScrVerseChunks(){return _scrVerses.map(function(v){return v.text;});}
+/**
+ * Scrolls to and highlights the verse at the given TTS chunk index — called by
+ * tts.js during 'scr' playback so the visible text tracks the spoken verse.
+ * Clears any previous highlight first so exactly one verse is highlighted at a time.
+ * @param {number} idx - Index into _scrVerses / the TTS chunk array.
+ */
+function highlightScrVerse(idx){
+  var el=document.getElementById('scr-v-'+idx);
+  if(!el)return;
+  document.querySelectorAll('#scrdisplay .readverse-hl').forEach(function(e){e.classList.remove('readverse-hl');});
+  el.classList.add('readverse-hl');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+/**
+ * Skips Scripture-panel TTS playback forward or backward by one verse.
+ * If nothing is currently playing/paused, starts playback from the beginning
+ * instead of no-op'ing — matches the Read tab's Skip Verse behavior.
+ * @param {number} dir - +1 for next verse, -1 for previous verse.
+ */
+function scrSkipVerse(dir){
+  var chunks=getScrVerseChunks();
+  if(!chunks.length)return;
+  var curIdx=(_ttsSource==='scr')?_ttsIdx:0;
+  var nextIdx=curIdx+dir;
+  if(nextIdx<0||nextIdx>=chunks.length)return;
+  window.ttsPlayScrFrom(nextIdx);
+}
 /**
  * Copies the current study's scripture text to the clipboard.
  * No-op if no study is open or scripture text is empty.
@@ -1676,6 +1719,7 @@ function resInsertText(id){
 export {
   // S11 — Bible API
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
+  getScrVerseChunks, highlightScrVerse, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,

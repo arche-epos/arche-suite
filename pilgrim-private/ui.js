@@ -24,6 +24,8 @@ import {
   TOOL_LABELS, TOOL_DESCS,
   // Section 27 — namespace helpers (defined in utils.js)
   migrateLegacyKey, activateUser,
+  // Shared verse-chunk parsing (Read tab + Scripture panel)
+  parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
 } from './utils.js';
@@ -1398,19 +1400,7 @@ var _readHandoff=null; // set by startStudyFromReading(), consumed once by creat
  * @param {string} text - Raw verse-numbered chapter/range text.
  * @returns {{num:string,text:string}[]}
  */
-function parseReadVerses(text){
-  var parts=text.split(/(\[\d+\])/g);
-  var out=[],curNum=null,buf='';
-  parts.forEach(function(part){
-    var m=part.match(/^\[(\d+)\]$/);
-    if(m){
-      if(curNum!==null)out.push({num:curNum,text:buf.trim()});
-      curNum=m[1];buf='';
-    }else{buf+=part;}
-  });
-  if(curNum!==null)out.push({num:curNum,text:buf.trim()});
-  return out;
-}
+function parseReadVerses(text){return parseVerseChunks(text);}
 /**
  * Computes chapter/book boundary markers for a multi-chapter Read-tab range, so
  * renderReadChapter() can insert a divider between chapters/books. Walks the

@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.23.2',date:'Aug 22, 2026',label:'Latest',
+    version:'4.24.0',date:'Aug 22, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Scripture panel now uses the Read tab\\u2019s TTS mechanics \\u2014 verse-by-verse playback (no verse numbers spoken aloud), tap a verse number to jump playback to it, and a compact mini-player (Skip Prev/Next Verse, Play/Pause, Restart, Speed) in place of the old single Listen button'
+    ]},
+  {
+    version:'4.23.2',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: corrected changelog dates for v4.20.2-4.23.1 — copy-paste error had them all dated Aug 18 (the prior session\\u2019s date) instead of the actual date those changes shipped'
@@ -1454,6 +1460,30 @@ function renderRefPills(containerId,mode){
 
 // ════════════════════════════════════════════════════════
 
+/**
+ * Splits raw verse-numbered text (e.g. "[1]In the beginning...[2]And the earth...")
+ * into an ordered array of {num, text} verse objects. Shared by the Read tab
+ * (renderReadChapter) and the Scripture panel (renderScrText) so both agree on
+ * exactly the same verse split, and by their respective TTS verse-chunk builders.
+ * Note: verse numbers reset at each chapter boundary in a cross-chapter range —
+ * callers that need unique DOM ids should key off array index, not v.num.
+ * @param {string} text - Raw verse-numbered chapter/range/passage text.
+ * @returns {{num:string,text:string}[]}
+ */
+function parseVerseChunks(text){
+  var parts=text.split(/(\[\d+\])/g);
+  var out=[],curNum=null,buf='';
+  parts.forEach(function(part){
+    var m=part.match(/^\[(\d+)\]$/);
+    if(m){
+      if(curNum!==null)out.push({num:curNum,text:buf.trim()});
+      curNum=m[1];buf='';
+    }else{buf+=part;}
+  });
+  if(curNum!==null)out.push({num:curNum,text:buf.trim()});
+  return out;
+}
+
 // Export all public symbols for ES Module consumers
 export {
   // Section 01 — constants
@@ -1480,6 +1510,8 @@ export {
   removeRef, confirmRemoveRef, doRemoveRef, renderRefPills,
   // Section 27 partial — namespace helpers
   migrateLegacyKey, activateUser,
+  // Shared verse-chunk parsing (Read tab + Scripture panel)
+  parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
 };
