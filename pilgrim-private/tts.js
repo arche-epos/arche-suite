@@ -300,14 +300,15 @@ function setTTSVoice(name){_ttsVoice=name;saveTTSSett();}
 function setTTSVolume(v){_ttsVolume=v;saveTTSSett();updateTTSVolumeUI();}
 /**
  * Syncs both volume sliders (#tts-volume-sel in Settings, #read-volume-sel in the
- * Read tab player bar) and the Settings percentage label to the current _ttsVolume
- * — both controls share the same global value.
+ * Read tab player's popout) and both percentage labels to the current _ttsVolume
+ * — all controls share the same global value.
  */
 function updateTTSVolumeUI(){
   var pct=Math.round((_ttsVolume||0)*100);
   var s1=document.getElementById('tts-volume-sel');if(s1)s1.value=String(_ttsVolume);
   var s2=document.getElementById('read-volume-sel');if(s2)s2.value=String(_ttsVolume);
   var d=document.getElementById('tts-volume-display');if(d)d.textContent=pct+'%';
+  var d2=document.getElementById('read-volume-pct');if(d2)d2.textContent=pct+'%';
 }
 
 // ── Named exports ────────────────────────────────────────────────────────────

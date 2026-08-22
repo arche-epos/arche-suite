@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.22.0',date:'Aug 18, 2026',label:'Latest',
+    version:'4.23.0',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Read tab Volume control changed from a cramped inline slider to a speaker icon that pops open a vertical fader — tap to open, adjust, tap anywhere else to close. Frees up the player row and gives Volume real room to work with on any device'
+    ]},
+  {
+    version:'4.22.0',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab player bar now has a Volume slider, placed to the right of the Voice picker. Volume is persisted alongside Speed and Voice and mirrored in Settings > Listen / Text-to-Speech, matching how Speed and Voice already sync between the two'

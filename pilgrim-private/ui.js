@@ -1652,6 +1652,46 @@ function readSkipVerse(dir){
   ttsPlayReadFrom(nextIdx);
 }
 /**
+ * Toggles the Read tab player bar's volume popout (a vertical slider anchored
+ * below the speaker icon). Uses position:fixed with a JS-computed location —
+ * the player row has overflow-x:auto for its horizontal-scroll fallback, and a
+ * plain position:absolute popout nested inside it would get clipped by that;
+ * position:fixed escapes ancestor overflow clipping entirely. Position is
+ * recomputed on a rAF tick after becoming visible so popout.offsetWidth is
+ * accurate (it's 0 before first paint). Opening attaches a one-shot document
+ * click listener (deferred via setTimeout so it doesn't catch the same click
+ * that opened the popout) to close it on any tap/click outside.
+ * @param {MouseEvent} [e] - The triggering click event, stopped from bubbling.
+ */
+function toggleVolumePopout(e){
+  if(e)e.stopPropagation();
+  var p=document.getElementById('read-volume-popout');
+  var btn=document.getElementById('read-volume-btn');
+  if(!p||!btn)return;
+  var opening=p.style.display==='none'||!p.style.display;
+  if(!opening){p.style.display='none';return;}
+  var r=btn.getBoundingClientRect();
+  p.style.left=Math.round(r.right-70)+'px'; // rough guess before first paint (~70px popout width)
+  p.style.top=Math.round(r.bottom+6)+'px';
+  p.style.display='flex';
+  requestAnimationFrame(function(){
+    var r2=btn.getBoundingClientRect();
+    p.style.left=Math.round(r2.right-p.offsetWidth)+'px';
+    p.style.top=Math.round(r2.bottom+6)+'px';
+  });
+  setTimeout(function(){document.addEventListener('click',closeVolumePopoutOnce,{once:true});},0);
+}
+/**
+ * Closes the volume popout if the click landed outside it and outside the
+ * speaker button that opens it. Bound as a one-shot listener by toggleVolumePopout().
+ * @param {MouseEvent} e
+ */
+function closeVolumePopoutOnce(e){
+  var p=document.getElementById('read-volume-popout');
+  var btn=document.getElementById('read-volume-btn');
+  if(p&&!p.contains(e.target)&&e.target!==btn)p.style.display='none';
+}
+/**
  * Enables or disables the Read tab's player bar transport buttons (Skip Prev/Next,
  * Play/Pause). Speed and Voice controls stay enabled always — they're global settings.
  * @param {boolean} enabled
@@ -3020,6 +3060,7 @@ export {
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
   getReadVerseChunks, getReadStartIdx, highlightReadVerse, readSkipVerse, readAutoAdvance,
+  toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
   exportData, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
