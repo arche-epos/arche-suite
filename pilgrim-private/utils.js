@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.21.0',date:'Aug 18, 2026',label:'Latest',
+    version:'4.22.0',date:'Aug 18, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Read tab player bar now has a Volume slider, placed to the right of the Voice picker. Volume is persisted alongside Speed and Voice and mirrored in Settings > Listen / Text-to-Speech, matching how Speed and Voice already sync between the two'
+    ]},
+  {
+    version:'4.21.0',date:'Aug 18, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Read tab range mode now shows a chapter divider when a passage range crosses a chapter or book boundary (e.g. "John 1:1-2:5") — a "Chapter 2" header appears between the text, or the new book\\u2019s name if the range crosses into a different book (e.g. "Acts 1")',

@@ -118,6 +118,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 .readverse{transition:background-color .3s ease;border-radius:3px}
 .readverse-hl{background-color:var(--golddim)}
 .read-chapter-break{display:block;margin:22px 0 14px;padding-top:16px;border-top:1px solid var(--border);text-align:center;font-family:'Crimson Pro',serif;font-weight:600;font-size:15px;letter-spacing:.03em;color:var(--gold)}
+input[type="range"]{accent-color:var(--gold)}
 #read-player button:disabled{opacity:.35;cursor:default}
 #read-prev-chapter-btn:disabled,#read-next-chapter-btn:disabled{opacity:.35;cursor:default}
 #read-display .vnum{cursor:pointer}
@@ -594,6 +595,10 @@ select option{background:var(--bg2);color:var(--txt1)}
     <select id="read-voice-sel" onchange="setTTSVoice(this.value)" title="Voice" style="flex:1 1 auto;min-width:0;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--txt2);font-family:'Crimson Pro',serif;font-size:12px;padding:5px 6px;height:52px;cursor:pointer">
       <option value="">Default Voice</option>
     </select>
+    <div id="read-volume-wrap" style="display:flex;align-items:center;gap:4px;flex:0 0 76px;height:52px" title="Volume">
+      <span aria-hidden="true" style="font-size:15px;color:var(--txt3);flex-shrink:0">🔊</span>
+      <input type="range" id="read-volume-sel" min="0" max="1" step="0.05" value="1" oninput="setTTSVolume(parseFloat(this.value))" style="width:52px;cursor:pointer">
+    </div>
   </div>
   <div style="display:flex;gap:8px;padding:10px 16px 0">
     <button id="read-prev-chapter-btn" class="btn btn-sec btn-sm" style="flex:1" onclick="readPrevChapter()">&#8592; Prev Chapter</button>
@@ -944,6 +949,13 @@ select option{background:var(--bg2);color:var(--txt1)}
       </select>
       <div style="font-size:11px;color:var(--txt4);margin-top:6px">Voice options vary by device and OS. Tap the field to see available voices.</div>
       <button id="tts-test-btn" onclick="ttsTestVoice()" style="margin-top:10px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-family:'Crimson Pro',serif;font-size:13px;padding:6px 14px;cursor:pointer;width:100%">▶ Test Voice</button>
+      <div style="margin-top:14px;margin-bottom:6px;font-size:12px;color:var(--txt3)">Volume</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span aria-hidden="true" style="font-size:14px;color:var(--txt3)">🔉</span>
+        <input type="range" id="tts-volume-sel" min="0" max="1" step="0.05" value="1" oninput="setTTSVolume(parseFloat(this.value))" style="flex:1;cursor:pointer">
+        <span aria-hidden="true" style="font-size:14px;color:var(--txt3)">🔊</span>
+      </div>
+      <div id="tts-volume-display" style="font-size:11px;color:var(--txt4);text-align:center;margin-top:2px">100%</div>
     </div>
     <div class="divider"></div>
     <div style="margin-bottom:22px" id="settings-sec-trans">

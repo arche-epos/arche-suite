@@ -38,6 +38,7 @@ export var _ttsPaused = false;
 export var _ttsSource = '';
 export var _ttsRate = 1;
 export var _ttsVoice = '';
+export var _ttsVolume = 1;
 export var _ttsCharOffset = 0;
 export var _ttsSession = 0;
 
@@ -139,7 +140,7 @@ function ttsPlay(source,fromIdx,charOffset){
     var spokenText=resumeOffset>0?sentence.slice(resumeOffset):sentence;
     if(!spokenText){_ttsIdx++;resumeOffset=0;speakNext();return;}
     var utt=new SpeechSynthesisUtterance(spokenText);
-    utt.rate=_ttsRate||1;utt.pitch=1;
+    utt.rate=_ttsRate||1;utt.pitch=1;utt.volume=(typeof _ttsVolume==='number')?_ttsVolume:1;
     var v=ttsGetVoice();if(v)utt.voice=v;
     // Capture resumeOffset in a closure — resumeOffset is reset to 0 after the first chunk
     var capturedOffset=resumeOffset;
@@ -213,7 +214,7 @@ function ttsTestVoice(){
   window.speechSynthesis.cancel();
   var btn=document.getElementById('tts-test-btn');
   var utt=new SpeechSynthesisUtterance('In the beginning was the Word, and the Word was with God, and the Word was God.');
-  utt.rate=_ttsRate||1;utt.pitch=1;
+  utt.rate=_ttsRate||1;utt.pitch=1;utt.volume=(typeof _ttsVolume==='number')?_ttsVolume:1;
   var v=ttsGetVoice();if(v)utt.voice=v;
   utt.onstart=function(){if(btn)btn.textContent='■ Stop';};
   utt.onend=function(){if(btn)btn.textContent='▶ Test Voice';};
@@ -232,14 +233,14 @@ function ttsRestart(source){
   var text=ttsGetText(source);if(!text)return;_ttsSentences=ttsSplit(text);ttsPlay(source,0);
 }
 /**
- * Loads TTS rate and voice preferences from localStorage and applies them.
- * Silently no-ops on parse failure. Calls updateTTSRateUI after loading.
+ * Loads TTS rate, voice, and volume preferences from localStorage and applies them.
+ * Silently no-ops on parse failure. Calls updateTTSRateUI/updateTTSVolumeUI after loading.
  */
-function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;}}catch(e){}updateTTSRateUI();}
+function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;if(typeof s.volume==='number')_ttsVolume=s.volume;}}catch(e){}updateTTSRateUI();updateTTSVolumeUI();}
 /**
- * Persists the current TTS rate and voice selections to localStorage.
+ * Persists the current TTS rate, voice, and volume selections to localStorage.
  */
-function saveTTSSett(){localStorage.setItem(SK_TTS_SETT,JSON.stringify({rate:_ttsRate,voice:_ttsVoice}));}
+function saveTTSSett(){localStorage.setItem(SK_TTS_SETT,JSON.stringify({rate:_ttsRate,voice:_ttsVoice,volume:_ttsVolume}));}
 /**
  * Sets the TTS playback rate, persists it, and refreshes the rate UI.
  * @param {number} r - Playback rate (0.5 – 3.0).
@@ -292,11 +293,27 @@ function initTTSVoices(){
  * @param {string} name - The SpeechSynthesisVoice name to use.
  */
 function setTTSVoice(name){_ttsVoice=name;saveTTSSett();}
+/**
+ * Sets the TTS playback volume, persists it, and refreshes the volume UI.
+ * @param {number} v - Volume level (0.0 – 1.0).
+ */
+function setTTSVolume(v){_ttsVolume=v;saveTTSSett();updateTTSVolumeUI();}
+/**
+ * Syncs both volume sliders (#tts-volume-sel in Settings, #read-volume-sel in the
+ * Read tab player bar) and the Settings percentage label to the current _ttsVolume
+ * — both controls share the same global value.
+ */
+function updateTTSVolumeUI(){
+  var pct=Math.round((_ttsVolume||0)*100);
+  var s1=document.getElementById('tts-volume-sel');if(s1)s1.value=String(_ttsVolume);
+  var s2=document.getElementById('read-volume-sel');if(s2)s2.value=String(_ttsVolume);
+  var d=document.getElementById('tts-volume-display');if(d)d.textContent=pct+'%';
+}
 
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
   ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
-  adjustTTSRate, initTTSVoices, setTTSVoice
+  adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI
 };
