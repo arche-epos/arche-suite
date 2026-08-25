@@ -43,6 +43,7 @@ export var _ttsVoice = '';
 export var _ttsVolume = 1;
 export var _ttsCharOffset = 0;
 export var _ttsSession = 0;
+export var _ttsRepeat = false;
 
 // ── Setters for cross-module writes ─────────────────────────────────────────
 export function setTtsActive(v)  { _ttsActive  = v; }
@@ -103,7 +104,7 @@ function ttsGetVoice(){if(!window.speechSynthesis)return null;var voices=window.
  * Stops TTS playback and resets all playback state (index, char offset, active/paused flags).
  * Updates buttons for the previously active source to stopped state.
  */
-function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');}
+function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');if(window.clearReadFocus)window.clearReadFocus();}
 /**
  * Pauses TTS by cancelling the current utterance and setting _ttsPaused=true.
  * Preserves _ttsIdx and _ttsCharOffset so playback can resume mid-sentence.
@@ -131,6 +132,12 @@ function ttsPlay(source,fromIdx,charOffset){
   function speakNext(){
     if(mySession!==_ttsSession)return;
     if(!_ttsActive||_ttsIdx>=_ttsSentences.length){
+      // Repeat takes priority over auto-advance: loop the currently loaded reference
+      // (verse 0) rather than continuing into the next chapter. Only applies to the
+      // verse-chunked sources tied to a reference box ('read', 'scr').
+      if(_ttsActive&&_ttsRepeat&&_ttsIdx>=_ttsSentences.length&&(source==='read'||source==='scr')){
+        _ttsIdx=0;resumeOffset=0;speakNext();return;
+      }
       // Reached the end naturally (still active, not paused/stopped) while reading —
       // hand off to readAutoAdvance() to continue into the next chapter, if available.
       if(_ttsActive&&source==='read'&&_ttsIdx>=_ttsSentences.length&&window.readAutoAdvance){window.readAutoAdvance();return;}
@@ -335,10 +342,32 @@ function updateTTSVolumeUI(){
   var d2=document.getElementById('read-volume-pct');if(d2)d2.textContent=pct+'%';
 }
 
+/**
+ * Toggles Repeat mode — loops the currently loaded reference (Read tab or
+ * Scripture panel) from the start once playback reaches the end, instead of
+ * stopping (or, for Read, instead of auto-advancing into the next chapter).
+ * Shared global flag, mirrored by both players' Repeat buttons — same pattern
+ * as rate/voice/volume, which are already single shared globals across players.
+ */
+function toggleTTSRepeat(){_ttsRepeat=!_ttsRepeat;updateTTSRepeatUI();}
+/**
+ * Syncs both Repeat buttons (Read player, Scripture panel mini-player) to the
+ * current _ttsRepeat state — gold/active when on, dim/default when off.
+ */
+function updateTTSRepeatUI(){
+  ['read-repeat-btn','scr-repeat-btn'].forEach(function(id){
+    var btn=document.getElementById(id);
+    if(!btn)return;
+    if(_ttsRepeat){btn.style.color='var(--gold)';btn.style.borderColor='var(--gold)';}
+    else{btn.style.color='var(--txt3)';btn.style.borderColor='var(--border)';}
+  });
+}
+
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
   ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsPlayScrFrom, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
-  adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI
+  adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI,
+  toggleTTSRepeat, updateTTSRepeatUI
 };

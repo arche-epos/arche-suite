@@ -386,10 +386,16 @@ function populateDeep(){
   var scrPanel=document.getElementById('deep-scr-collapsible');
   var scrLabel=document.getElementById('deep-scr-label');
   if(scrEl&&scrPanel){
-    var scrText=ar&&ar.scriptureText?ar.scriptureText.replace(/<[^>]+>/g,''):'';
+    var scrText=ar&&ar.scriptureText?ar.scriptureText:'';
     if(scrText){
-      scrEl.innerHTML='';
-      scrEl.textContent=scrText;
+      // Ports the Read tab's verse-numbered .scrtext formatting into this panel
+      // (previously plain italic text) — same parseVerseChunks pattern as
+      // renderReadChapter()/renderScrText(), minus TTS wiring (read-only here).
+      var _dVerses=parseVerseChunks(scrText);
+      var _dHtml=_dVerses.map(function(v){
+        return '<span class="readverse"><sup class="vnum">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+      }).join(' ');
+      scrEl.innerHTML='<div class="scrtext">'+_dHtml+'</div>';
       if(scrLabel)scrLabel.textContent=(ar&&ar.reference)||'Scripture';
     } else {
       // Always show the section — an empty, unexplained hidden panel reads as a missing

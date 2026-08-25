@@ -1620,17 +1620,26 @@ function getReadStartIdx(){
   return idx>=0?idx:0;
 }
 /**
- * Scrolls to and highlights the verse at the given TTS chunk index — called by
- * tts.js during 'read' playback so the visible text tracks the spoken verse.
- * Clears any previous highlight first so exactly one verse is highlighted at a time.
+ * Scrolls to and visually "focuses" the verse at the given TTS chunk index — called
+ * by tts.js during 'read' playback so the visible text tracks the spoken verse.
+ * Focus is a 3x font-size bump on just the active verse (readverse-focus), not a
+ * background highlight — easier to visually track while listening than a color
+ * change. Clears any previous focus first so exactly one verse is enlarged at a time.
  * @param {number} idx - Index into _readVerses / the TTS chunk array.
  */
 function highlightReadVerse(idx){
   var el=document.getElementById('read-v-'+idx);
   if(!el)return;
-  document.querySelectorAll('#read-display .readverse-hl').forEach(function(e){e.classList.remove('readverse-hl');});
-  el.classList.add('readverse-hl');
+  document.querySelectorAll('#read-display .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
+  el.classList.add('readverse-focus');
   el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+/**
+ * Clears the Read tab's active-verse focus effect (readverse-focus), if any.
+ * Called by ttsStop() so the text returns to normal size once playback fully stops.
+ */
+function clearReadFocus(){
+  document.querySelectorAll('#read-display .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
 }
 /**
  * Skips Read-tab TTS playback forward or backward by one verse.
@@ -3102,7 +3111,7 @@ export {
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
-  getReadVerseChunks, getReadStartIdx, highlightReadVerse, readSkipVerse, readAutoAdvance,
+  getReadVerseChunks, getReadStartIdx, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,

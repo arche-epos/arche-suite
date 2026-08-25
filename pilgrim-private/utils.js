@@ -406,7 +406,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.27.2',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.0',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Study Tools\u2019 Scripture panel now uses the same verse-numbered formatting as the Read tab (previously plain italic text).',
+      'feat: Added a Repeat button to the Read player and the Scripture panel mini-player \u2014 loops the currently loaded reference from the start once playback reaches the end, instead of stopping (Read: instead of advancing into the next chapter).',
+      'feat: During Read tab playback, the actively-spoken verse now enlarges (3x) instead of just background-highlighting \u2014 easier to visually track while listening. Resets to normal size when playback stops.',
+      'tune: Read player\u2019s Voice selector now always shows \u201cVoice\u201d instead of the selected voice name \u2014 tap it to see/change your pick. Speed selector narrowed and centered (removed unused width) in both the Read player and Scripture panel mini-player.'
+    ]},
+  {
+    version:'4.27.2',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Historical Context TIME PERIOD & AUTHOR section could state a debated date/authorship (e.g. Acts) as settled fact. Prompt now requires the tool to check for genuine scholarly debate first and, if present, name the general range each side holds rather than defaulting to one date with an optional footnote.'
