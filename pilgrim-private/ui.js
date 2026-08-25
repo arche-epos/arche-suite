@@ -8,7 +8,8 @@ import {
   WORKER_URL, APP_SHARE_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_UPDATE_SKIP,
-  SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
+  SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_ERROR_LOG,
+  logError, loadErrorLog, clearErrorLog,
   // Section 02 — state
   studies, cur, sett, online, TAGS, ACTIVE_USER,
   studyScope, activeRefIdx, _pendingDeleteId, _pendingDeleteRefIdx, _renameResId,
@@ -81,6 +82,8 @@ var _pendingUpdateVersion = null; // checkForUpdate: version string for dismissU
 // Changelog section toggle state (S26 — renderChangelog, clSectionToggle, clToggle)
 var _clOpen = {};            // map of changelog entry index → bool (open/closed)
 var _clSectionOpen = false;  // changelog section collapsed state
+// Error Log section toggle state (S28a — renderErrorLog, errorLogSectionToggle)
+var _errorLogSectionOpen = false;
 // DELETED_TAGS: tombstone list for deleted tags.
 // sync.js accesses via window.DELETED_TAGS bridge in app.js (see defineProperty there).
 // setDeletedTags() is called by the window.DELETED_TAGS setter in app.js when
@@ -154,7 +157,7 @@ function navTo(id){
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
-  if(id==='settings'){renderTagManager();renderChangelog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN))setTimeout(function(){startTour('settings');},300);}
+  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN))setTimeout(function(){startTour('settings');},300);}
 }
 /**
  * Switches between the Study tab's Notes and Study Tools sub-panels.
@@ -867,7 +870,7 @@ async function exportPDF(opts){
     var fname=pdfSafe((cur.title||'study').replace(/[^a-z0-9]/gi,'_'))+'_'+(cur.date||'undated')+'.pdf';
     if(navigator.share&&/Mobi|Android/i.test(navigator.userAgent)){try{var blob=doc.output('blob'),file=new File([blob],fname,{type:'application/pdf'});await navigator.share({files:[file],title:cur.title||'Arche Pilgrim Study'});toast('PDF shared');return;}catch(e){}}
     doc.save(fname);toast('PDF downloaded');
-  }catch(e){toast('PDF error: '+e.message);console.error(e);}
+  }catch(e){logError('PDF Export',e);toast('PDF error: '+e.message);console.error(e);}
 }
 
 // ── SWIPE GESTURES ───────────────────────────────────────────────
@@ -952,7 +955,7 @@ function importDataFromFile(input){
       }
       renderLib();
       toast('Imported '+imported.length+' studies ('+(added)+' new)');
-    }catch(err){toast('Import failed: '+err.message);}
+    }catch(err){logError('Import Studies',err);toast('Import failed: '+err.message);}
   };
   reader.readAsText(file);
   input.value='';
@@ -1015,7 +1018,7 @@ function shareStudyLinkById(id){
       var url=shortUrl||(APP_SHARE_URL+'#study='+encoded);
       _dispatchShare(url,title,shareText);
     });
-  }catch(e){toast('Could not generate link: '+e.message);}
+  }catch(e){logError('Generate Share Link',e);toast('Could not generate link: '+e.message);}
 }
 /**
  * Requests a short share slug from the arche-proxy /share route.
@@ -1482,6 +1485,7 @@ async function fetchReadChapter(){
       if(btn)btn.style.display='';
       readSetPlayerEnabled(true);
     }catch(e){
+      logError('Load Reading Range',e);
       disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load that range.</p></div>';
     }
     return;
@@ -1503,6 +1507,7 @@ async function fetchReadChapter(){
     if(btn)btn.style.display='';
     readSetPlayerEnabled(true);
   }catch(e){
+    logError('Load Reading Chapter',e);
     disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px">Could not load passage.</p></div>';
   }
 }
@@ -2803,7 +2808,8 @@ async function submitFeedback(){
       diagnosticSummary:{pass:passCount,fail:failCount},
       diagnosticResults:_diagResults,
       description:desc,
-      images:images
+      images:images,
+      errorLog:loadErrorLog().slice(0,20)
     };
     await sendFeedback(payload);
     statusEl.style.color='var(--sagebright)';
@@ -2811,7 +2817,7 @@ async function submitFeedback(){
     // Reset pills/text/images after a brief delay so the confirmation is visible first.
     // diagFbReset() also clears diag-send-status — that's fine once the 2s window has passed.
     setTimeout(diagFbReset,2000);
-  }catch(e){statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Failed: '+e.message;}
+  }catch(e){logError('Submit Feedback',e);statusEl.style.color='var(--crimsonbright)';statusEl.textContent='Failed: '+e.message;}
   finally{btn.disabled=false;}
 }
 /* show feedback toggle row only in private (diagFeedback toggle exists) */
@@ -2855,6 +2861,53 @@ function renderChangelog(){
 function clToggle(i){
   _clOpen[i]=!(_clOpen.hasOwnProperty(i)?_clOpen[i]:false);
   renderChangelog();
+}
+
+/**
+ * Toggles the Error Log section open/closed in Settings and re-renders it.
+ */
+function errorLogSectionToggle(){
+  _errorLogSectionOpen=!_errorLogSectionOpen;
+  var btn=document.getElementById('errorlog-section-btn');
+  if(btn)btn.innerHTML=_errorLogSectionOpen?'Hide &#8963;':'Show &#8964;';
+  renderErrorLog();
+}
+/**
+ * Renders the persistent error log into the Settings panel, newest first.
+ * Each entry shows its timestamp, the action being attempted, and the error message.
+ */
+function renderErrorLog(){
+  var el=document.getElementById('errorlog-list');if(!el)return;
+  var log=loadErrorLog();
+  el.innerHTML=log.length?log.map(function(e){
+    var d=new Date(e.ts);
+    var when=isNaN(d.getTime())?e.ts:d.toLocaleString();
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">'+
+      '<div style="color:var(--txt4)">'+when+'</div>'+
+      '<div style="color:var(--gold);margin-top:2px">'+escHtml(e.action)+'</div>'+
+      '<div style="color:var(--txt3);margin-top:2px">'+escHtml(e.message)+'</div>'+
+    '</div>';
+  }).join(''):'<div class="setsub" style="padding:8px 0">No errors logged.</div>';
+  var body=document.getElementById('errorlog-body');
+  if(body){body.style.maxHeight=_errorLogSectionOpen?body.scrollHeight+'px':'0';}
+}
+/**
+ * Copies the full error log to the clipboard as plain text (one line per entry).
+ */
+function copyErrorLog(){
+  var log=loadErrorLog();
+  if(!log.length){toast('No errors to copy');return;}
+  var text=log.map(function(e){return e.ts+' | '+e.action+' | '+e.message;}).join('\n');
+  navigator.clipboard.writeText(text).then(function(){toastSuccess('Error log copied');}).catch(function(){toast('Copy failed');});
+}
+/**
+ * Clears the error log after a native confirm dialog.
+ */
+function clearErrorLogUI(){
+  if(!confirm('Clear the error log? This cannot be undone.'))return;
+  clearErrorLog();
+  renderErrorLog();
+  toast('Error log cleared');
 }
 
 
@@ -3067,6 +3120,8 @@ export {
   diagPillSelect, diagGetPill, diagFbInput, diagFbToggleExtended,
   diagFbPickImage, diagFbRenderThumbs, diagFbRemoveImage, diagFbReset,
   submitFeedback, initDiagSection, renderChangelog, clToggle,
+  // S28a — Error Log
+  errorLogSectionToggle, renderErrorLog, copyErrorLog, clearErrorLogUI,
   // S27-partial — PIN Auth UI
   initPinGate, submitPin, switchUser,
   // S28-partial — Startup helpers

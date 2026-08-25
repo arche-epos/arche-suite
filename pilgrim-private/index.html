@@ -1048,6 +1048,21 @@ input[type="range"]{accent-color:var(--gold)}
       </div>
     </div>
     <div class="divider"></div>
+    <div style="margin-bottom:22px" id="settings-sec-errorlog">
+      <div class="cl-section-hdr" onclick="errorLogSectionToggle()">
+        <div class="sethead">Error Log</div>
+        <button class="cl-toggle-btn" id="errorlog-section-btn">Show &#8964;</button>
+      </div>
+      <div class="cl-body" id="errorlog-body">
+        <div class="setsub" style="margin-top:4px">Recent app errors (network, save, sync), newest first &mdash; last 50 kept on this device. The 20 most recent are attached automatically if you send Feedback.</div>
+        <div style="display:flex;gap:8px;margin:10px 0">
+          <button class="btn btn-sec btn-sm" onclick="copyErrorLog()">Copy Log</button>
+          <button class="btn btn-sec btn-sm" onclick="clearErrorLogUI()">Clear Log</button>
+        </div>
+        <div id="errorlog-list" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="divider"></div>
     <div style="margin-bottom:22px" id="diag-settings-section">
       <div class="cl-section-hdr" onclick="toggleDiagSection()">
         <div class="sethead">Diagnostics</div>

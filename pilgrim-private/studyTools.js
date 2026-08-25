@@ -12,7 +12,7 @@ import {
   cur, studies, sett, activeRef,
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
-  toast, toastSuccess, parseVerseChunks
+  toast, toastSuccess, parseVerseChunks, logError
 } from './utils.js';
 
 import { saveStudy, persist, syncFromInputs } from './storage.js';
@@ -92,7 +92,7 @@ async function fetchScr(){
     if(!text)throw new Error('Empty response');
     if(ar)ar.scriptureText=text;
     renderScrText(text,trans);document.getElementById('scracts').style.display='flex';
-  }catch(e){disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px;margin-bottom:10px">Could not load passage.</p><button class="btn btn-sec btn-sm" onclick="openPasteModal()">Paste Scripture</button></div>';}
+  }catch(e){logError('Load Scripture Passage',e);disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px;margin-bottom:10px">Could not load passage.</p><button class="btn btn-sec btn-sm" onclick="openPasteModal()">Paste Scripture</button></div>';}
 }
 /**
  * Fetches a passage from the ESV API via the arche-proxy Cloudflare Worker.
@@ -477,6 +477,7 @@ async function showResScripture(ref){
     var clean=text.replace(/\[(\d+)\]/g,'<sup style="color:var(--golddim);font-size:10px;vertical-align:super;">$1</sup>').replace(/\n\n/g,'<br><br>');
     body.innerHTML='<div style="font-family:\'EB Garamond\',serif;font-size:17px;line-height:1.9;color:var(--txt1);font-style:italic;">'+clean+'</div><div style="font-size:11px;color:var(--txt4);margin-top:10px;font-style:italic;">ESV — English Standard Version</div>';
   }catch(e){
+    logError('Load Scripture (Resources)',e);
     body.innerHTML='<div style="color:var(--txt3);font-size:14px;font-style:italic;">Could not load ESV text. Check your connection or use Paste mode.</div>';
   }
 }
@@ -677,6 +678,7 @@ async function runTool(tool){
     btn.classList.remove('busy');btn.classList.add('ready');
     if(!btn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';btn.appendChild(d);}
   }catch(e){
+    logError('AI Study Tool: '+tool,e);
     document.getElementById('aipanel-content').innerHTML='<p style="color:var(--crimsonbright);font-size:14px;margin-bottom:8px">'+groqErrMsg(e.message)+'</p>';
     btn.classList.remove('busy');
   }
@@ -689,6 +691,8 @@ async function runTool(tool){
 // Results are cached and displayed in the 2×3 Snapshot grid.
 // ════════════════════════════════════════════════════════
 var _snapshotRunning=false;var _snapshotLastRun=null;
+// tool -> {start:timestamp, intervalId} — drives the live elapsed-time counter per row
+var _snapRowTimers={};
 // Fixed ordering of all 6 snapshot tools — used by the progress modal to identify rows
 var SNAPSHOT_TOOL_ORDER=['lexical','grammar','crossrefs','geography','historical','cultural'];
 /**
@@ -727,11 +731,16 @@ function snapshotDelay(ms){
 function openSnapshotProgressModal(all){
   var list=document.getElementById('snap-progress-list');
   if(!list)return;
+  // Defensive cleanup — clear any timers left running from a prior interrupted run
+  Object.keys(_snapRowTimers).forEach(function(t){if(_snapRowTimers[t].intervalId)clearInterval(_snapRowTimers[t].intervalId);});
+  _snapRowTimers={};
   list.innerHTML=all.map(function(item){
     var scopeLbl=item.scope==='book'?'Whole Book':'This Passage';
     return '<div class="snap-row" id="snap-row-'+item.tool+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">'
       +'<span class="snap-icon" id="snap-icon-'+item.tool+'" style="width:16px;text-align:center;color:var(--txt4);flex-shrink:0">&#9675;</span>'
       +'<span style="flex:1;font-size:14px;color:var(--txt2)">'+(TOOL_LABELS[item.tool]||item.tool)+' <span style="font-size:11px;color:var(--txt4)">('+scopeLbl+')</span></span>'
+      +'<span class="snap-time" id="snap-time-'+item.tool+'" style="font-size:11px;color:var(--txt4);min-width:42px;text-align:right;font-variant-numeric:tabular-nums"></span>'
+      +'<span class="snap-tokens" id="snap-tokens-'+item.tool+'" style="font-size:11px;color:var(--txt4);min-width:62px;text-align:right"></span>'
       +'<span class="snap-status" id="snap-status-'+item.tool+'" style="font-size:12px;color:var(--txt4)">Pending</span>'
       +'</div>';
   }).join('');
@@ -741,6 +750,38 @@ function openSnapshotProgressModal(all){
   if(closeBtn)closeBtn.style.display='none';
   var ov=document.getElementById('snapshot-progress-overlay');
   if(ov)ov.classList.add('on');
+}
+/**
+ * Starts a live counting-up timer for a Snapshot row, updating its #snap-time-{tool}
+ * span every 100ms with elapsed seconds (e.g. "3.2s"). Clears any pre-existing timer
+ * for the same tool first (defensive — guards against a stale interval surviving a
+ * skipped 'done' transition).
+ * @param {string} tool - Tool key.
+ */
+function startSnapRowTimer(tool){
+  if(_snapRowTimers[tool]&&_snapRowTimers[tool].intervalId)clearInterval(_snapRowTimers[tool].intervalId);
+  var start=Date.now();
+  var el=document.getElementById('snap-time-'+tool);
+  if(el)el.textContent='0.0s';
+  var iv=setInterval(function(){
+    var t=document.getElementById('snap-time-'+tool);
+    if(t)t.textContent=((Date.now()-start)/1000).toFixed(1)+'s';
+  },100);
+  _snapRowTimers[tool]={start:start,intervalId:iv};
+}
+/**
+ * Stops a Snapshot row's live timer and freezes its #snap-time-{tool} span at the
+ * final elapsed value. No-op if the row never had a running timer (e.g. cached-skip
+ * or never-started rows).
+ * @param {string} tool - Tool key.
+ */
+function stopSnapRowTimer(tool){
+  var t=_snapRowTimers[tool];
+  if(!t)return;
+  if(t.intervalId)clearInterval(t.intervalId);
+  var el=document.getElementById('snap-time-'+tool);
+  if(el)el.textContent=((Date.now()-t.start)/1000).toFixed(1)+'s';
+  delete _snapRowTimers[tool];
 }
 /**
  * Updates a single tool row's icon and status label in the Snapshot progress modal.
@@ -761,6 +802,8 @@ function setSnapshotRowStatus(tool,status){
   var m=map[status]||map.pending;
   icon.innerHTML=m.ic;icon.style.color=m.color;
   label.textContent=m.txt;label.style.color=m.color;
+  if(status==='running')startSnapRowTimer(tool);
+  else if(status==='done'||status==='failed'||status==='cancelled')stopSnapRowTimer(tool);
 }
 /**
  * Finalizes the Snapshot progress modal once the run loop ends.
@@ -827,6 +870,8 @@ async function runSnapshot(){
     // Skip if cached — but NOT if the value is '__shared__' (placeholder from an imported study that needs real data)
     if(ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'){
       setStudyScope(prevScope);
+      var cachedTokEl=document.getElementById('snap-tokens-'+item.tool);
+      if(cachedTokEl)cachedTokEl.textContent='cached';
       setSnapshotRowStatus(item.tool,'done');
       await snapshotDelay(200);
       continue;
@@ -849,6 +894,8 @@ async function runSnapshot(){
       var _diagUsage2=data.usage||{};
       var _diagLine2='**\uD83D\uDD27 DIAGNOSTIC (temporary) \u2014 completion_tokens: '+(_diagUsage2.completion_tokens!=null?_diagUsage2.completion_tokens:'?')+' / max_tokens: 16384 / finish_reason: '+(finishReason2||'?')+'**\n\n';
       showAIPanel(item.tool,_diagLine2+content2);
+      var tokEl=document.getElementById('snap-tokens-'+item.tool);
+      if(tokEl)tokEl.textContent=(_diagUsage2.completion_tokens!=null?_diagUsage2.completion_tokens.toLocaleString()+' tok':'');
       setSnapshotRowStatus(item.tool,'done');
     }catch(e){
       if(e.name==='AbortError'){
@@ -856,6 +903,7 @@ async function runSnapshot(){
         setStudyScope(prevScope);
         break;
       }
+      logError('Snapshot: '+item.tool,e);
       setSnapshotRowStatus(item.tool,'failed');
       toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
     }
@@ -1397,6 +1445,7 @@ async function runLexiconLookup(){
     _lexLastResult={query:lex.originalWord||lex.transliteration||query,html:html,reference:(activeRef()&&activeRef().reference)||''};
     bar.style.display='';
   }catch(e){
+    logError('Lexicon Lookup',e);
     // Distinguish parse errors (bad JSON from AI) from network/API errors
     if(e instanceof SyntaxError){
       res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">Could not parse lexicon data — please try again.</p>';
@@ -1594,7 +1643,7 @@ async function resRunOCR(id){
     res.ocrText=text||'No text could be extracted.';res.ocrStatus='done';
     saveStudy();renderResources();toast('Text extracted');
     resRefreshOpenView(id);
-  }catch(e){res.ocrStatus='error';res.ocrText='Text extraction error: '+e.message;saveStudy();renderResources();resRefreshOpenView(id);}
+  }catch(e){logError('OCR Text Extraction',e);res.ocrStatus='error';res.ocrText='Text extraction error: '+e.message;saveStudy();renderResources();resRefreshOpenView(id);}
 }
 /**
  * Permanently removes a resource from the current study by id.

@@ -12,7 +12,7 @@ import {
   WORKER_URL, ACTIVE_USER,
   sett, TAGS, setTags,
   toast, toastSuccess,
-  migrateStudy, todayStr
+  migrateStudy, todayStr, logError
 } from './utils.js';
 
 import { persist } from './storage.js';
@@ -186,6 +186,7 @@ async function syncToGist(silent){
     var isRateLimit=e.message&&(e.message.indexOf('rate limit')!==-1||e.message.indexOf('429')!==-1||e.message.indexOf('secondary rate')!==-1||e.message.indexOf('rate_limit')!==-1);
     if(isRateLimit){_rateLimitUntil=Date.now()+15*60*1000;} // Back off silent auto-push for 15 minutes
     var msg=isRateLimit?'GitHub rate limited — auto-push paused 15 min. Manual Push still works.':e.message;
+    logError('Gist Push (Sync)',e);
     if(!silent){gistSetStatus('Push failed: '+msg,'var(--crimsonbright)');toast(msg);}
   }finally{_gistPushing=false;}
 }
@@ -263,6 +264,7 @@ async function syncFromGist(){
     gistSetStatus('Pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
     toast('Sync complete — '+msg);
   }catch(e){
+    logError('Gist Pull (Sync)',e);
     gistSetStatus('Pull failed: '+e.message,'var(--crimsonbright)');
     toast('Sync failed: '+e.message);
   }finally{_gistPulling=false;}
@@ -302,6 +304,7 @@ async function syncFromGistForce(){
     gistSetStatus('Force pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
     toast('Force restore complete — local data replaced with backup');
   }catch(e){
+    logError('Gist Force Pull (Sync)',e);
     gistSetStatus('Force pull failed: '+e.message,'var(--crimsonbright)');
   }finally{_gistPulling=false;}
 }

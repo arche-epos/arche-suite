@@ -29,6 +29,7 @@ function parseRef(ref){
 }
 var APP_SHARE_URL='https://www.archestudytools.com/pilgrim-public/';
 var SK_DIAG='bsn_diag_log';
+var SK_ERROR_LOG='bsn_error_log';
 var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TAGS_DEL='bsn_tags_deleted_v1';
 var SK_OB='bsn_ob_done', SK_TAB_HINTS='bsn_tab_hints_shown';
 var SK_UPDATE_SKIP='bsn_update_skip'; // Intentionally NOT namespaced in activateUser() — tracks which app version this browser dismissed the update banner for, not per-user study data (same treatment as bsn_active_user)
@@ -344,6 +345,7 @@ function activateUser(userId){
   SK_OB='bsn_ob_done_'+userId;
   SK_TAB_HINTS='bsn_tab_hints_shown_'+userId;
   SK_DIAG='bsn_diag_log_'+userId;
+  SK_ERROR_LOG='bsn_error_log_'+userId;
   SK_STREAK='bsn_streak_'+userId;
   SK_TTS_SETT='bsn_tts_sett_'+userId;
   SK_WORDS='bsn_words_global_'+userId;
@@ -356,12 +358,46 @@ function activateUser(userId){
   migrateLegacyKey('bsn_ob_done',SK_OB);
   migrateLegacyKey('bsn_tab_hints_shown',SK_TAB_HINTS);
   migrateLegacyKey('bsn_diag_log',SK_DIAG);
+  migrateLegacyKey('bsn_error_log',SK_ERROR_LOG);
   migrateLegacyKey('bsn_streak',SK_STREAK);
   migrateLegacyKey('bsn_tts_sett',SK_TTS_SETT);
   migrateLegacyKey('bsn_words_global',SK_WORDS);
   migrateLegacyKey('bsn_tour_study_seen',SK_TOUR_STUDY_SEEN);
   migrateLegacyKey('bsn_tour_settings_seen',SK_TOUR_SETTINGS_SEEN);
 }
+
+// ── SECTION 28a — ERROR LOG ──
+// App-wide error log — any caught error (network, save, sync, AI tools, OCR, etc.)
+// is recorded with a timestamp and the action being attempted. Capped at
+// ERROR_LOG_CAP entries (FIFO, newest first). Viewable + copyable in Settings.
+// The 20 most recent entries are auto-attached to any /feedback submission.
+var ERROR_LOG_CAP=50;
+/**
+ * Records a caught error to the persistent error log (localStorage, newest first,
+ * capped at ERROR_LOG_CAP). Never throws — a broken logger must not break the app.
+ * @param {string} action - Short label for what was being attempted (e.g. 'AI Study Tool: historical').
+ * @param {Error|string} err - The caught error or error message.
+ */
+function logError(action,err){
+  try{
+    var msg=(err&&err.message)?err.message:String(err);
+    var log=loadErrorLog();
+    log.unshift({ts:new Date().toISOString(),action:action,message:msg});
+    if(log.length>ERROR_LOG_CAP)log=log.slice(0,ERROR_LOG_CAP);
+    localStorage.setItem(SK_ERROR_LOG,JSON.stringify(log));
+  }catch(e){/* logging must never itself throw */}
+}
+/**
+ * Loads the persistent error log from localStorage.
+ * @returns {Array<{ts:string,action:string,message:string}>}
+ */
+function loadErrorLog(){
+  try{return JSON.parse(localStorage.getItem(SK_ERROR_LOG)||'[]');}catch(e){return [];}
+}
+/**
+ * Clears the persistent error log.
+ */
+function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 
 // ── From SECTION 29 — CHANGELOG ──
 // SECTION 29 — CHANGELOG
@@ -370,7 +406,19 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.24.1',date:'Aug 25, 2026',label:'Latest',
+    version:'4.24.3',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: New app-wide Error Log (Settings \\u2192 Error Log) \\u2014 records any caught error (network, save, sync, AI tools, OCR) with a timestamp and what was being attempted; keeps the last 50 on this device, Copy Log button included. The 20 most recent entries are now automatically attached to any Feedback submission for better diagnostic context.'
+    ]},
+  {
+    version:'4.24.2',date:'Aug 25, 2026',label:'',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Study Snapshot progress modal now shows a live counting-up elapsed-time timer per tool row (starts on \\u2018Running\\u2019, freezes on \\u2018Done\\u2019/\\u2018Failed\\u2019/\\u2018Cancelled\\u2019) and the completion_tokens used, alongside the existing status \\u2014 part of the same temporary max_tokens right-sizing test as v4.24.1'
+    ]},
+  {
+    version:'4.24.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'chore: AI Study Tools \\u2014 temporarily raised max_tokens from 2048 to 16384 for all 6 tools (runTool + runSnapshot) to measure real output size post-DeepInfra migration; added a temporary on-screen diagnostic (completion_tokens / finish_reason) to the AI panel display \\u2014 not saved to study data. Will be reverted to a right-sized cap once test data is collected.'
@@ -1518,6 +1566,8 @@ export {
   migrateLegacyKey, activateUser,
   // Shared verse-chunk parsing (Read tab + Scripture panel)
   parseVerseChunks,
+  // Section 28a — Error Log
+  SK_ERROR_LOG, ERROR_LOG_CAP, logError, loadErrorLog, clearErrorLog,
   // Section 29 — changelog
   CHANGELOG
 };
