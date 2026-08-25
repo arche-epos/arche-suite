@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.28.9';
+} from './utils.js?v=4.28.10';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.9';
-import { syncToGist } from './sync.js?v=4.28.9';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.9';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.10';
+import { syncToGist } from './sync.js?v=4.28.10';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.10';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -205,17 +205,39 @@ function renderScrText(text,trans){
  */
 function getScrVerseChunks(){return _scrVerses.map(function(v){return v.text;});}
 /**
- * Scrolls to and highlights the verse at the given TTS chunk index — called by
- * tts.js during 'scr' playback so the visible text tracks the spoken verse.
- * Clears any previous highlight first so exactly one verse is highlighted at a time.
+ * Scrolls to and visually "focuses" the verse at the given TTS chunk index — called
+ * by tts.js during 'scr' playback so the visible text tracks the spoken verse.
+ * Uses the same readverse-focus enlarge effect as the Read tab (unified — see
+ * highlightReadVerse() in ui.js) rather than a separate background highlight, so
+ * both panels behave identically. Clears any previous focus first so exactly one
+ * verse is enlarged at a time. Scroll is deferred until the font-size transition
+ * finishes (transitionend, with a timeout fallback) — same clipping-prevention fix
+ * as the Read tab, since scrolling before the box has grown centers against the
+ * stale (small) size and can leave the top of a long verse clipped.
  * @param {number} idx - Index into _scrVerses / the TTS chunk array.
  */
 function highlightScrVerse(idx){
   var el=document.getElementById('scr-v-'+idx);
   if(!el)return;
-  document.querySelectorAll('#scrdisplay .readverse-hl').forEach(function(e){e.classList.remove('readverse-hl');});
-  el.classList.add('readverse-hl');
-  el.scrollIntoView({behavior:'smooth',block:'center'});
+  document.querySelectorAll('#scrdisplay .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
+  el.classList.add('readverse-focus');
+  var scrolled=false;
+  function doScroll(){
+    if(scrolled)return;
+    scrolled=true;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  el.addEventListener('transitionend',doScroll,{once:true});
+  setTimeout(doScroll,280);
+}
+/**
+ * Clears the Scripture panel's active-verse focus effect (readverse-focus), if any.
+ * Called by ttsStop() so the text returns to normal size once playback fully stops
+ * — mirrors clearReadFocus() in ui.js. Fixes a bug where stopping Scripture panel
+ * playback left the last-spoken verse enlarged/highlighted indefinitely.
+ */
+function clearScrFocus(){
+  document.querySelectorAll('#scrdisplay .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
 }
 /**
  * Returns the chunk index Play should start from — a manually tapped verse
@@ -1839,7 +1861,7 @@ function resInsertText(id){
 export {
   // S11 — Bible API
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
-  getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, scrSkipVerse,
+  getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,

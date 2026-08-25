@@ -10,7 +10,7 @@ import {
   cur,
   htmlToText,
   activeRef
-} from './utils.js?v=4.28.9';
+} from './utils.js?v=4.28.10';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -106,7 +106,7 @@ function ttsGetVoice(){if(!window.speechSynthesis)return null;var voices=window.
  * Stops TTS playback and resets all playback state (index, char offset, active/paused flags).
  * Updates buttons for the previously active source to stopped state.
  */
-function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');if(window.clearReadFocus)window.clearReadFocus();}
+function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=false;_ttsIdx=0;_ttsCharOffset=0;ttsUpdateBtn(_ttsSource,'stopped');if(window.clearReadFocus)window.clearReadFocus();if(window.clearScrFocus)window.clearScrFocus();}
 /**
  * Pauses TTS by cancelling the current utterance and setting _ttsPaused=true.
  * Preserves _ttsIdx and _ttsCharOffset so playback can resume mid-sentence.

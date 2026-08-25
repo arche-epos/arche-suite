@@ -406,7 +406,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.9',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.10',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Scripture panel (Notes tab) TTS was out of sync with the Read tab \\u2014 stopping playback never cleared the last-spoken verse\\u2019s highlight, and the panel still used the old plain-highlight effect instead of the Read tab\\u2019s focus-enlarge effect. Both now unified.',
+      'tune: Scripture panel player buttons resized from ~26px to 44px touch targets, matching the Read tab\\u2019s player styling.',
+      'fix: Scripture panel\\u2019s player bar is now a sticky fixture pinned to the top of the panel instead of scrolling down with the passage text \\u2014 on tablet/desktop it could previously drift down toward the Notes section on long passages.'
+    ]},
+  {
+    version:'4.28.9',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feature: current app version now shown beside the \\u201cPilgrim\\u201d title on the Library tab \\u2014 visible on every screen size without opening Settings.'
