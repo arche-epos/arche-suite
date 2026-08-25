@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.5',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.6',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: Read tab\u2019s active-verse focus effect scaled back from 2x to 1.5x \u2014 longer verses were still running off-screen at 2x even with the centering fix.'
+    ]},
+  {
+    version:'4.28.5',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Read tab\u2019s active-verse focus effect could clip the top of the enlarged verse on mobile \u2014 scrollIntoView() was firing in the same instant the font-size class was applied, before the .25s grow transition finished, so it centered against the verse\u2019s old (small) size and the text grew past the scrolled position afterward. Now waits for the transition to actually finish before scrolling. Also added a scroll-margin so a focused verse never lands directly under the fixed update-banner when it happens to be showing.'

@@ -10,7 +10,7 @@ import {
   cur,
   htmlToText,
   activeRef
-} from './utils.js?v=4.28.5';
+} from './utils.js?v=4.28.6';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
