@@ -1027,10 +1027,23 @@ function closeAIPanel(){if(window.speechSynthesis&&_ttsActive&&_ttsSource==='ai'
 
 // _expandRunning declared in module header
 /**
- * Shows or hides the "Expand" button row based on whether the active AI tab
- * has an expandable result (historical or cultural, either scope).
+ * Per-tool guidance for what "Go Deeper" should prioritize — i.e. what each tool's
+ * scaled-back (Aug 25 2026) default prompt leaves out. Doubles as the source of truth
+ * for which tools show the Go Deeper button (updateExpandBtn reads its keys).
  */
-function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(!row)return;var expandable=['historical','historical_book','cultural','cultural_book'];row.style.display=(aiActiveTab&&expandable.indexOf(aiActiveTab)>=0)?'block':'none';var lbl=document.getElementById('expand-btn-label');if(lbl)lbl.textContent='Go Deeper \u2014 full scholarly detail';}
+var DEEP_PRIORITIES={
+  lexical:'additional key words in the passage not yet covered; deeper semantic-range nuance and any scholarly disagreement for the words already covered, citing BDAG/BDB by name; additional key occurrences elsewhere in Scripture',
+  grammar:'disputed grammatical readings where two or more valid readings exist, citing Wallace, Moulton, or BDF by name; a full conjunction-and-particle breakdown; any grammatical nuance not yet covered',
+  historical:'additional named scholars and specific positions not yet mentioned; minority scholarly views; additional archaeological evidence; patristic or early church testimony on dating or authorship; any internal textual evidence not yet discussed',
+  cultural:'additional customs with named primary sources; archaeological finds not yet mentioned; comparative material from surrounding cultures (Greek, Roman, Jewish); details about specific locations, social groups, or economic practices referenced in the text not yet covered',
+  crossrefs:'linguistic connections (shared words or phrases in the original language); additional thematic, narrative, or prophetic connections not yet covered',
+  geography:'additional locations in the passage beyond those already covered (if more than 6 exist); deeper archaeological detail; a full listing of contested or probable identifications with named conservative scholarly sources for each proposed view'
+};
+/**
+ * Shows or hides the "Go Deeper" button row based on whether the active AI tab's
+ * tool has deep-priorities defined (all six tools, any scope, since Aug 25 2026).
+ */
+function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(!row)return;var base=aiActiveTab?aiActiveTab.replace('_book',''):'';row.style.display=(base&&DEEP_PRIORITIES[base])?'block':'none';var lbl=document.getElementById('expand-btn-label');if(lbl)lbl.textContent='Go Deeper \u2014 full scholarly detail';}
 /**
  * Shows or hides the "Continue" button row based on whether the active AI tab's
  * result was cut off by the model's max_tokens cap (finish_reason==='length').
@@ -1039,27 +1052,27 @@ function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(
 function updateContinueBtn(){var row=document.getElementById('continue-btn-row');if(!row)return;row.style.display=(aiActiveTab&&_truncatedTabs[aiActiveTab])?'block':'none';}
 /**
  * "Go Deeper" — appends genuinely new, full-scholarly-depth content to the current
- * (now plain-language-first) Historical or Cultural result using a follow-up Groq
- * prompt. Since Aug 25 2026 the default historical/cultural prompts were scaled back
- * to a Summary + brief overview for general readability; this button is how a user
- * pulls the fuller scholarly treatment (named scholars, archaeological detail,
- * minority positions, etc.) back in, on demand. Merges the expansion into ar.deep and
- * re-renders the panel. Guards against concurrent runs via _expandRunning flag.
+ * (now plain-language-first) AI result using a follow-up Groq prompt. Since Aug 25
+ * 2026 all six AI Study Tools' default prompts were scaled back for general
+ * readability; this button is how a user pulls the fuller scholarly treatment
+ * (named scholars, disputed readings, archaeological detail, etc.) back in, per
+ * tool, on demand. What to prioritize is looked up per-tool from DEEP_PRIORITIES.
+ * Merges the expansion into ar.deep and re-renders the panel. Guards against
+ * concurrent runs via _expandRunning flag.
  */
 async function expandCurrentTool(){
   if(_expandRunning){toast('Go Deeper already running');return;}
   if(!aiActiveTab)return;
-  var expandable=['historical','historical_book','cultural','cultural_book'];
-  if(expandable.indexOf(aiActiveTab)<0)return;
+  var base=aiActiveTab.replace('_book','');
+  if(!DEEP_PRIORITIES[base])return;
   var ar=activeRef();if(!ar)return;
   var existing=aiPanelResults[aiActiveTab]||(ar.deep&&ar.deep[aiActiveTab])||'';
   if(!existing){toast('Run the tool first');return;}
   _expandRunning=true;
   var btn=document.getElementById('btn-expand');var lbl=document.getElementById('expand-btn-label');
   btn.style.opacity='.5';btn.style.pointerEvents='none';lbl.textContent='Going deeper...';
-  var base=aiActiveTab.replace('_book','');
-  var isHist=(base==='historical');
-  var expandPrompt='The following '+(isHist?'Historical Context':'Cultural Context')+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\n'+(isHist?'For Historical expansion prioritize: additional named scholars and specific positions not yet mentioned; minority scholarly views; additional archaeological evidence; patristic or early church testimony on dating or authorship; any internal textual evidence not yet discussed.':'For Cultural expansion prioritize: additional customs with named primary sources; archaeological finds not yet mentioned; comparative material from surrounding cultures (Greek, Roman, Jewish); details about specific locations, social groups, or economic practices referenced in the text not yet covered.')+'\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, name scholars on each side.\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
+  var toolLabel=TOOL_LABELS[base]||base;
+  var expandPrompt='The following '+toolLabel+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\nPrioritize: '+DEEP_PRIORITIES[base]+'.\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, name scholars on each side.\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
   try{
     var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:expandPrompt}],max_tokens:2048,temperature:0.2})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
