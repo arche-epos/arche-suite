@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.27.0',date:'Aug 25, 2026',label:'Latest',
+    version:'4.27.1',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: Renamed the \\u2018SUMMARY OF THE DATA PRESENTED\\u2019 section header to just \\u2018SUMMARY\\u2019 across Language & Structure, Historical Context, and Cultural Context \\u2014 the original phrasing read stiff and academic for a general reader.'
+    ]},
+  {
+    version:'4.27.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: \\u2018Go Deeper \\u2014 full scholarly detail\\u2019 button now available on all 6 AI Study Tools (previously Historical/Cultural only). Each tool pulls back exactly what its scaled-back default leaves out: Word Study adds additional words and disputed-term debate; Language & Structure adds the full conjunction/particle breakdown and disputed grammatical readings (Wallace/Moulton/BDF); Cross-References adds Linguistic Connections; Places & Geography adds locations beyond the first 6 and full contested-identification sourcing; Historical/Cultural unchanged from v4.26.1.'
