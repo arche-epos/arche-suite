@@ -370,7 +370,13 @@ function activateUser(userId){
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.24.0',date:'Aug 22, 2026',label:'Latest',
+    version:'4.24.1',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'chore: AI Study Tools \\u2014 temporarily raised max_tokens from 2048 to 16384 for all 6 tools (runTool + runSnapshot) to measure real output size post-DeepInfra migration; added a temporary on-screen diagnostic (completion_tokens / finish_reason) to the AI panel display \\u2014 not saved to study data. Will be reverted to a right-sized cap once test data is collected.'
+    ]},
+  {
+    version:'4.24.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Scripture panel now uses the Read tab\\u2019s TTS mechanics \\u2014 verse-by-verse playback (no verse numbers spoken aloud), tap a verse number to jump playback to it, and a compact mini-player (Skip Prev/Next Verse, Play/Pause, Restart, Speed) in place of the old single Listen button'

@@ -661,14 +661,19 @@ async function runTool(tool){
   try{
     var trans=ar.pastedTranslation||ar.translation||'ESV';
     var prompt=buildPrompt(tool,ar.reference,trans,studyScope);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:prompt}],max_tokens:2048,temperature:0.2})});
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:prompt}],max_tokens:16384,temperature:0.2})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
     var finishReason=data.choices&&data.choices[0]&&data.choices[0].finish_reason;
     _truncatedTabs[ck]=(finishReason==='length');
     if(!ar.deep)ar.deep={};
-    ar.deep[ck]=content;saveStudy();showAIPanel(tool,content);
+    ar.deep[ck]=content;saveStudy();
+    // TEMP DIAGNOSTIC (Aug 2026 max_tokens right-sizing test — remove after data collected).
+    // Display-only: NOT written into ar.deep, so saved study data stays clean.
+    var _diagUsage=data.usage||{};
+    var _diagLine='**\uD83D\uDD27 DIAGNOSTIC (temporary) \u2014 completion_tokens: '+(_diagUsage.completion_tokens!=null?_diagUsage.completion_tokens:'?')+' / max_tokens: 16384 / finish_reason: '+(finishReason||'?')+'**\n\n';
+    showAIPanel(tool,_diagLine+content);
     btn.classList.remove('busy');btn.classList.add('ready');
     if(!btn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';btn.appendChild(d);}
   }catch(e){
@@ -830,7 +835,7 @@ async function runSnapshot(){
       var trans=ar.pastedTranslation||ar.translation||'ESV';
       var prompt=buildPrompt(item.tool,ar.reference,trans,item.scope);
       _snapshotAbortController=new AbortController();
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:prompt}],max_tokens:2048,temperature:0.2}),signal:_snapshotAbortController.signal});
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b',messages:[{role:'user',content:prompt}],max_tokens:16384,temperature:0.2}),signal:_snapshotAbortController.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -839,7 +844,11 @@ async function runSnapshot(){
       if(content2){if(!ar.deep)ar.deep={};ar.deep[ck]=content2;saveStudy(true);}
       var toolBtn=document.getElementById('btn-'+item.tool);
       if(toolBtn){toolBtn.classList.add('ready');if(!toolBtn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';toolBtn.appendChild(d);}}
-      showAIPanel(item.tool,content2);
+      // TEMP DIAGNOSTIC (Aug 2026 max_tokens right-sizing test — remove after data collected).
+      // Display-only: ar.deep already holds the clean content2 above.
+      var _diagUsage2=data.usage||{};
+      var _diagLine2='**\uD83D\uDD27 DIAGNOSTIC (temporary) \u2014 completion_tokens: '+(_diagUsage2.completion_tokens!=null?_diagUsage2.completion_tokens:'?')+' / max_tokens: 16384 / finish_reason: '+(finishReason2||'?')+'**\n\n';
+      showAIPanel(item.tool,_diagLine2+content2);
       setSnapshotRowStatus(item.tool,'done');
     }catch(e){
       if(e.name==='AbortError'){
