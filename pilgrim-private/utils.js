@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.2',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.3',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: update banner was showing permanently regardless of version \u2014 checkForUpdate() and the Diagnostics panel\u2019s appVersion both gated on window.CHANGELOG, a global that no longer exists post-ES-Modules-migration (CHANGELOG is a module-scope import in ui.js). The check always fell through to an empty string, so \u201clatest\u201d never matched \u201ccurrent\u201d. Now reads the imported CHANGELOG binding directly.'
+    ]},
+  {
+    version:'4.28.2',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'tune: Read tab\u2019s active-verse focus effect scaled back from 3x to 2x \u2014 3x was too large in live testing.'

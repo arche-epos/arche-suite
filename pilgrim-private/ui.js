@@ -2789,7 +2789,7 @@ async function submitFeedback(){
   try{
     var passCount=_diagResults.filter(function(r){return r.status==='pass';}).length;
     var failCount=_diagResults.filter(function(r){return r.status==='fail';}).length;
-    var appVersion=window.CHANGELOG&&window.CHANGELOG[0]?window.CHANGELOG[0].version:'unknown';
+    var appVersion=CHANGELOG&&CHANGELOG[0]?CHANGELOG[0].version:'unknown';
     // Try to get version from CHANGELOG var
     try{appVersion=CHANGELOG[0].version;}catch(e){}
     var systemInfo={
@@ -3052,7 +3052,7 @@ function checkForUpdate(){
       var m=html.match(/CHANGELOG\s*=\s*\[\s*\{\s*version\s*:\s*'([^']+)'/);
       if(!m)return;
       var latest=m[1];
-      var current=(window.CHANGELOG&&CHANGELOG[0])?CHANGELOG[0].version:'';
+      var current=(CHANGELOG&&CHANGELOG[0])?CHANGELOG[0].version:'';
       if(latest===current)return; // already on the latest version
       if(localStorage.getItem(SK_UPDATE_SKIP)===latest)return; // user already skipped this exact version
       _pendingUpdateVersion=latest;
