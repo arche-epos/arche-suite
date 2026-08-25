@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.26.0',date:'Aug 25, 2026',label:'Latest',
+    version:'4.26.1',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: Follow-up pass on the v4.26.0 audience scaling, based on first real test run. Historical Context restored more substance (Author Background and Archaeological Attestation sections back, each section given more room) after the first cut ran too thin \\u2014 full scholarly debate/named-scholar detail still reserved for Go Deeper. Language & Structure now opens with a Summary section. Cross-References restored Thematic Connections and Narrative/Prophetic Connections (Linguistic Connections stays out \\u2014 too technical for the general-readability goal). Places & Geography now leads with the Journey Summary (when the passage involves travel) before individual locations, instead of after.'
+    ]},
+  {
+    version:'4.26.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: AI Study Tools scaled back for general readability. Language & Structure and Cross-References now give a concise, plain-language overview (Cross-References narrowed to direct scriptural references only) instead of a full technical breakdown. Historical Context and Cultural Context now open with a plain-language \\u2018Summary of the Data Presented\\u2019 followed by a brief overview \\u2014 the existing Expand button (now labeled \\u2018Go Deeper \\u2014 full scholarly detail\\u2019) still pulls in named scholars, archaeological detail, and minority positions on demand. Word Study and Places & Geography are unchanged. Study Snapshot now runs the shorter default versions of all 6 tools, making the whole run both faster and more approachable \\u2014 individual deep dives remain available per tool.'
