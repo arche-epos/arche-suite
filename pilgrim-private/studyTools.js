@@ -42,7 +42,7 @@ export var aiPanelResults = {};
 export var aiActiveTab    = null;
 var _snapshotRunning = false;
 var _snapshotCancelled = false;
-var _snapshotAbortController = null;
+var _snapshotAbortControllers = {}; // tool -> AbortController, one per in-flight parallel request
 // S14-partial
 var _expandRunning = false;
 // Tracks which AI result keys (ck) were cut off by the model's max_tokens cap
@@ -824,25 +824,32 @@ function finishSnapshotProgressModal(cancelled){
   }
 }
 /**
- * Cancels an in-progress Snapshot run. Aborts the in-flight fetch immediately via
- * AbortController and sets _snapshotCancelled so the run loop exits at its next check.
- * Disables the Cancel button to prevent duplicate clicks while the run unwinds.
+ * Cancels an in-progress Snapshot run. Aborts every in-flight fetch immediately via
+ * each tool's AbortController and sets _snapshotCancelled so any not-yet-started
+ * (staggered) requests bail out before firing. Disables the Cancel button to prevent
+ * duplicate clicks while the run unwinds.
  */
 function cancelSnapshot(){
   if(!_snapshotRunning)return;
   _snapshotCancelled=true;
-  if(_snapshotAbortController){_snapshotAbortController.abort();}
+  Object.keys(_snapshotAbortControllers).forEach(function(tool){
+    _snapshotAbortControllers[tool].abort();
+  });
   var cancelBtn=document.getElementById('snap-cancel-btn');
   if(cancelBtn){cancelBtn.disabled=true;cancelBtn.textContent='Cancelling\u2026';}
 }
 /**
- * Runs all six AI study tools in sequence for the active reference, driving the
+ * Runs all six AI study tools in PARALLEL for the active reference, driving the
  * Snapshot progress modal (per-tool status + Cancel/Close control).
  * Passage-scope tools: lexical, grammar, crossrefs, geography.
  * Book-scope tools: historical, cultural.
- * Skips any tool with a cached result. Inserts a cancellable 2.5s delay between
- * requests to avoid Groq rate limits. Sets _snapshotRunning to prevent concurrent runs.
- * Cancel aborts the in-flight fetch immediately and stops before the next tool.
+ * Skips any tool with a cached result. Non-cached tools fire concurrently, each
+ * staggered by 150ms purely to avoid a literal single-instant burst — not for
+ * rate-limit pacing (DeepInfra's paid tier has no need for that, unlike the old
+ * Groq free tier). Total wall-clock is now bounded by the slowest single tool
+ * rather than the sum of all six (migrated from sequential Aug 25 2026).
+ * Sets _snapshotRunning to prevent concurrent runs. Cancel aborts every in-flight
+ * fetch immediately via its own AbortController.
  */
 async function runSnapshot(){
   if(_snapshotRunning){toast('Snapshot already running');return;}
@@ -852,6 +859,7 @@ async function runSnapshot(){
   if(!online){toast('AI tools require internet');return;}
   _snapshotRunning=true;
   _snapshotCancelled=false;
+  _snapshotAbortControllers={};
   var btn=document.getElementById('btn-snapshot');
   var sub=document.getElementById('snapshot-sub');
   if(btn){btn.style.opacity='.6';btn.style.pointerEvents='none';}
@@ -859,28 +867,35 @@ async function runSnapshot(){
   var bookTools=['historical','cultural'];
   var all=passageTools.map(function(t){return {tool:t,scope:'passage'};}).concat(bookTools.map(function(t){return {tool:t,scope:'book'};}));
   openSnapshotProgressModal(all);
+  var trans=ar.pastedTranslation||ar.translation||'ESV';
+  // First pass (synchronous): mark cached tools done immediately, collect the rest to run.
+  var toRun=[];
   for(var i=0;i<all.length;i++){
-    if(_snapshotCancelled)break;
     var item=all[i];
-    setSnapshotRowStatus(item.tool,'running');
-    // Temporarily override studyScope so buildPrompt and cache keys use the tool's required scope
-    var prevScope=studyScope;
-    setStudyScope(item.scope);
     var ck=item.scope==='book'?item.tool+'_book':item.tool; // Storage key matching the tool+scope combination
     // Skip if cached — but NOT if the value is '__shared__' (placeholder from an imported study that needs real data)
     if(ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'){
-      setStudyScope(prevScope);
       var cachedTokEl=document.getElementById('snap-tokens-'+item.tool);
       if(cachedTokEl)cachedTokEl.textContent='cached';
       setSnapshotRowStatus(item.tool,'done');
-      await snapshotDelay(200);
-      continue;
+    }else{
+      toRun.push({item:item,ck:ck});
     }
+  }
+  /**
+   * Runs a single Snapshot tool call. Prompt/cache-key scope is passed explicitly
+   * (never read from the global studyScope) so concurrent calls can't clobber each other.
+   */
+  async function runOneSnapshotTool(entry,startDelayMs){
+    var item=entry.item,ck=entry.ck;
+    if(startDelayMs)await snapshotDelay(startDelayMs);
+    if(_snapshotCancelled){setSnapshotRowStatus(item.tool,'cancelled');return;}
+    setSnapshotRowStatus(item.tool,'running');
+    var controller=new AbortController();
+    _snapshotAbortControllers[item.tool]=controller;
     try{
-      var trans=ar.pastedTranslation||ar.translation||'ESV';
       var prompt=buildPrompt(item.tool,ar.reference,trans,item.scope);
-      _snapshotAbortController=new AbortController();
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:16384,temperature:0.2}),signal:_snapshotAbortController.signal});
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:16384,temperature:0.2}),signal:controller.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -900,23 +915,21 @@ async function runSnapshot(){
     }catch(e){
       if(e.name==='AbortError'){
         setSnapshotRowStatus(item.tool,'cancelled');
-        setStudyScope(prevScope);
-        break;
+      }else{
+        logError('Snapshot: '+item.tool,e);
+        setSnapshotRowStatus(item.tool,'failed');
+        toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
       }
-      logError('Snapshot: '+item.tool,e);
-      setSnapshotRowStatus(item.tool,'failed');
-      toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
+    }finally{
+      delete _snapshotAbortControllers[item.tool];
     }
-    setStudyScope(prevScope);
-    if(_snapshotCancelled)break;
-    // Courtesy 500ms spacing between requests (was 5000ms for Groq's free-tier
-    // 60s/8,000-TPM rolling window — no longer applies on DeepInfra's paid tier,
-    // migrated Aug 25 2026). Small buffer kept to avoid firing 6 requests in a
-    // tight burst, not for rate-limit avoidance.
-    if(i<all.length-1)await snapshotDelay(500);
   }
+  // Fire all non-cached tools concurrently, each staggered 150ms purely to avoid
+  // a literal same-millisecond burst. Promise.allSettled so one failure/cancel
+  // doesn't stop the others from completing.
+  await Promise.allSettled(toRun.map(function(entry,idx){return runOneSnapshotTool(entry,idx*150);}));
   _snapshotRunning=false;
-  _snapshotAbortController=null;
+  _snapshotAbortControllers={};
   var wasCancelled=_snapshotCancelled;
   _snapshotCancelled=false;
   finishSnapshotProgressModal(wasCancelled);
