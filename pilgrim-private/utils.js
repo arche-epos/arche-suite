@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.0',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.1',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: "New version available" update banner had been silently broken since the ES Modules migration (dev\u2192main merge, July 19) \u2014 checkForUpdate() was still re-fetching index.html and regex-matching for CHANGELOG there, but CHANGELOG moved to utils.js during that migration and never appeared in index.html again. Fails-silently-by-design meant no error ever surfaced. Now fetches utils.js instead \u2014 update banner works again.'
+    ]},
+  {
+    version:'4.28.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Study Tools\u2019 Scripture panel now uses the same verse-numbered formatting as the Read tab (previously plain italic text).',

@@ -3027,20 +3027,26 @@ function toggleNotesFontSize(){
 }
 
 // ── UPDATE AVAILABLE BANNER ────────────────────────────────────────────
-// Cache-busted re-fetch of this same index.html to detect a newer deployed
-// version. Checked on app boot (startPilgrim) and tab-focus-regain (listener
-// above). Replaces the old standalone APP_VER constant in Section 30 as the
-// single source of truth for "what version is actually live."
+// Cache-busted re-fetch of utils.js (where CHANGELOG actually lives, post-ES-
+// Modules extraction) to detect a newer deployed version. Checked on app boot
+// (startPilgrim) and tab-focus-regain (listener above). Replaces the old
+// standalone APP_VER constant in Section 30 as the single source of truth
+// for "what version is actually live."
+// XP: this fetched index.html until v4.28.1 — silently broken since the ES
+// Modules migration moved CHANGELOG out of index.html into utils.js. The regex
+// never matched, so the banner never showed and no error surfaced (fails
+// silently by design on fetch failure/no-match alike). Caught by Boss asking
+// why the "new version available" prompt had stopped appearing.
 /**
- * Re-fetches index.html with a cache-busting query param, extracts the first
+ * Re-fetches utils.js with a cache-busting query param, extracts the first
  * CHANGELOG entry's version string via regex (cheaper and safer than eval'ing
- * the fetched HTML), and compares it to the version running in memory. Shows
+ * the fetched JS), and compares it to the version running in memory. Shows
  * the update banner if a newer version is live and the user hasn't already
  * skipped that exact version. Fails silently on network errors (e.g. offline)
  * — no banner, no error shown to the user.
  */
 function checkForUpdate(){
-  fetch('./index.html?t='+Date.now(),{cache:'no-store'})
+  fetch('./utils.js?t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.text();})
     .then(function(html){
       var m=html.match(/CHANGELOG\s*=\s*\[\s*\{\s*version\s*:\s*'([^']+)'/);
