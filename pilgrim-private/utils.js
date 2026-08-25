@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.4',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.5',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Read tab\u2019s active-verse focus effect could clip the top of the enlarged verse on mobile \u2014 scrollIntoView() was firing in the same instant the font-size class was applied, before the .25s grow transition finished, so it centered against the verse\u2019s old (small) size and the text grew past the scrolled position afterward. Now waits for the transition to actually finish before scrolling. Also added a scroll-margin so a focused verse never lands directly under the fixed update-banner when it happens to be showing.'
+    ]},
+  {
+    version:'4.28.4',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: update banner would flash and immediately reappear on mobile after hitting Refresh Now \u2014 location.reload() doesn\u2019t force mobile browsers to bypass cache for sub-resource scripts the way a desktop hard-refresh does, so app.js/ui.js/utils.js etc. kept loading from stale cache even though the reload happened. All inter-module import paths and the app.js entry script now carry a ?v= cache-busting query tied to the release version, so a version bump always forces a genuinely fresh fetch regardless of CDN cache headers.',

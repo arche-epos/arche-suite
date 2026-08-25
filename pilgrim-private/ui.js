@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.4';
+} from './utils.js?v=4.28.5';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.4';
+} from './storage.js?v=4.28.5';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.4';
+} from './tts.js?v=4.28.5';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.4';
+} from './sync.js?v=4.28.5';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.4';
+} from './studyTools.js?v=4.28.5';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1642,6 +1642,12 @@ function readSelectVerse(idx){
  * Focus is a 3x font-size bump on just the active verse (readverse-focus), not a
  * background highlight — easier to visually track while listening than a color
  * change. Clears any previous focus first so exactly one verse is enlarged at a time.
+ * XP: scrollIntoView() used to fire in the same tick as the class toggle, i.e.
+ * before the .25s font-size transition had grown the box — so it centered against
+ * the OLD (small) size, then the verse grew underneath that stale scroll position
+ * and the top edge could end up clipped above the viewport. Now waits for the
+ * transition to actually finish (transitionend, with a timeout fallback in case it
+ * doesn't fire) before scrolling, so centering always runs against the final size.
  * @param {number} idx - Index into _readVerses / the TTS chunk array.
  */
 function highlightReadVerse(idx){
@@ -1649,7 +1655,14 @@ function highlightReadVerse(idx){
   if(!el)return;
   document.querySelectorAll('#read-display .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
   el.classList.add('readverse-focus');
-  el.scrollIntoView({behavior:'smooth',block:'center'});
+  var scrolled=false;
+  function doScroll(){
+    if(scrolled)return;
+    scrolled=true;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  el.addEventListener('transitionend',doScroll,{once:true});
+  setTimeout(doScroll,280); // fallback in case transitionend never fires (reduced-motion, already-focused verse re-selected, etc.)
 }
 /**
  * Clears the Read tab's active-verse focus effect (readverse-focus), if any.

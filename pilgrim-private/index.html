@@ -117,7 +117,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 .scrtext .vnum{font-size:10px;color:var(--gold);font-weight:700;vertical-align:super;margin-right:2px}
 .readverse{transition:background-color .3s ease,font-size .25s ease;border-radius:3px}
 .readverse-hl{background-color:var(--golddim)}
-.readverse-focus{font-size:2em;line-height:1.4}
+.readverse-focus{font-size:2em;line-height:1.4;scroll-margin-top:70px}
 .read-chapter-break{display:block;margin:26px 0 16px;padding-top:18px;border-top:1px solid var(--border);text-align:center;font-family:'EB Garamond',serif;font-weight:600;font-size:21px;letter-spacing:.04em;color:var(--gold)}
 input[type="range"]{accent-color:var(--gold)}
 #read-player button:disabled{opacity:.35;cursor:default}
@@ -1565,7 +1565,7 @@ input[type="range"]{accent-color:var(--gold)}
 </div>
 <button class="fab" onclick="newStudy()">+</button>
 
-<script type="module" src="app.js?v=4.28.4"></script>
+<script type="module" src="app.js?v=4.28.5"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
