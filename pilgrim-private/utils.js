@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.1',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.2',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: Read tab\u2019s active-verse focus effect scaled back from 3x to 2x \u2014 3x was too large in live testing.'
+    ]},
+  {
+    version:'4.28.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: "New version available" update banner had been silently broken since the ES Modules migration (dev\u2192main merge, July 19) \u2014 checkForUpdate() was still re-fetching index.html and regex-matching for CHANGELOG there, but CHANGELOG moved to utils.js during that migration and never appeared in index.html again. Fails-silently-by-design meant no error ever surfaced. Now fetches utils.js instead \u2014 update banner works again.'
