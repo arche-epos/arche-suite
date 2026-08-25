@@ -406,7 +406,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.7',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.8',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: Read tab\u2019s active-verse focus effect bumped from 1.5x to 1.75x.',
+      'tune: Read tab\u2019s player bar (Prev/Play/Next/Repeat/Speed/Voice/Volume) is more compact on mobile \u2014 smaller buttons, tighter padding, reclaiming vertical space for scripture text.',
+      'tune: trimmed the top padding above the Scripture Reference row on the Read tab.',
+      'fix: removing the Read/Settings/Progress title bars in v4.28.7 also silently removed the only place applying the phone\u2019s safe-area top inset (notch/status bar clearance) \u2014 those three tabs could render content flush under the notch. Re-added a minimal safe-area-only inset (no full title-bar height) to all three.'
+    ]},
+  {
+    version:'4.28.7',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'tune: removed the redundant title bar (just repeating the tab name \u2014 \u201cRead\u201d, \u201cSettings\u201d, \u201cProgress\u201d) at the top of those three tabs \u2014 the bottom nav already labels the active tab, so this was a full row of duplicated, wasted vertical space, especially costly on mobile.'
