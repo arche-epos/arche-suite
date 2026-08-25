@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.24.3',date:'Aug 25, 2026',label:'Latest',
+    version:'4.24.4',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: AI Study Tools were timing out (HTTP 524) on longer outputs (Grammar, Cultural, Places & Geography) \\u2014 gpt-oss-120b defaults to \\u2018medium\\u2019 reasoning effort, generating an invisible chain-of-thought that pushed total response time past Cloudflare\\u2019s ~100s edge timeout. Added \\u2018Reasoning: low\\u2019 to all 5 AI Study Tools calls (Word Study/Snapshot/Expand/Continue/Lexicon) to skip that overhead. Also removed the leftover 5s-per-tool Snapshot delay (was pacing around Groq\\u2019s free-tier rate limit, not needed on DeepInfra\\u2019s paid tier) \\u2014 trimmed to a 500ms courtesy buffer.'
+    ]},
+  {
+    version:'4.24.3',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: New app-wide Error Log (Settings \\u2192 Error Log) \\u2014 records any caught error (network, save, sync, AI tools, OCR) with a timestamp and what was being attempted; keeps the last 50 on this device, Copy Log button included. The 20 most recent entries are now automatically attached to any Feedback submission for better diagnostic context.'
