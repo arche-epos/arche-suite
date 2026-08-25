@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.25.1',date:'Aug 25, 2026',label:'Latest',
+    version:'4.25.2',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Removed the GEOGRAPHIC SETTING subsection from Cultural Context \\u2014 it duplicated what the dedicated Places & Geography tool already covers in far more depth (ancient/modern names, map links, terrain, archaeological attestation, certainty rating). Cultural Context now stays focused on customs, social structures, economics, and religious/civic practices.'
+    ]},
+  {
+    version:'4.25.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'perf: Study Snapshot now runs all 6 AI tools in PARALLEL instead of sequentially (each staggered 150ms to avoid a same-instant burst). Total wall-clock is now bounded by the slowest single tool (~50s) instead of the sum of all six (~3.5min). Each request gets its own cancel handle, so Cancel still stops every in-flight tool immediately.'
