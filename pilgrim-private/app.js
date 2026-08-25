@@ -5,27 +5,27 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr
-} from './utils.js?v=4.28.6';
+} from './utils.js?v=4.28.7';
 
 import {
   wireCallbacks, loadStudies, autoSave
-} from './storage.js?v=4.28.6';
+} from './storage.js?v=4.28.7';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.28.6';
+} from './sync.js?v=4.28.7';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.28.6';
+} from './tts.js?v=4.28.7';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.28.6';
-import * as Storage from './storage.js?v=4.28.6';
-import * as TTS from './tts.js?v=4.28.6';
-import * as Sync from './sync.js?v=4.28.6';
-import * as StudyTools from './studyTools.js?v=4.28.6';
-import * as UI from './ui.js?v=4.28.6';
+import * as Utils from './utils.js?v=4.28.7';
+import * as Storage from './storage.js?v=4.28.7';
+import * as TTS from './tts.js?v=4.28.7';
+import * as Sync from './sync.js?v=4.28.7';
+import * as StudyTools from './studyTools.js?v=4.28.7';
+import * as UI from './ui.js?v=4.28.7';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({

@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.6',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.7',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'tune: removed the redundant title bar (just repeating the tab name \u2014 \u201cRead\u201d, \u201cSettings\u201d, \u201cProgress\u201d) at the top of those three tabs \u2014 the bottom nav already labels the active tab, so this was a full row of duplicated, wasted vertical space, especially costly on mobile.'
+    ]},
+  {
+    version:'4.28.6',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'tune: Read tab\u2019s active-verse focus effect scaled back from 2x to 1.5x \u2014 longer verses were still running off-screen at 2x even with the centering fix.'

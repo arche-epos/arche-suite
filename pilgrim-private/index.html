@@ -565,7 +565,6 @@ input[type="range"]{accent-color:var(--gold)}
 
 <!-- READ -->
 <div class="scr" id="scr-read">
-  <div class="topbar"><div class="topbar-title">Read</div></div>
   <div class="frow" style="align-items:flex-end;padding:12px 16px 0">
     <div class="ig" style="flex:0 0 auto;margin-bottom:0"><label style="visibility:hidden">Pick</label><button class="bp-open-btn" onclick="bpOpen('read')" title="Pick book &amp; chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button></div>
     <div class="ig" style="flex:2;margin-bottom:0"><label>Scripture Reference</label><input type="text" id="read-ref" placeholder="e.g. John 3:16" onblur="fetchReadChapter()" onkeydown="if(event.key==='Enter'){this.blur();}"></div>
@@ -925,7 +924,6 @@ input[type="range"]{accent-color:var(--gold)}
 
 <!-- SETTINGS -->
 <div class="scr" id="scr-settings">
-  <div class="topbar"><div class="topbar-title">Settings</div></div>
   <div class="scroll">
     <div style="margin-bottom:22px" id="settings-sec-sync">
       <div class="sethead">Study Sync</div>
@@ -1145,7 +1143,6 @@ input[type="range"]{accent-color:var(--gold)}
 
 <!-- STATS -->
 <div class="scr" id="scr-stats">
-  <div class="topbar"><div class="topbar-title">Progress</div></div>
   <div class="scroll">
     <div class="stats-grid" id="stats-grid"></div>
     <div class="seclabel">Most Studied Books</div>
@@ -1565,7 +1562,7 @@ input[type="range"]{accent-color:var(--gold)}
 </div>
 <button class="fab" onclick="newStudy()">+</button>
 
-<script type="module" src="app.js?v=4.28.6"></script>
+<script type="module" src="app.js?v=4.28.7"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
