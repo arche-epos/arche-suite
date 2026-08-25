@@ -406,7 +406,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.3',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.4',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: update banner would flash and immediately reappear on mobile after hitting Refresh Now \u2014 location.reload() doesn\u2019t force mobile browsers to bypass cache for sub-resource scripts the way a desktop hard-refresh does, so app.js/ui.js/utils.js etc. kept loading from stale cache even though the reload happened. All inter-module import paths and the app.js entry script now carry a ?v= cache-busting query tied to the release version, so a version bump always forces a genuinely fresh fetch regardless of CDN cache headers.',
+      'feat: tapping a verse number in the Read tab or Scripture panel now selects/focuses it without auto-starting playback \u2014 only the Play button starts audio. The tapped verse still gets the visual focus/highlight and becomes the starting point once Play is pressed.'
+    ]},
+  {
+    version:'4.28.3',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: update banner was showing permanently regardless of version \u2014 checkForUpdate() and the Diagnostics panel\u2019s appVersion both gated on window.CHANGELOG, a global that no longer exists post-ES-Modules-migration (CHANGELOG is a module-scope import in ui.js). The check always fell through to an empty string, so \u201clatest\u201d never matched \u201ccurrent\u201d. Now reads the imported CHANGELOG binding directly.'

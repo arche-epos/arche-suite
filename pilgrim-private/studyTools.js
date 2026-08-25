@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js';
+} from './utils.js?v=4.28.4';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js';
-import { syncToGist } from './sync.js';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.4';
+import { syncToGist } from './sync.js?v=4.28.4';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.4';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -56,6 +56,7 @@ var _lexSaveContext = null;
 var _wlCache = [];
 var _swCache = [];
 var _scrVerses = []; // {num,text}[] for the currently rendered Scripture panel passage — TTS chunk source
+var _scrSelectedIdx = null; // set by scrSelectVerse() (tap verse to focus/jump WITHOUT auto-playing) — cleared on new passage render
 // S16 — Resource methods lookup (populated at bottom of section)
 var RES_METHODS;
 
@@ -190,8 +191,9 @@ async function getBibleAPI(ref,trans){
  */
 function renderScrText(text,trans){
   _scrVerses=parseVerseChunks(text);
+  _scrSelectedIdx=null;
   var html=_scrVerses.map(function(v,i){
-    return '<span class="readverse" id="scr-v-'+i+'"><sup class="vnum" onclick="ttsPlayScrFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+    return '<span class="readverse" id="scr-v-'+i+'"><sup class="vnum" onclick="scrSelectVerse('+i+')" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('scrdisplay').innerHTML='<div class="scrtext">'+html+'</div>';
 }
@@ -216,15 +218,37 @@ function highlightScrVerse(idx){
   el.scrollIntoView({behavior:'smooth',block:'center'});
 }
 /**
+ * Returns the chunk index Play should start from — a manually tapped verse
+ * (_scrSelectedIdx) if one is set, else the first verse loaded.
+ * @returns {number}
+ */
+function getScrStartIdx(){
+  return _scrSelectedIdx!=null?_scrSelectedIdx:0;
+}
+/**
+ * Tapping a verse number now selects/focuses it WITHOUT starting playback —
+ * only the Play button starts audio. Sets _scrSelectedIdx so the next Play
+ * press (ttsToggleScr -> getScrStartIdx) begins from this verse, and applies
+ * the same highlight used during active playback so the selection is visible.
+ * @param {number} idx - Index into _scrVerses / the TTS chunk array.
+ */
+function scrSelectVerse(idx){
+  var chunks=getScrVerseChunks();
+  if(idx<0||idx>=chunks.length)return;
+  _scrSelectedIdx=idx;
+  highlightScrVerse(idx);
+}
+/**
  * Skips Scripture-panel TTS playback forward or backward by one verse.
- * If nothing is currently playing/paused, starts playback from the beginning
- * instead of no-op'ing — matches the Read tab's Skip Verse behavior.
+ * If nothing is currently playing/paused, starts playback from the selected
+ * verse (or the beginning, if none selected) instead of no-op'ing — matches
+ * the Read tab's Skip Verse behavior.
  * @param {number} dir - +1 for next verse, -1 for previous verse.
  */
 function scrSkipVerse(dir){
   var chunks=getScrVerseChunks();
   if(!chunks.length)return;
-  var curIdx=(_ttsSource==='scr')?_ttsIdx:0;
+  var curIdx=(_ttsSource==='scr')?_ttsIdx:getScrStartIdx();
   var nextIdx=curIdx+dir;
   if(nextIdx<0||nextIdx>=chunks.length)return;
   window.ttsPlayScrFrom(nextIdx);
@@ -1815,7 +1839,7 @@ function resInsertText(id){
 export {
   // S11 — Bible API
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
-  getScrVerseChunks, highlightScrVerse, scrSkipVerse,
+  getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,

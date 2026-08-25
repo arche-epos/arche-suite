@@ -13,7 +13,7 @@ import {
   _pendingDeleteId, setPendingDeleteId,
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef
-} from './utils.js';
+} from './utils.js?v=4.28.4';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,

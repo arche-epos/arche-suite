@@ -10,7 +10,7 @@ import {
   cur,
   htmlToText,
   activeRef
-} from './utils.js';
+} from './utils.js?v=4.28.4';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -31,6 +31,8 @@ function _readVerseChunks() { return (window.getReadVerseChunks && window.getRea
 function _scrVerseChunks() { return (window.getScrVerseChunks && window.getScrVerseChunks()) || []; }
 /** @returns {number} Chunk index Read tab playback should start from (the requested entry verse) */
 function _readStartIdx() { return (window.getReadStartIdx && window.getReadStartIdx()) || 0; }
+/** @returns {number} Chunk index Scripture panel playback should start from (a manually tapped verse, if any) */
+function _scrStartIdx() { return (window.getScrStartIdx && window.getScrStartIdx()) || 0; }
 
 // ── TTS state ───────────────────────────────────────────────────────────────
 export var _ttsSentences = [];
@@ -190,7 +192,7 @@ function ttsToggleField(source){
 function ttsToggleScr(){
   if(_ttsSource==='scr'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('scr',_ttsIdx,_ttsCharOffset);return;}}
   if(!_scrVerseChunks().length){toast('No scripture loaded');return;}
-  ttsPlayScrFrom(0);
+  ttsPlayScrFrom(_scrStartIdx());
 }
 /**
  * Starts Scripture panel TTS playback fresh from a specific verse chunk index —

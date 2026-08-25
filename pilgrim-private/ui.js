@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js';
+} from './utils.js?v=4.28.4';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js';
+} from './storage.js?v=4.28.4';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js';
+} from './tts.js?v=4.28.4';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js';
+} from './sync.js?v=4.28.4';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js';
+} from './studyTools.js?v=4.28.4';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1387,6 +1387,7 @@ function bpGoStage(n){
 // ════════════════════════════════════════════════════════
 var _bpFlatBooks=BP_BOOKS.OT.concat(BP_BOOKS.NT); // BOLLS_BOOKS ids 1-66 map 1:1 to this order
 var _readBook=null,_readChapter=null,_readTargetVerse=null,_readRangeMode=false;
+var _readSelectedIdx=null; // set by readSelectVerse() (tap verse to focus/jump WITHOUT auto-playing) — cleared on new chapter/range load
 var _readReference='',_readTranslation='esv',_readScriptureText='';
 var _readVerses=[]; // [{num:'1',text:'...'}, ...] — parsed once per fetch, shared by render + TTS
 var _readChapterBoundaries=[]; // range mode only: [{atIndex, book, chapter, newBook}, ...] — see computeReadChapterBoundaries()
@@ -1473,7 +1474,7 @@ async function fetchReadChapter(){
   if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
 
   if(isReadRangeRef(ref)){
-    _readRangeMode=true;_readBook=null;_readChapter=null;_readTargetVerse=null;_readReference=ref;
+    _readRangeMode=true;_readBook=null;_readChapter=null;_readTargetVerse=null;_readSelectedIdx=null;_readReference=ref;
     readSetChapterNavEnabled(false);
     try{
       var rtext=_readTranslation==='esv'?await getESV(ref):await getBibleAPI(ref,_readTranslation);
@@ -1495,7 +1496,7 @@ async function fetchReadChapter(){
   var p=parseRef(ref);
   var book=p?_bpFlatBooks[p.book-1]:null;
   if(!p||!book){toast('Could not understand that reference');return;}
-  _readBook=book.n;_readChapter=p.chapter;_readTargetVerse=p.startVerse||null;_readReference=ref;
+  _readBook=book.n;_readChapter=p.chapter;_readTargetVerse=p.startVerse||null;_readSelectedIdx=null;_readReference=ref;
   var chapterRef=book.n+' '+p.chapter;
   try{
     var text=_readTranslation==='esv'?await getESV(chapterRef):await getBibleAPI(chapterRef,_readTranslation);
@@ -1530,7 +1531,7 @@ function renderReadChapter(targetVerse){
       var label=b.newBook?(b.book+' '+b.chapter):('Chapter '+b.chapter);
       divider='<div class="read-chapter-break">'+label+'</div>';
     }
-    return divider+'<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="ttsPlayReadFrom('+i+')" title="Play from here">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+    return divider+'<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="readSelectVerse('+i+')" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('read-display').innerHTML='<div class="scrtext">'+html+'</div>';
   var scr=document.getElementById('read-scroll');
@@ -1609,15 +1610,31 @@ function getReadText(){return _readScriptureText||'';}
  */
 function getReadVerseChunks(){return _readVerses.map(function(v){return v.text;});}
 /**
- * Returns the chunk index Play should start from — the requested entry verse
- * (_readTargetVerse) if one was specified, else the first verse loaded.
- * Always 0 in range mode, since _readTargetVerse is cleared there.
+ * Returns the chunk index Play should start from — a manually tapped verse
+ * (_readSelectedIdx) takes priority if one is set, else the requested entry
+ * verse (_readTargetVerse) if one was specified, else the first verse loaded.
+ * Always 0/selection-only in range mode, since _readTargetVerse is cleared there.
  * @returns {number}
  */
 function getReadStartIdx(){
+  if(_readSelectedIdx!=null)return _readSelectedIdx;
   if(!_readTargetVerse)return 0;
   var idx=_readVerses.findIndex(function(v){return v.num===String(_readTargetVerse);});
   return idx>=0?idx:0;
+}
+/**
+ * Tapping a verse number now selects/focuses it WITHOUT starting playback —
+ * only the Play button starts audio. Sets _readSelectedIdx so the next Play
+ * press (ttsToggleRead -> getReadStartIdx) begins from this verse, and applies
+ * the same visual focus effect (readverse-focus) used during active playback
+ * so the selected verse is easy to find.
+ * @param {number} idx - Index into _readVerses / the TTS chunk array.
+ */
+function readSelectVerse(idx){
+  var chunks=getReadVerseChunks();
+  if(idx<0||idx>=chunks.length)return;
+  _readSelectedIdx=idx;
+  highlightReadVerse(idx);
 }
 /**
  * Scrolls to and visually "focuses" the verse at the given TTS chunk index — called
@@ -3117,7 +3134,7 @@ export {
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
-  getReadVerseChunks, getReadStartIdx, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
+  getReadVerseChunks, getReadStartIdx, readSelectVerse, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
