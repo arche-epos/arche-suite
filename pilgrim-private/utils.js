@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.27.1',date:'Aug 25, 2026',label:'Latest',
+    version:'4.27.2',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Historical Context TIME PERIOD & AUTHOR section could state a debated date/authorship (e.g. Acts) as settled fact. Prompt now requires the tool to check for genuine scholarly debate first and, if present, name the general range each side holds rather than defaulting to one date with an optional footnote.'
+    ]},
+  {
+    version:'4.27.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'tune: Renamed the \\u2018SUMMARY OF THE DATA PRESENTED\\u2019 section header to just \\u2018SUMMARY\\u2019 across Language & Structure, Historical Context, and Cultural Context \\u2014 the original phrasing read stiff and academic for a general reader.'
