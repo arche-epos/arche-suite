@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.8',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.9',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feature: current app version now shown beside the \\u201cPilgrim\\u201d title on the Library tab \\u2014 visible on every screen size without opening Settings.'
+    ]},
+  {
+    version:'4.28.8',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'tune: Read tab\u2019s active-verse focus effect bumped from 1.5x to 1.75x.',

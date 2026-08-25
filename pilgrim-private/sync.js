@@ -13,9 +13,9 @@ import {
   sett, TAGS, setTags,
   toast, toastSuccess,
   migrateStudy, todayStr, logError
-} from './utils.js?v=4.28.8';
+} from './utils.js?v=4.28.9';
 
-import { persist } from './storage.js?v=4.28.8';
+import { persist } from './storage.js?v=4.28.9';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.

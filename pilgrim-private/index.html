@@ -536,7 +536,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="scr on" id="scr-library">
   <div class="topbar">
     <div class="topbar-title" style="line-height:1.2">
-      <div>Pilgrim</div>
+      <div>Pilgrim <span id="lib-version-display" style="font-size:10px;font-weight:400;color:var(--txt4);letter-spacing:.03em;vertical-align:middle"></span></div>
       <div onclick="openVerseModal()" style="font-family:'Crimson Pro',serif;font-size:11px;color:var(--gold);font-style:italic;font-weight:400;letter-spacing:0;margin-top:2px;cursor:pointer">&#8220;This book of the law shall not depart from your mouth, but you shall meditate on it day and night...&#8221;</div>
     </div>
     <div class="offbadge" id="offbadge"><div class="offdot"></div>Offline</div>
@@ -1572,7 +1572,7 @@ input[type="range"]{accent-color:var(--gold)}
 </div>
 <button class="fab" onclick="newStudy()">+</button>
 
-<script type="module" src="app.js?v=4.28.8"></script>
+<script type="module" src="app.js?v=4.28.9"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
