@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.12',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.13',date:'Aug 26, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: PDF Export placed every scripture reference on its own page, wasting paper on short passages — references now flow together in one continuous block with a gold divider between them, only breaking to a fresh page when a reference would otherwise start within 15mm of the bottom margin.'
+    ]},
+  {
+    version:'4.28.12',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: opening a study could silently wipe its Outline and Conclusions fields to empty and autosave over the real content \\u2014 openStudy() cleared both Quill editors before the real data loaded, but never reset their dirty flags, so navTo()\\u2019s save-before-nav could mistake the momentarily-empty editors for a real edit and persist the empty state. Dirty flags now reset immediately after clearing, matching the existing Field Notes pattern.'

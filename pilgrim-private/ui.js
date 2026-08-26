@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.12';
+} from './utils.js?v=4.28.13';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.12';
+} from './storage.js?v=4.28.13';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.12';
+} from './tts.js?v=4.28.13';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.12';
+} from './sync.js?v=4.28.13';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.12';
+} from './studyTools.js?v=4.28.13';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -847,7 +847,17 @@ async function exportPDF(opts){
     pb();
     // ── REFERENCE GROUPS ─────────────────────────────────────────────
     allRefs.forEach(function(r,i){
-      if(i>0)pb();
+      if(i>0){
+        var pgBefore=doc.internal.getCurrentPageInfo().pageNumber;
+        np(15);
+        if(doc.internal.getCurrentPageInfo().pageNumber===pgBefore){
+          // Stayed on same page — gold divider + extra breathing room between refs
+          y+=5;doc.setFillColor(140,105,30);doc.rect(mgL,y,cw,0.4,'F');y+=7;
+        }else{
+          // Landed on a fresh page — the page break itself is the separator
+          y+=2;
+        }
+      }
       // Ref heading
       np(14);doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
       doc.text(pdfSafe(r.reference||'Passage'),mgL,y);y+=lh(15)+2;
