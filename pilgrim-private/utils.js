@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.10',date:'Aug 25, 2026',label:'Latest',
+    version:'4.28.11',date:'Aug 25, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: AI Study Tools could get stuck in a repetition loop (a phrase repeating dozens of times before recovering) \\u2014 no frequency_penalty was set on any of the 5 Groq/DeepInfra calls (Word Study/Snapshot/Expand/Continue/Lexicon), and max_tokens was still at a temporary 16384 diagnostic value flagged in prior sessions, giving a loop far more room to run before being cut off. Added frequency_penalty:0.3 to all 5 calls and right-sized max_tokens to 6000 on the two calls that were still at 16384 (Word Study, Study Snapshot) \\u2014 real usage maxes ~4,300 tokens.'
+    ]},
+  {
+    version:'4.28.10',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Scripture panel (Notes tab) TTS was out of sync with the Read tab \\u2014 stopping playback never cleared the last-spoken verse\\u2019s highlight, and the panel still used the old plain-highlight effect instead of the Read tab\\u2019s focus-enlarge effect. Both now unified.',

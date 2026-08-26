@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.28.10';
+} from './utils.js?v=4.28.11';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.10';
-import { syncToGist } from './sync.js?v=4.28.10';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.10';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.11';
+import { syncToGist } from './sync.js?v=4.28.11';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.11';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -714,7 +714,7 @@ async function runTool(tool){
   try{
     var trans=ar.pastedTranslation||ar.translation||'ESV';
     var prompt=buildPrompt(tool,ar.reference,trans,studyScope);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:16384,temperature:0.2})});
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
@@ -947,7 +947,7 @@ async function runSnapshot(){
     _snapshotAbortControllers[item.tool]=controller;
     try{
       var prompt=buildPrompt(item.tool,ar.reference,trans,item.scope);
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:16384,temperature:0.2}),signal:controller.signal});
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3}),signal:controller.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -1126,7 +1126,7 @@ async function expandCurrentTool(){
   var toolLabel=TOOL_LABELS[base]||base;
   var expandPrompt='The following '+toolLabel+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\nPrioritize: '+DEEP_PRIORITIES[base]+'.\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, name scholars on each side.\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
   try{
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:expandPrompt}],max_tokens:2048,temperature:0.2})});
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:expandPrompt}],max_tokens:2048,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var more=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -1161,7 +1161,7 @@ async function continueCurrentTool(){
     var trans2=ar.pastedTranslation||ar.translation||'ESV';
     var origPrompt=buildPrompt(base,ar.reference,trans2,scope);
     var contPrompt=origPrompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
-    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:contPrompt}],max_tokens:2048,temperature:0.2})});
+    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:contPrompt}],max_tokens:2048,temperature:0.2,frequency_penalty:0.3})});
     if(!res2.ok){var err2=await res2.json().catch(function(){return{};});throw new Error(err2.error?err2.error.message:'HTTP '+res2.status);}
     var data2=await res2.json();
     var addition=data2.choices&&data2.choices[0]&&data2.choices[0].message&&data2.choices[0].message.content||'';
@@ -1515,7 +1515,7 @@ async function runLexiconLookup(){
   bar.style.display='none';
   var prompt='You are a biblical lexicographer with deep knowledge of Greek NT and Hebrew OT.\nThe user has looked up: "'+query+'"\n\nIf the input is a Strong\'s number (G#### or H####), use that number. If it is an English word, transliteration, or original language word, identify the most likely Strong\'s number.\n\nReturn ONLY a valid JSON object — absolutely no markdown fences, no backticks, no preamble, no text before or after the JSON. Use this exact structure:\n\n{"strongsNumber":"G#### or H####","testament":"NT or OT","originalWord":"word in original script","transliteration":"romanized form","pronunciation":"phonetic e.g. log\'-os","partOfSpeech":"e.g. masculine noun","gender":"masculine/feminine/neuter or null","rootWord":"etymology e.g. from λέγω (G3004) or null","tdntReference":"vol:page,entry or null","primaryDefinition":"concise primary definition","usageOutline":["I. main usage","   A. sub-usage","   B. sub-usage","II. second main usage"],"kjvCount":0,"kjvTranslations":[{"word":"translation","count":0}],"strongsDefinition":"full Strong\'s Concordance definition text","scholarlyEntry":"150-200 word summary of Thayer\'s Greek Lexicon (NT) or Brown-Driver-Briggs (OT) in their scholarly style","occurrences":[{"ref":"Book Ch:v","text":"full verse text (KJV) showing the word in context"}]}\n\nFor occurrences: list ALL known occurrences up to 30. For very common words (100+ occurrences), list the 25 most theologically significant. Always include the full verse text, never just the reference.';
   try{
-    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:3000,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}]})});
+    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:3000,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],frequency_penalty:0.3})});
     var d=await r.json();
     if(!r.ok){res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status)+'</p>';return;}
     var raw=d.choices[0].message.content;
