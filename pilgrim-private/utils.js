@@ -406,7 +406,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.13',date:'Aug 26, 2026',label:'Latest',
+    version:'4.28.14',date:'Aug 26, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'diag: temporary console.log instrumentation added to loadStudies() and renderLib() to trace a live bug where studies fail to render despite valid localStorage data — will be reverted once root cause is found.'
+    ]},
+  {
+    version:'4.28.13',date:'Aug 26, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: PDF Export placed every scripture reference on its own page, wasting paper on short passages — references now flow together in one continuous block with a gold divider between them, only breaking to a fresh page when a reference would otherwise start within 15mm of the bottom margin.'

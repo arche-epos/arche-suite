@@ -13,7 +13,7 @@ import {
   _pendingDeleteId, setPendingDeleteId,
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef
-} from './utils.js?v=4.28.12';
+} from './utils.js?v=4.28.14';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -75,15 +75,19 @@ function _qOutlineDirty() { return window._qOutlineDirty || false; }
  * Falls back to an empty array on JSON parse failure.
  */
 export function loadStudies() {
+  console.log('[DIAG] loadStudies() called. SK =', SK); // TEMP — remove after diagnosis
   try {
     var loaded = JSON.parse(localStorage.getItem(SK)) || [];
+    console.log('[DIAG] parsed loaded.length =', loaded.length); // TEMP
     loaded.forEach(function(s) { migrateStudy(s); });
     setStudies(loaded);
-  } catch(e) { setStudies([]); }
+    console.log('[DIAG] after setStudies(), studies.length =', studies.length); // TEMP
+  } catch(e) { console.error('[DIAG] loadStudies() caught error:', e); setStudies([]); } // TEMP — logs the swallowed error
   if (cur) {
     var _resync = studies.find(function(s) { return s.id === cur.id; });
     if (_resync) setCur(_resync);
   }
+  console.log('[DIAG] loadStudies() exiting, final studies.length =', studies.length); // TEMP
 }
 
 /**
