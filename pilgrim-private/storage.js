@@ -13,7 +13,7 @@ import {
   _pendingDeleteId, setPendingDeleteId,
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef
-} from './utils.js?v=4.28.11';
+} from './utils.js?v=4.28.12';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -119,8 +119,15 @@ export function openStudy(id) {
   setActiveRefIdx(0);
   setStudyScope((activeRef() && activeRef().deep && activeRef().deep.studyScope) || 'passage');
   // Reset Quill editors to empty — study content populates via populateField()
+  // Dirty flags reset immediately after (mirrors Field Notes pattern below) —
+  // without this, navTo()'s saveStudy(true) can read the momentarily-empty
+  // editors as a real edit and overwrite deep.outline/deep.conclusions with
+  // empty content before populateDeep() ever loads the real data. See
+  // session-handoff-aug23-2026-pilgrim-outline-wipe-bug.md.
   var _qO = _qOutline(); if (_qO) _qO.setText('');
+  if (window.setQOutlineDirty) window.setQOutlineDirty(false);
   var _qC = _qConcl(); if (_qC) _qC.setText('');
+  if (window.setQConclDirty) window.setQConclDirty(false);
   if (_cbs.trackOpen) _cbs.trackOpen(cur);
   if (_cbs.populateField) _cbs.populateField();
   if (_cbs.navTo) _cbs.navTo('study');
