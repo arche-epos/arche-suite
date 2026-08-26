@@ -406,10 +406,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.14',date:'Aug 26, 2026',label:'Latest',
+    version:'4.28.15',date:'Aug 26, 2026',label:'Latest',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'diag: temporary console.log instrumentation added to loadStudies() and renderLib() to trace a live bug where studies fail to render despite valid localStorage data — will be reverted once root cause is found.'
+      'fix: after any version bump, an old Service Worker could keep serving stale cached JS even on a normal refresh, requiring a hard refresh to see the update (surfaced as studies appearing to vanish, though local data was always intact) — the version-mismatch cleanup now purges Cache Storage in addition to unregistering the worker.',
+      'fix: sync.js and tts.js were still importing utils.js/storage.js at a stale cache-bust version after a prior deploy only bumped some files — all cross-module imports now stay in lockstep on every version bump.',
+      'fix: PDF Export could split an AI Study Tool entry (e.g. a Word Study definition) across a page break, orphaning its heading — content is now measured in blocks and pushed to a fresh page when a block would otherwise be split.',
+      'fix: PDF Export now shows all scripture reference texts together first, then AI Study Tool results grouped by reference afterward, instead of interleaving them by reference order.',
+      'fix: PDF Export’s “Scripture” checkbox in the Export modal was never actually wired to the export logic — unchecking it now correctly omits scripture texts.'
     ]},
   {
     version:'4.28.13',date:'Aug 26, 2026',label:'',

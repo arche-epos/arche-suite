@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.28.14';
+} from './utils.js?v=4.28.15';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.14';
-import { syncToGist } from './sync.js?v=4.28.14';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.14';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.15';
+import { syncToGist } from './sync.js?v=4.28.15';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.15';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.

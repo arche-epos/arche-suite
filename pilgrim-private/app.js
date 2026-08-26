@@ -5,27 +5,27 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr
-} from './utils.js?v=4.28.14';
+} from './utils.js?v=4.28.15';
 
 import {
   wireCallbacks, loadStudies, autoSave
-} from './storage.js?v=4.28.14';
+} from './storage.js?v=4.28.15';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.28.14';
+} from './sync.js?v=4.28.15';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.28.14';
+} from './tts.js?v=4.28.15';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.28.14';
-import * as Storage from './storage.js?v=4.28.14';
-import * as TTS from './tts.js?v=4.28.14';
-import * as Sync from './sync.js?v=4.28.14';
-import * as StudyTools from './studyTools.js?v=4.28.14';
-import * as UI from './ui.js?v=4.28.14';
+import * as Utils from './utils.js?v=4.28.15';
+import * as Storage from './storage.js?v=4.28.15';
+import * as TTS from './tts.js?v=4.28.15';
+import * as Sync from './sync.js?v=4.28.15';
+import * as StudyTools from './studyTools.js?v=4.28.15';
+import * as UI from './ui.js?v=4.28.15';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -91,17 +91,31 @@ setInterval(autoSave, 30000);
 });
 
 // ── Service Worker (Section 30) ──────────────────────────────────────────────
+// On version bump: unregister any leftover Service Worker AND purge Cache Storage.
+// Unregistering alone is not enough — a controlled page's in-flight/next-reload
+// requests can still be served stale cached responses from CacheStorage even
+// after unregister(), requiring a manual hard-refresh to fully clear. See
+// session-handoff-aug26-2026-studies-not-loading-false-alarm.md.
 (function() {
   var APP_VER = (CHANGELOG && CHANGELOG[0]) ? CHANGELOG[0].version : '0';
   if (localStorage.getItem('_sw_ver') !== APP_VER) {
     localStorage.setItem('_sw_ver', APP_VER);
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(regs) {
-        var found = regs.length > 0;
-        regs.forEach(function(r) { r.unregister(); });
-        if (found) { window.location.reload(); }
-      });
-    }
+    var swP = ('serviceWorker' in navigator)
+      ? navigator.serviceWorker.getRegistrations().then(function(regs) {
+          var found = regs.length > 0;
+          regs.forEach(function(r) { r.unregister(); });
+          return found;
+        })
+      : Promise.resolve(false);
+    var cacheP = ('caches' in window)
+      ? caches.keys().then(function(names) {
+          var found = names.length > 0;
+          return Promise.all(names.map(function(n) { return caches.delete(n); })).then(function() { return found; });
+        })
+      : Promise.resolve(false);
+    Promise.all([swP, cacheP]).then(function(results) {
+      if (results[0] || results[1]) { window.location.reload(); }
+    });
   }
 })();
 

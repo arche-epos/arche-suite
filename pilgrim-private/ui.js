@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.14';
+} from './utils.js?v=4.28.15';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.14';
+} from './storage.js?v=4.28.15';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.14';
+} from './tts.js?v=4.28.15';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.14';
+} from './sync.js?v=4.28.15';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.14';
+} from './studyTools.js?v=4.28.15';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -233,7 +233,6 @@ function createFromTemplate(tplKey){
 function renderLib(){
   if(libTab==='words'){renderWordList();return;}
   loadStudies();
-  console.log('[DIAG] renderLib() after loadStudies(), studies.length as seen by ui.js =', studies.length, '| ACTIVE_USER =', ACTIVE_USER, '| SK =', SK); // TEMP — remove after diagnosis
   var q=(document.getElementById('lib-search').value||'').toLowerCase();
   var sortBy=(document.getElementById('lib-sort')&&document.getElementById('lib-sort').value)||'date';
 
@@ -814,6 +813,35 @@ async function exportPDF(opts){
         else{var t=node.textContent.trim();if(t)txt(pdfSafe(t),defaultSz||10,'normal',defaultRgb||[30,25,15]);}
       });
     };
+    // AI content block renderer: splits on literal "---" divider lines (used by the
+    // AI tools to separate entries, e.g. WORD 1 / WORD 2) and, for any block short
+    // enough to fit on one full page, forces a page break before it if it would
+    // otherwise be split by the current page boundary — prevents an orphaned
+    // heading (e.g. "WORD 2: living") stranded at the bottom with its definition
+    // starting fresh on the next page.
+    var txtBlocks=function(str,sz,style,rgb){
+      if(!str)return;
+      var lhv=lh(sz);
+      var maxBlockH=ph-mgT-mgB-footH;
+      var blocks=String(str).split(/\n[ \t]*-{3,}[ \t]*\n/);
+      blocks.forEach(function(block,bi){
+        block=block.replace(/^\s+|\s+$/g,'');
+        if(!block)return;
+        var estH=0;
+        block.split('\n').forEach(function(para){
+          var m=para.match(/^([ \t]*)/);
+          var spaces=m?(m[1].replace(/\t/g,'    ').length):0;
+          var indMm=Math.min(spaces,24)*1.5;
+          var content=para.replace(/^[ \t]+/,'');
+          if(!content){estH+=lhv;return;}
+          estH+=doc.splitTextToSize(content,cw-indMm).length*lhv;
+        });
+        var remaining=(ph-mgB-footH)-y;
+        if(estH<=maxBlockH&&estH>remaining)pb();
+        if(bi>0){y+=2;doc.setDrawColor(180,160,110);doc.setLineWidth(0.2);doc.line(mgL,y,mgL+cw,y);y+=4;}
+        txt(block,sz,style,rgb,3);
+      });
+    };
     // AI sub-section rule: requires 35mm clearance, thin gold line, small uppercase label
     var softsection=function(title){np(35);y+=3;doc.setFillColor(140,105,30);doc.rect(mgL,y-1,cw,0.5,'F');y+=4;doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(90,65,20);doc.text(pdfSafe(title.toUpperCase()),mgL,y);y+=5;};
     // Major section rule: requires 22mm clearance, gold line, bold uppercase label
@@ -846,32 +874,54 @@ async function exportPDF(opts){
     if(opts.resources&&cur.resources&&cur.resources.length){var hasOcr=cur.resources.some(function(r){return r.ocrStatus==='done'&&r.ocrText;});if(hasOcr){section('Resources & Documents');cur.resources.forEach(function(r){if(r.ocrStatus!=='done'||!r.ocrText)return;np(14);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(90,65,20);doc.text(pdfSafe(r.title+' - '+r.date),mgL,y);y+=6;txt(pdfSafe(r.ocrText),9,'normal',[35,28,18]);y+=2;});}}
     // ── PAGE BREAK — into reference groups ───────────────────────────
     pb();
-    // ── REFERENCE GROUPS ─────────────────────────────────────────────
-    allRefs.forEach(function(r,i){
-      if(i>0){
-        var pgBefore=doc.internal.getCurrentPageInfo().pageNumber;
-        np(15);
-        if(doc.internal.getCurrentPageInfo().pageNumber===pgBefore){
-          // Stayed on same page — gold divider + extra breathing room between refs
-          y+=5;doc.setFillColor(140,105,30);doc.rect(mgL,y,cw,0.4,'F');y+=7;
-        }else{
-          // Landed on a fresh page — the page break itself is the separator
-          y+=2;
+    // ── PASS 1: ALL SCRIPTURE TEXTS TOGETHER ──────────────────────────
+    if(opts.scripture!==false){
+      allRefs.forEach(function(r,i){
+        if(i>0){
+          var pgBefore=doc.internal.getCurrentPageInfo().pageNumber;
+          np(15);
+          if(doc.internal.getCurrentPageInfo().pageNumber===pgBefore){
+            // Stayed on same page — gold divider + extra breathing room between refs
+            y+=5;doc.setFillColor(140,105,30);doc.rect(mgL,y,cw,0.4,'F');y+=7;
+          }else{
+            // Landed on a fresh page — the page break itself is the separator
+            y+=2;
+          }
         }
-      }
-      // Ref heading
-      np(14);doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
-      doc.text(pdfSafe(r.reference||'Passage'),mgL,y);y+=lh(15)+2;
-      // Full verse text
-      if(r.scriptureText){txt(pdfSafe(r.scriptureText.replace(/<[^>]+>/g,'').replace(/\n\n/g,'\n')),10,'italic',[45,35,20],1);}
-      // Populated AI tools for this ref only
-      ['lexical','grammar','historical','cultural','crossrefs'].forEach(function(k){
-        var cp=r.deep&&r.deep[k];
-        var cb=r.deep&&r.deep[k+'_book'];
-        if(cp&&opts.tools[k]&&opts.tools[k].passage){softsection(TOOL_LABELS[k]+' \u2013 Passage');txt(pdfSafe(cp.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
-        if(cb&&opts.tools[k]&&opts.tools[k].book){softsection(TOOL_LABELS[k]+' \u2013 Whole Book');txt(pdfSafe(cb.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
+        // Ref heading
+        np(14);doc.setFontSize(15);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
+        doc.text(pdfSafe(r.reference||'Passage'),mgL,y);y+=lh(15)+2;
+        // Full verse text
+        if(r.scriptureText){txt(pdfSafe(r.scriptureText.replace(/<[^>]+>/g,'').replace(/\n\n/g,'\n')),10,'italic',[45,35,20],1);}
+      });
+    }
+    // ── PASS 2: AI STUDY TOOLS, GROUPED BY REFERENCE ──────────────────
+    var refsWithTools=allRefs.filter(function(r){
+      return ['lexical','grammar','historical','cultural','crossrefs'].some(function(k){
+        var cp=r.deep&&r.deep[k],cb=r.deep&&r.deep[k+'_book'];
+        return (cp&&opts.tools[k]&&opts.tools[k].passage)||(cb&&opts.tools[k]&&opts.tools[k].book);
       });
     });
+    if(refsWithTools.length){
+      pb();
+      section('AI Study Tools');
+      refsWithTools.forEach(function(r,i){
+        if(i>0){
+          var pgBefore2=doc.internal.getCurrentPageInfo().pageNumber;
+          np(15);
+          if(doc.internal.getCurrentPageInfo().pageNumber===pgBefore2){y+=5;doc.setFillColor(140,105,30);doc.rect(mgL,y,cw,0.4,'F');y+=7;}
+          else{y+=2;}
+        }
+        np(14);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
+        doc.text(pdfSafe(r.reference||'Passage'),mgL,y);y+=lh(13)+3;
+        ['lexical','grammar','historical','cultural','crossrefs'].forEach(function(k){
+          var cp=r.deep&&r.deep[k];
+          var cb=r.deep&&r.deep[k+'_book'];
+          if(cp&&opts.tools[k]&&opts.tools[k].passage){softsection(TOOL_LABELS[k]+' \u2013 Passage');txtBlocks(pdfSafe(cp.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
+          if(cb&&opts.tools[k]&&opts.tools[k].book){softsection(TOOL_LABELS[k]+' \u2013 Whole Book');txtBlocks(pdfSafe(cb.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
+        });
+      });
+    }
     // ── MY CONCLUSIONS ────────────────────────────────────────────────
     var concl=(_qConcl&&_qConcl.root.innerHTML)||(cur.deep&&cur.deep.conclusions)||'';
     if(opts.conclusions&&concl.replace(/<[^>]*>/g,'').trim()){pb();section('My Conclusions');htmlTxt(concl,10,[30,25,15]);}
