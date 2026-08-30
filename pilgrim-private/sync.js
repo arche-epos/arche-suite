@@ -13,9 +13,9 @@ import {
   sett, TAGS, setTags,
   toast, toastSuccess,
   migrateStudy, todayStr, logError
-} from './utils.js?v=4.28.16';
+} from './utils.js?v=4.28.17';
 
-import { persist } from './storage.js?v=4.28.16';
+import { persist } from './storage.js?v=4.28.17';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -56,6 +56,34 @@ function gistFilename() {
   return ACTIVE_USER === 'jesse' ? 'arche-pilgrim-studies.json' : 'arche-pilgrim-' + ACTIVE_USER + '.json';
 }
 
+/**
+ * Returns a copy of the given studies array with every photo resource's dataUrl
+ * emptied (marked stubbed:true) for the outgoing Gist payload only. Pilgrim has no
+ * server-side storage for uploaded photos yet — pushing the full base64 bytes to
+ * every tester's Gist on every save isn't sustainable, so only lightweight metadata
+ * (id, title, date, ocrText, ocrStatus) travels to the Gist; the real bytes stay on
+ * the device that captured them. Document resources already store extracted text
+ * only (dataUrl:''), so they pass through untouched. Does not mutate the input —
+ * local state (localStorage) always keeps the real photo bytes.
+ * @param {Array} list - Studies array (post-merge, about to be pushed).
+ * @returns {Array} Deep-enough copy safe to JSON.stringify and push.
+ */
+function stubResourcesForSync(list){
+  return list.map(function(s){
+    if(!s.resources||!s.resources.length)return s;
+    var hasPhotoBytes=s.resources.some(function(r){return r.dataUrl;});
+    if(!hasPhotoBytes)return s;
+    var copy=Object.assign({},s);
+    copy.resources=s.resources.map(function(r){
+      if(!r.dataUrl)return r; // doc resources — already text-only, nothing to stub
+      var stub=Object.assign({},r);
+      stub.dataUrl='';
+      stub.stubbed=true;
+      return stub;
+    });
+    return copy;
+  });
+}
 var _gistPushing=false;
 var _gistPulling=false;
 var _lastPushTime=0;
@@ -77,6 +105,34 @@ function updateGistStatusDot(){
  * @param {Array} remote - Studies from the Gist backup.
  * @returns {Array} Merged array of studies.
  */
+/**
+ * Patches a resource-bytes reconciliation into the study picked as the merge winner.
+ * Photo resources are stubbed (dataUrl emptied) before every Gist push (see
+ * stubResourcesForSync) since there's no server-side storage for them yet — a synced-
+ * down copy of a study will therefore never carry real photo bytes. Without this
+ * reconciliation, a remote copy winning the merge (newer updatedAt) would silently
+ * overwrite the local device's real photo with the stubbed one — same failure shape
+ * as the Aug 25 Outline/Conclusions wipe bug. Whichever side has real (non-empty)
+ * dataUrl bytes for a given resource id always wins for that resource, regardless
+ * of which side wins the study as a whole.
+ * @param {Object} winner - The study object chosen by the merge (will be returned, not mutated in place).
+ * @param {Object} other - The losing side's copy of the same study, may hold real photo bytes.
+ * @returns {Object} winner, with resources reconciled.
+ */
+function reconcileResourceBytes(winner,other){
+  if(!other||!other.resources||!other.resources.length)return winner;
+  var winnerResources=(winner.resources||[]).map(function(r){return Object.assign({},r);});
+  var winnerMap={};
+  winnerResources.forEach(function(r){winnerMap[r.id]=r;});
+  other.resources.forEach(function(r){
+    if(!r.dataUrl)return; // nothing to restore from this side
+    var w=winnerMap[r.id];
+    if(!w){winnerResources.push(Object.assign({},r));return;} // resource missing entirely on winner side — restore it
+    if(!w.dataUrl){w.dataUrl=r.dataUrl;delete w.stubbed;} // winner's copy is stubbed — patch in the real bytes
+  });
+  winner.resources=winnerResources;
+  return winner;
+}
 function mergeStudies(local,remote){
   var merged={};
   local.forEach(function(s){merged[s.id]=s;}); // Seed map with all local studies
@@ -84,10 +140,11 @@ function mergeStudies(local,remote){
     if(_deletedStudyIds[r.id])return; // Skip studies deleted this session (tombstone in memory)
     if(!merged[r.id]){merged[r.id]=r;}
     else{
+      var priorLocal=merged[r.id];
       // Most-recent updatedAt wins; fall back to date if updatedAt missing; 0 if neither present
-      var localTime=new Date(merged[r.id].updatedAt||merged[r.id].date||0).getTime();
+      var localTime=new Date(priorLocal.updatedAt||priorLocal.date||0).getTime();
       var remoteTime=new Date(r.updatedAt||r.date||0).getTime();
-      if(remoteTime>localTime)merged[r.id]=r;
+      if(remoteTime>localTime)merged[r.id]=reconcileResourceBytes(Object.assign({},r),priorLocal);
     }
   });
   return Object.values(merged).sort(function(a,b){return (b.updatedAt||b.date||'')>(a.updatedAt||a.date||'')?1:-1;});
@@ -171,7 +228,7 @@ async function syncToGist(silent){
       }
     }catch(e){/* remote fetch failed — push local only, better than nothing */}
     var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-    var payload=JSON.stringify({studies:mergedStudies,tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak},null,2);
+    var payload=JSON.stringify({studies:stubResourcesForSync(mergedStudies),tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak},null,2);
     var body={description:'Arché · Pilgrim Studies',public:false,files:{}};body.files[gistFilename()]={content:payload};
     var res=await fetch(WORKER_URL+'/gist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok){var errBody='';try{errBody=await res.text();}catch(e){}throw new Error('Sync '+res.status+' — '+errBody.slice(0,120));}

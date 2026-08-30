@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.28.16';
+} from './utils.js?v=4.28.17';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.16';
-import { syncToGist } from './sync.js?v=4.28.16';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.16';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.28.17';
+import { syncToGist } from './sync.js?v=4.28.17';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.28.17';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -714,7 +714,7 @@ async function runTool(tool){
   try{
     var trans=ar.pastedTranslation||ar.translation||'ESV';
     var prompt=buildPrompt(tool,ar.reference,trans,studyScope);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool,'X-Tool-Scope':studyScope},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
@@ -1685,6 +1685,7 @@ function resAddDocResource(filename,text){
   cur.resources.push(res);
   saveStudy();
   renderResources();
+  trackEvent({fileType:'doc',fileBytes:trimmed.length}); // stored-text length as a byte-count estimate — no content sent
   toast(truncated?'Document added (large file — first portion stored)':'Document added — tap to view or insert into notes');
 }
 /**
@@ -1706,7 +1707,7 @@ function resCompressImage(dataUrl,callback){var img=new Image();img.onload=funct
  * Creates an image resource object, attaches it to the study, saves, and triggers OCR.
  * @param {string} dataUrl - Compressed base64 JPEG data URL.
  */
-function resAddResource(dataUrl){if(!cur.resources)cur.resources=[];var res={id:'r'+Date.now(),dataUrl:dataUrl,ocrText:'',ocrStatus:'pending',title:'Resource '+(cur.resources.length+1),date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};cur.resources.push(res);saveStudy();renderResources();resRunOCR(res.id);}
+function resAddResource(dataUrl){if(!cur.resources)cur.resources=[];var res={id:'r'+Date.now(),dataUrl:dataUrl,ocrText:'',ocrStatus:'pending',title:'Resource '+(cur.resources.length+1),date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})};cur.resources.push(res);saveStudy();renderResources();var _b64=dataUrl.indexOf(',')>=0?dataUrl.slice(dataUrl.indexOf(',')+1):dataUrl;trackEvent({fileType:'image',fileBytes:Math.round(_b64.length*0.75)});resRunOCR(res.id);}
 /**
  * Runs OCR on a resource image via the arche-proxy /gemini-ocr endpoint (Gemini 3.5 Flash).
  * Updates the resource's ocrText and ocrStatus, saves, and re-renders resources.

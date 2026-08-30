@@ -9,8 +9,9 @@ import {
   SK_TTS_SETT,
   cur,
   htmlToText,
-  activeRef
-} from './utils.js?v=4.28.16';
+  activeRef,
+  trackEvent
+} from './utils.js?v=4.28.17';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -171,7 +172,7 @@ function ttsPlay(source,fromIdx,charOffset){
  */
 function ttsToggleAI(){
   if(_ttsSource==='ai'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('ai',_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText('ai');if(!text){toast('No content to read');return;}_ttsSentences=ttsSplit(text);ttsPlay('ai',0);
+  ttsStop();var text=ttsGetText('ai');if(!text){toast('No content to read');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:'ai'});ttsPlay('ai',0);
 }
 /**
  * Toggles TTS for a Field Notes panel source ('fn', 'concl', or 'outline').
@@ -180,7 +181,7 @@ function ttsToggleAI(){
  */
 function ttsToggleField(source){
   if(_ttsSource===source){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay(source,_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText(source);if(!text){toast('Nothing to read here');return;}_ttsSentences=ttsSplit(text);ttsPlay(source,0);
+  ttsStop();var text=ttsGetText(source);if(!text){toast('Nothing to read here');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:source});ttsPlay(source,0);
 }
 /**
  * Toggles TTS for the Scripture panel. Pause if playing, resume if paused, or start
@@ -206,6 +207,7 @@ function ttsPlayScrFrom(idx){
   if(!chunks.length||idx<0||idx>=chunks.length)return;
   ttsStop();
   _ttsSentences=chunks;
+  trackEvent({tts:'scr'});
   ttsPlay('scr',idx);
 }
 /**
@@ -233,6 +235,7 @@ function ttsPlayReadFrom(idx){
   if(!chunks.length||idx<0||idx>=chunks.length)return;
   ttsStop();
   _ttsSentences=chunks;
+  trackEvent({tts:'read'});
   ttsPlay('read',idx);
 }
 /**

@@ -14,8 +14,12 @@ var ACTIVE_USER=null; // set by initPinGate()/activateUser() before any storage 
  * Sends only a screen path and/or tool name — NEVER content of any kind. Failures
  * are swallowed silently; a broken beacon must never surface to the tester or
  * affect app behavior in any way.
- * @param {{screen?:string, tool?:string}} payload - screen: dot-path nav location
+ * @param {{screen?:string, tool?:string, field?:string, tour?:string, tts?:string,
+ *   fileType?:string, fileBytes?:number}} payload - screen: dot-path nav location
  *   (e.g. 'study.notes'). tool: AI-tool key, or 'snapshot' for the batch-mode counter.
+ *   field: 'notes'|'outline'|'conclusions' — fired once per edit session, no content.
+ *   tour: 'study'|'settings'. tts: source key ('ai'|'fn'|'concl'|'outline'|'scr'|'read').
+ *   fileType+fileBytes: 'image'|'doc' plus an estimated byte size — no content, size only.
  */
 function trackEvent(payload){
   try{
@@ -419,7 +423,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.16',date:'Aug 27, 2026',label:'Latest',
+    version:'4.28.17',date:'Aug 29, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: usage tracking extended — TTS plays, Notes/Outline/Conclusions usage, AI tool scope (Passage/Book), guided tour starts, and resource upload sizes are now included, same no-content rule as before (usage/size only, never content).',
+      'fix: photo resources are no longer pushed to the Gist backup at full size — there is no server-side storage for them yet. Only lightweight metadata (title, date, OCR text) syncs; the photo itself stays on the capturing device. A safeguard now prevents a synced-down copy of a study from ever overwriting a full-resolution photo already on that device.'
+    ]},
+  {
+    version:'4.28.16',date:'Aug 27, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: added anonymous usage tracking — screen/tab visits and AI-tool usage are now sent to arche-proxy so Boss can see what testers actually use, to guide where development time goes. No content of any kind is ever logged — only tester ID, screen/tool name, timestamp, and token counts. See spec-usage-tracking-admin-v2.md.'

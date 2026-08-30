@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.16';
+} from './utils.js?v=4.28.17';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.16';
+} from './storage.js?v=4.28.17';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.16';
+} from './tts.js?v=4.28.17';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.16';
+} from './sync.js?v=4.28.17';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.16';
+} from './studyTools.js?v=4.28.17';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -120,11 +120,11 @@ var _qlToolbar=[
 function initEditors(){
   if(typeof Quill==='undefined')return;
   _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:_qlToolbar}});
-  _qFN.on('text-change',function(){updateWordCount();_qFNDirty=true;});
+  _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
   _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:_qlToolbar}});
-  _qConcl.on('text-change',function(){_qConclDirty=true;});
+  _qConcl.on('text-change',function(){if(!_qConclDirty)trackEvent({field:'conclusions'});_qConclDirty=true;});
   _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:_qlToolbar}});
-  _qOutline.on('text-change',function(){_qOutlineDirty=true;});
+  _qOutline.on('text-change',function(){if(!_qOutlineDirty)trackEvent({field:'outline'});_qOutlineDirty=true;});
 }
 
 
@@ -2169,6 +2169,7 @@ function tourPositionBubble(rect){
  * @param {string} name - 'study' for Tour A, 'settings' for Tour B.
  */
 function startTour(name){
+  trackEvent({tour:name});
   _tourActive=name;
   _tourSteps=(name==='study')?TOUR_A_STEPS:TOUR_B_STEPS;
   _tourStep=0;

@@ -125,6 +125,35 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
+      <h2>Engagement <span class="muted" id="rangeLabel3"></span></h2>
+      <div class="detail-cols">
+        <div class="detail-col">
+          <h4>TTS Plays (by source)</h4>
+          <div id="topTts"></div>
+        </div>
+        <div class="detail-col">
+          <h4>Notes / Outline / Conclusions</h4>
+          <div id="topFields"></div>
+        </div>
+        <div class="detail-col">
+          <h4>Guided Tours</h4>
+          <div id="topTours"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>AI Tool Scope — Passage vs. Book <span class="muted" id="rangeLabel4"></span></h2>
+      <div id="toolScopeList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Resource Storage <span class="muted" id="rangeLabel5"></span></h2>
+      <div class="stat-row" id="storageStats"></div>
+      <div class="muted" style="margin-top:6px">Bytes added over this range (not current total — deleted resources aren't subtracted). Doc size is extracted-text length, an estimate.</div>
+    </div>
+
+    <div class="card">
       <h2>
         Per-Tester Breakdown
         <input type="text" class="filter-input" id="testerFilter" placeholder="Filter by tester…">
@@ -144,7 +173,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="testerEmpty">No usage data in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.0.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.1.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -167,6 +196,14 @@ function rangeToDates(range){
   const to = todayStr();
   if (range === 'all') return { from: ANALYTICS_START, to };
   return { from: daysAgoStr(parseInt(range,10)-1), to };
+}
+const TOOL_LABELS = { lexical:'Word Study', grammar:'Language & Structure', historical:'Historical Context', cultural:'Cultural Context', crossrefs:'Cross-References', geography:'Places & Geography', lexicon:'Word Lookup', gemini_ocr:'OCR', snapshot:'Snapshot' };
+function toolLabel(key){ return TOOL_LABELS[key] || key; }
+function formatBytes(n){
+  if (!n) return '0 B';
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/(1024*1024)).toFixed(2) + ' MB';
 }
 function fmtDate(iso){
   if (!iso) return '—';
@@ -235,12 +272,18 @@ async function loadData(){
   const { from, to } = rangeToDates(currentRange);
   document.getElementById('rangeLabel1').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel2').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel3').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel4').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel5').textContent = `(${from} → ${to})`;
   [usageData, ratelimitData] = await Promise.all([
     fetchAdmin('/admin/usage', { from, to }),
     fetchAdmin('/admin/ratelimits', { from, to })
   ]);
   renderHealth();
   renderTopLists();
+  renderEngagement();
+  renderToolScope();
+  renderStorage();
   renderTesterTable();
 }
 
@@ -299,7 +342,40 @@ function renderBarList(containerId, entries){
 
 function renderTopLists(){
   renderBarList('topScreens', aggregateAcross('screens'));
-  renderBarList('topTools', aggregateAcross('tools'));
+  renderBarList('topTools', aggregateAcross('tools').map(([k,v]) => [toolLabel(k), v]));
+}
+
+function renderEngagement(){
+  renderBarList('topTts', aggregateAcross('ttsPlays'));
+  renderBarList('topFields', aggregateAcross('fields'));
+  renderBarList('topTours', aggregateAcross('tours'));
+}
+
+function renderToolScope(){
+  const entries = aggregateAcross('toolScopes').map(([key,count]) => {
+    const [tool,scope] = key.split(':');
+    const label = toolLabel(tool) + ' — ' + (scope === 'book' ? 'Whole Book' : 'This Passage');
+    return [label, count];
+  });
+  renderBarList('toolScopeList', entries);
+}
+
+function renderStorage(){
+  const bytesByType = aggregateAcross('fileBytes');
+  const countsByType = aggregateAcross('fileCounts');
+  const countMap = Object.fromEntries(countsByType);
+  const el = document.getElementById('storageStats');
+  el.innerHTML = '';
+  if (!bytesByType.length) { el.innerHTML = '<div class="empty">No uploads in this range.</div>'; return; }
+  const labels = { image: 'Photos', doc: 'Documents' };
+  bytesByType.forEach(([type,bytes]) => {
+    const count = countMap[type] || 0;
+    const avg = count ? Math.round(bytes/count) : 0;
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    stat.innerHTML = `<div class="n">${formatBytes(bytes)}</div><div class="l">${labels[type]||type} — ${count} upload${count!==1?'s':''}, avg ${formatBytes(avg)}</div>`;
+    el.appendChild(stat);
+  });
 }
 
 function testerRows(){
@@ -340,9 +416,16 @@ function renderTesterTable(){
     detail.className = 'detail-row';
     const screenEntries = Object.entries(r.raw.screens||{}).sort((a,b)=>b[1]-a[1]);
     const toolEntries = Object.entries(r.raw.tools||{}).sort((a,b)=>b[1]-a[1]);
+    const fieldEntries = Object.entries(r.raw.fields||{}).sort((a,b)=>b[1]-a[1]);
+    const tourEntries = Object.entries(r.raw.tours||{}).sort((a,b)=>b[1]-a[1]);
+    const ttsEntries = Object.entries(r.raw.ttsPlays||{}).sort((a,b)=>b[1]-a[1]);
+    const rowHtml = (label, entries) => `<div class="detail-col"><h4>${label}</h4>${entries.length ? entries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>`;
     detail.innerHTML = `<td colspan="5"><div class="detail-cols">
-      <div class="detail-col"><h4>Screens</h4>${screenEntries.length ? screenEntries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>
-      <div class="detail-col"><h4>Tools</h4>${toolEntries.length ? toolEntries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>
+      ${rowHtml('Screens', screenEntries)}
+      ${rowHtml('Tools', toolEntries)}
+      ${rowHtml('Notes/Outline/Concl.', fieldEntries)}
+      ${rowHtml('Tours', tourEntries)}
+      ${rowHtml('TTS', ttsEntries)}
     </div></td>`;
     tr.addEventListener('click', () => detail.classList.toggle('open'));
     body.appendChild(tr);
