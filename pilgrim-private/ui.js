@@ -11,7 +11,7 @@ import {
   SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_ERROR_LOG,
   logError, loadErrorLog, clearErrorLog,
   // Section 02 — state
-  studies, cur, sett, online, TAGS, ACTIVE_USER,
+  studies, cur, sett, online, TAGS, ACTIVE_USER, trackEvent,
   studyScope, activeRefIdx, _pendingDeleteId, _pendingDeleteRefIdx, _renameResId,
   // Section 02 — setters
   setStudies, setCur, setActiveRefIdx, setStudyScope,
@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.15';
+} from './utils.js?v=4.28.16';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.15';
+} from './storage.js?v=4.28.16';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.15';
+} from './tts.js?v=4.28.16';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.15';
+} from './sync.js?v=4.28.16';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.15';
+} from './studyTools.js?v=4.28.16';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -143,6 +143,7 @@ function initEditors(){
  * @param {string} id - Screen id: 'library' | 'read' | 'study' | 'stats' | 'settings'.
  */
 function navTo(id){
+  trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
   dismissTabHints();
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
   if(window.speechSynthesis)window.speechSynthesis.cancel();
@@ -164,6 +165,7 @@ function navTo(id){
  * @param {string} tab - 'notes' or 'tools'.
  */
 function switchStudyTab(tab){
+  trackEvent({screen:'study.'+tab}); // usage tracking — sub-tab visit (spec-usage-tracking-admin-v2.md)
   var notesOn=tab==='notes';
   document.getElementById('scr-field').classList.toggle('on',notesOn);
   document.getElementById('scr-deep').classList.toggle('on',!notesOn);
