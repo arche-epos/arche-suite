@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<!-- © 2026 Jesse Caldwell. All rights reserved.
+     Arché · Pilgrim Admin — usage tracking dashboard.
+     Not for tester distribution. Boss-only tool. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Arché · Pilgrim Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root{--bg0:#0b0907;--bg1:#120f0a;--bg2:#1b1710;--bg3:#252019;--bg4:#2f2a1f;--border:#3a3022;--borderlit:#4d4430;--gold:#c9a84c;--golddim:#7a6520;--goldpale:#e8ca80;--crimson:#8b3535;--crimsonbright:#c05050;--sagebright:#5a9b70;--txt1:#e8d5a3;--txt2:#c4a870;--txt3:#b59a68;--txt4:#8a7850;--r:8px;--rl:14px;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg0);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:16px;-webkit-font-smoothing:antialiased}
+#app{max-width:1080px;margin:0 auto;padding:20px 20px 60px}
+h1,h2,h3{font-family:'EB Garamond',serif;font-weight:500;color:var(--gold)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+.topbar h1{font-size:24px;letter-spacing:.02em}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-size:13px;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:'Crimson Pro',serif}
+.pill:hover{border-color:var(--borderlit);color:var(--txt1)}
+.pill.on{background:var(--gold);color:var(--bg0);border-color:var(--gold);font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r);font-family:'Crimson Pro',serif;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--borderlit);background:var(--bg3);color:var(--txt1);transition:all .15s}
+.btn:hover{background:var(--bg4)}
+.btn-primary{background:var(--gold);color:var(--bg0);font-weight:600;border-color:var(--gold)}
+.btn-primary:hover{background:var(--goldpale)}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--txt3)}
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rl);padding:18px 20px;margin-bottom:18px}
+.card h2{font-size:18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 18px;min-width:120px}
+.stat .n{font-family:'EB Garamond',serif;font-size:28px;color:var(--gold);line-height:1.1}
+.stat .l{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{color:var(--txt3);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:var(--txt1)}
+th.sorted::after{content:' ▾';color:var(--gold)}
+th.sorted.asc::after{content:' ▴'}
+tr.tester-row{cursor:pointer;transition:background .15s}
+tr.tester-row:hover{background:var(--bg2)}
+tr.detail-row td{background:var(--bg2);padding:14px 16px}
+tr.detail-row{display:none}
+tr.detail-row.open{display:table-row}
+.detail-cols{display:flex;gap:30px;flex-wrap:wrap}
+.detail-col{min-width:200px;flex:1}
+.detail-col h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);margin-bottom:8px}
+.bar-item{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px}
+.bar-item .name{width:120px;flex-shrink:0;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:14px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--golddim),var(--gold))}
+.bar-item .cnt{width:34px;text-align:right;color:var(--txt3);font-size:12px}
+.filter-input{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:14px;padding:8px 12px;outline:none;width:220px}
+.filter-input:focus{border-color:var(--golddim)}
+.empty{color:var(--txt4);font-style:italic;padding:10px 0;font-size:14px}
+.muted{color:var(--txt4);font-size:12px}
+#login{max-width:340px;margin:15vh auto 0;text-align:center}
+#login h1{font-size:22px;margin-bottom:6px}
+#login p{color:var(--txt3);font-size:14px;margin-bottom:20px}
+#login input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:16px;padding:12px 14px;outline:none;margin-bottom:12px;text-align:center;letter-spacing:.1em}
+#login input:focus{border-color:var(--golddim)}
+#login .err{color:var(--crimsonbright);font-size:13px;min-height:18px;margin-bottom:8px}
+.hidden{display:none !important}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.events-list{max-height:220px;overflow-y:auto}
+footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="login">
+    <h1>Arché · Pilgrim Admin</h1>
+    <p>Enter the admin passphrase to continue.</p>
+    <input type="password" id="passInput" placeholder="Passphrase" autocomplete="off">
+    <button class="btn btn-primary" style="width:100%;justify-content:center" id="loginBtn">Enter</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <div class="topbar">
+      <h1>Pilgrim Admin</h1>
+      <div class="pill-row">
+        <div class="pill" data-range="7">Last 7 days</div>
+        <div class="pill" data-range="30">Last 30 days</div>
+        <div class="pill" data-range="90">Last 90 days</div>
+        <div class="pill" data-range="all">All time</div>
+        <button class="btn btn-ghost" id="refreshBtn" title="Refresh">↻ Refresh</button>
+        <button class="btn btn-ghost" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Health <span class="muted" id="rangeLabel1"></span></h2>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="statRatelimits">–</div><div class="l">429s</div></div>
+        <div class="stat"><div class="n" id="statTokens">–</div><div class="l">Total Tokens</div></div>
+        <div class="stat"><div class="n" id="statTesters">–</div><div class="l">Active Testers</div></div>
+      </div>
+      <h3 style="font-size:13px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px">Recent Rate-Limit Events</h3>
+      <div class="events-list">
+        <table id="eventsTable">
+          <thead><tr><th>Tester</th><th>Route</th><th>Time</th></tr></thead>
+          <tbody id="eventsBody"></tbody>
+        </table>
+        <div class="empty hidden" id="eventsEmpty">No rate-limit events in this range.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Usage — Where It's Going <span class="muted" id="rangeLabel2"></span></h2>
+      <div class="detail-cols">
+        <div class="detail-col">
+          <h4>Top Screens</h4>
+          <div id="topScreens"></div>
+        </div>
+        <div class="detail-col">
+          <h4>Top AI Tools</h4>
+          <div id="topTools"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>
+        Per-Tester Breakdown
+        <input type="text" class="filter-input" id="testerFilter" placeholder="Filter by tester…">
+      </h2>
+      <table id="testerTable">
+        <thead>
+          <tr>
+            <th data-key="id">Tester</th>
+            <th data-key="screens">Screen Visits</th>
+            <th data-key="tools">Tool Calls</th>
+            <th data-key="tokens">Tokens</th>
+            <th data-key="lastseen">Last Active</th>
+          </tr>
+        </thead>
+        <tbody id="testerBody"></tbody>
+      </table>
+      <div class="empty hidden" id="testerEmpty">No usage data in this range.</div>
+    </div>
+
+    <footer>Arché · Pilgrim Admin v1.0.0 — no study content is ever logged here.</footer>
+  </div>
+
+</div>
+
+<script>
+const PROXY = 'https://arche-proxy.archestudytools.workers.dev';
+const ANALYTICS_START = '2026-08-27'; // feature launch date — used for "All time"
+const SS_KEY = 'pilgrimAdminPass';
+
+let currentRange = '7';
+let usageData = null;
+let ratelimitData = null;
+let sortKey = 'activity';
+let sortDir = 'desc';
+
+// ── date helpers ──────────────────────────────────────────────────────────
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function daysAgoStr(n){ const d=new Date(); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
+function rangeToDates(range){
+  const to = todayStr();
+  if (range === 'all') return { from: ANALYTICS_START, to };
+  return { from: daysAgoStr(parseInt(range,10)-1), to };
+}
+function fmtDate(iso){
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+}
+
+// ── auth ──────────────────────────────────────────────────────────────────
+async function tryAuth(passphrase){
+  const res = await fetch(PROXY + '/admin/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ passphrase })
+  });
+  return res.ok;
+}
+
+function getStoredPass(){ return sessionStorage.getItem(SS_KEY); }
+function setStoredPass(p){ sessionStorage.setItem(SS_KEY, p); }
+function clearStoredPass(){ sessionStorage.removeItem(SS_KEY); }
+
+async function showLogin(err){
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('loginErr').textContent = err || '';
+  document.getElementById('passInput').focus();
+}
+
+async function showDashboard(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('dashboard').classList.remove('hidden');
+  setRange(currentRange);
+}
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('passInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin(){
+  const val = document.getElementById('passInput').value.trim();
+  if (!val) return;
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('loginBtn').innerHTML = '<span class="spin"></span>';
+  const ok = await tryAuth(val).catch(() => false);
+  document.getElementById('loginBtn').textContent = 'Enter';
+  if (!ok) { showLogin('Incorrect passphrase.'); return; }
+  setStoredPass(val);
+  showDashboard();
+}
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  clearStoredPass();
+  showLogin('');
+});
+
+// ── data fetch ────────────────────────────────────────────────────────────
+async function fetchAdmin(path, params){
+  const pass = getStoredPass();
+  const url = new URL(PROXY + path);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  const res = await fetch(url, { headers: { 'X-Admin-Auth': pass } });
+  if (res.status === 401) { clearStoredPass(); showLogin('Session expired — enter the passphrase again.'); throw new Error('unauthorized'); }
+  return res.json();
+}
+
+async function loadData(){
+  const { from, to } = rangeToDates(currentRange);
+  document.getElementById('rangeLabel1').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel2').textContent = `(${from} → ${to})`;
+  [usageData, ratelimitData] = await Promise.all([
+    fetchAdmin('/admin/usage', { from, to }),
+    fetchAdmin('/admin/ratelimits', { from, to })
+  ]);
+  renderHealth();
+  renderTopLists();
+  renderTesterTable();
+}
+
+function setRange(range){
+  currentRange = range;
+  document.querySelectorAll('.pill[data-range]').forEach(p => p.classList.toggle('on', p.dataset.range === range));
+  loadData().catch(e => { if (e.message !== 'unauthorized') console.error(e); });
+}
+
+document.querySelectorAll('.pill[data-range]').forEach(p => p.addEventListener('click', () => setRange(p.dataset.range)));
+document.getElementById('refreshBtn').addEventListener('click', () => loadData());
+
+// ── rendering ─────────────────────────────────────────────────────────────
+function renderHealth(){
+  document.getElementById('statRatelimits').textContent = ratelimitData.count || 0;
+  let totalTokens = 0;
+  const testers = usageData.testers || {};
+  Object.values(testers).forEach(t => totalTokens += (t.tokens || 0));
+  document.getElementById('statTokens').textContent = totalTokens.toLocaleString();
+  document.getElementById('statTesters').textContent = Object.keys(testers).length;
+
+  const body = document.getElementById('eventsBody');
+  const events = ratelimitData.events || [];
+  body.innerHTML = '';
+  document.getElementById('eventsEmpty').classList.toggle('hidden', events.length > 0);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(ev.tester)}</td><td>${escapeHtml(ev.route)}</td><td>${fmtDate(ev.time)}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function aggregateAcross(field){
+  const totals = {};
+  Object.values(usageData.testers || {}).forEach(t => {
+    Object.entries(t[field] || {}).forEach(([name,count]) => {
+      totals[name] = (totals[name] || 0) + count;
+    });
+  });
+  return Object.entries(totals).sort((a,b) => b[1]-a[1]);
+}
+
+function renderBarList(containerId, entries){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  if (!entries.length) { el.innerHTML = '<div class="empty">No data in this range.</div>'; return; }
+  const max = entries[0][1];
+  entries.forEach(([name, count]) => {
+    const pct = Math.max(4, Math.round((count / max) * 100));
+    const row = document.createElement('div');
+    row.className = 'bar-item';
+    row.innerHTML = `<div class="name" title="${escapeHtml(name)}">${escapeHtml(name)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="cnt">${count}</div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderTopLists(){
+  renderBarList('topScreens', aggregateAcross('screens'));
+  renderBarList('topTools', aggregateAcross('tools'));
+}
+
+function testerRows(){
+  const filterVal = (document.getElementById('testerFilter').value || '').toLowerCase();
+  const rows = Object.entries(usageData.testers || {}).map(([id,t]) => {
+    const screenTotal = Object.values(t.screens || {}).reduce((a,b)=>a+b,0);
+    const toolTotal = Object.values(t.tools || {}).reduce((a,b)=>a+b,0);
+    return { id, screens: screenTotal, tools: toolTotal, tokens: t.tokens||0, lastseen: t.lastseen, activity: screenTotal+toolTotal, raw: t };
+  }).filter(r => r.id.toLowerCase().includes(filterVal));
+
+  rows.sort((a,b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (sortKey === 'id') { av = a.id.toLowerCase(); bv = b.id.toLowerCase(); }
+    if (sortKey === 'lastseen') { av = a.lastseen || ''; bv = b.lastseen || ''; }
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return rows;
+}
+
+function renderTesterTable(){
+  const body = document.getElementById('testerBody');
+  body.innerHTML = '';
+  const rows = testerRows();
+  document.getElementById('testerEmpty').classList.toggle('hidden', rows.length > 0);
+
+  document.querySelectorAll('#testerTable th[data-key]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === sortKey);
+    th.classList.toggle('asc', th.dataset.key === sortKey && sortDir === 'asc');
+  });
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.className = 'tester-row';
+    tr.innerHTML = `<td>${escapeHtml(r.id)}</td><td>${r.screens}</td><td>${r.tools}</td><td>${r.tokens.toLocaleString()}</td><td>${fmtDate(r.lastseen)}</td>`;
+    const detail = document.createElement('tr');
+    detail.className = 'detail-row';
+    const screenEntries = Object.entries(r.raw.screens||{}).sort((a,b)=>b[1]-a[1]);
+    const toolEntries = Object.entries(r.raw.tools||{}).sort((a,b)=>b[1]-a[1]);
+    detail.innerHTML = `<td colspan="5"><div class="detail-cols">
+      <div class="detail-col"><h4>Screens</h4>${screenEntries.length ? screenEntries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>
+      <div class="detail-col"><h4>Tools</h4>${toolEntries.length ? toolEntries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>
+    </div></td>`;
+    tr.addEventListener('click', () => detail.classList.toggle('open'));
+    body.appendChild(tr);
+    body.appendChild(detail);
+  });
+}
+
+document.querySelectorAll('#testerTable th[data-key]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortKey = key; sortDir = 'desc'; }
+    renderTesterTable();
+  });
+});
+document.getElementById('testerFilter').addEventListener('input', renderTesterTable);
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────
+(function boot(){
+  const stored = getStoredPass();
+  if (stored) {
+    tryAuth(stored).then(ok => { ok ? showDashboard() : (clearStoredPass(), showLogin('')); });
+  } else {
+    showLogin('');
+  }
+})();
+</script>
+</body>
+</html>
