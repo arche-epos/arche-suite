@@ -54,6 +54,9 @@ tr.detail-row.open{display:table-row}
 .bar-item .cnt{width:34px;text-align:right;color:var(--txt3);font-size:12px}
 .filter-input{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:14px;padding:8px 12px;outline:none;width:220px}
 .filter-input:focus{border-color:var(--golddim)}
+.filter-select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:14px;padding:8px 12px;outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--golddim)}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .empty{color:var(--txt4);font-style:italic;padding:10px 0;font-size:14px}
 .muted{color:var(--txt4);font-size:12px}
 #login{max-width:340px;margin:15vh auto 0;text-align:center}
@@ -66,6 +69,18 @@ tr.detail-row.open{display:table-row}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bg4);border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .events-list{max-height:220px;overflow-y:auto}
+.run-item{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.run-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg2);gap:10px;flex-wrap:wrap;transition:background .15s}
+.run-header:hover{background:var(--bg3)}
+.run-header .who{color:var(--txt1);font-weight:500}
+.run-header .when{color:var(--txt3);font-size:13px}
+.run-header .summary-pass{color:var(--sagebright)}
+.run-header .summary-fail{color:var(--crimsonbright)}
+.run-body{display:none;padding:10px 14px;background:var(--bg1)}
+.run-body.open{display:block}
+.run-body table{font-size:13px}
+.status-pass{color:var(--sagebright);font-weight:600}
+.status-fail{color:var(--crimsonbright);font-weight:600}
 footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
 </style>
 </head>
@@ -173,7 +188,42 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="testerEmpty">No usage data in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.1.0 — no study content is ever logged here.</footer>
+    <div class="card">
+      <h2>Errors</h2>
+      <div class="filter-row">
+        <input type="text" class="filter-input" id="errorsFilter" placeholder="Filter by tester…" style="width:180px">
+        <select class="filter-select" id="errorsDeviceFilter"><option value="">All Devices</option></select>
+        <select class="filter-select" id="errorsOsFilter"><option value="">All OS</option></select>
+        <select class="filter-select" id="errorsActionFilter"><option value="">All Actions</option></select>
+      </div>
+      <div class="muted" id="rangeLabel6" style="margin-bottom:8px"></div>
+      <div class="events-list" style="max-height:420px">
+        <table id="errorsTable">
+          <thead><tr><th>Tester</th><th>Time</th><th>Action</th><th>Message</th><th>Device</th><th>OS</th></tr></thead>
+          <tbody id="errorsBody"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="errorsEmpty">No errors in this range.</div>
+    </div>
+
+    <div class="card">
+      <h2>Diagnostic Runs</h2>
+      <div class="filter-row">
+        <input type="text" class="filter-input" id="diagFilter" placeholder="Filter by tester…" style="width:180px">
+        <select class="filter-select" id="diagStatusFilter">
+          <option value="">All Runs</option>
+          <option value="fail">Any Failures</option>
+          <option value="pass">All Passed</option>
+        </select>
+        <select class="filter-select" id="diagDeviceFilter"><option value="">All Devices</option></select>
+        <select class="filter-select" id="diagOsFilter"><option value="">All OS</option></select>
+      </div>
+      <div class="muted" id="rangeLabel7" style="margin-bottom:8px"></div>
+      <div id="diagRunsList"></div>
+      <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
+    </div>
+
+    <footer>Arché · Pilgrim Admin v1.2.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -186,8 +236,11 @@ const SS_KEY = 'pilgrimAdminPass';
 let currentRange = '7';
 let usageData = null;
 let ratelimitData = null;
+let errorsData = null;
+let diagnosticsData = null;
 let sortKey = 'activity';
 let sortDir = 'desc';
+const DEVICE_LABELS = { mobile:'Mobile', tablet:'Tablet', desktop:'Desktop', other:'Unknown' };
 
 // ── date helpers ──────────────────────────────────────────────────────────
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -275,9 +328,13 @@ async function loadData(){
   document.getElementById('rangeLabel3').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel4').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel5').textContent = `(${from} → ${to})`;
-  [usageData, ratelimitData] = await Promise.all([
+  document.getElementById('rangeLabel6').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel7').textContent = `(${from} → ${to})`;
+  [usageData, ratelimitData, errorsData, diagnosticsData] = await Promise.all([
     fetchAdmin('/admin/usage', { from, to }),
-    fetchAdmin('/admin/ratelimits', { from, to })
+    fetchAdmin('/admin/ratelimits', { from, to }),
+    fetchAdmin('/admin/errors', { from, to }),
+    fetchAdmin('/admin/diagnostics', { from, to })
   ]);
   renderHealth();
   renderTopLists();
@@ -285,6 +342,8 @@ async function loadData(){
   renderToolScope();
   renderStorage();
   renderTesterTable();
+  renderErrors();
+  renderDiagnostics();
 }
 
 function setRange(range){
@@ -446,6 +505,102 @@ document.getElementById('testerFilter').addEventListener('input', renderTesterTa
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+// ── Errors card ───────────────────────────────────────────────────────────
+function populateSelect(id, values, currentVal){
+  const el = document.getElementById(id);
+  const opts = Array.from(new Set(values)).filter(Boolean).sort();
+  const placeholder = el.options[0]; // "All ___" option, always kept
+  el.innerHTML = '';
+  el.appendChild(placeholder);
+  opts.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = (DEVICE_LABELS[v] || v);
+    el.appendChild(o);
+  });
+  if (opts.includes(currentVal)) el.value = currentVal;
+}
+
+function renderErrors(){
+  const events = errorsData.events || [];
+  populateSelect('errorsDeviceFilter', events.map(e => e.device), document.getElementById('errorsDeviceFilter').value);
+  populateSelect('errorsOsFilter', events.map(e => e.os), document.getElementById('errorsOsFilter').value);
+  populateSelect('errorsActionFilter', events.map(e => e.action), document.getElementById('errorsActionFilter').value);
+
+  const testerVal = (document.getElementById('errorsFilter').value || '').toLowerCase();
+  const deviceVal = document.getElementById('errorsDeviceFilter').value;
+  const osVal = document.getElementById('errorsOsFilter').value;
+  const actionVal = document.getElementById('errorsActionFilter').value;
+
+  const filtered = events.filter(e =>
+    e.tester.toLowerCase().includes(testerVal) &&
+    (!deviceVal || e.device === deviceVal) &&
+    (!osVal || e.os === osVal) &&
+    (!actionVal || e.action === actionVal)
+  );
+
+  const body = document.getElementById('errorsBody');
+  body.innerHTML = '';
+  document.getElementById('errorsEmpty').classList.toggle('hidden', filtered.length > 0);
+  document.getElementById('errorsTable').classList.toggle('hidden', filtered.length === 0);
+  filtered.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${escapeHtml(e.tester)}</td><td>${fmtDate(e.ts)}</td><td>${escapeHtml(e.action)}</td><td>${escapeHtml(e.message)}</td><td>${escapeHtml(DEVICE_LABELS[e.device]||e.device)}</td><td>${escapeHtml(e.os)}</td>`;
+    body.appendChild(tr);
+  });
+}
+['errorsFilter','errorsDeviceFilter','errorsOsFilter','errorsActionFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderErrors);
+  document.getElementById(id).addEventListener('change', renderErrors);
+});
+
+// ── Diagnostic Runs card ──────────────────────────────────────────────────
+function renderDiagnostics(){
+  const runs = diagnosticsData.runs || [];
+  populateSelect('diagDeviceFilter', runs.map(r => r.device), document.getElementById('diagDeviceFilter').value);
+  populateSelect('diagOsFilter', runs.map(r => r.os), document.getElementById('diagOsFilter').value);
+
+  const testerVal = (document.getElementById('diagFilter').value || '').toLowerCase();
+  const statusVal = document.getElementById('diagStatusFilter').value;
+  const deviceVal = document.getElementById('diagDeviceFilter').value;
+  const osVal = document.getElementById('diagOsFilter').value;
+
+  const filtered = runs.filter(r => {
+    const summary = r.summary || { pass: 0, fail: 0 };
+    if (statusVal === 'fail' && !(summary.fail > 0)) return false;
+    if (statusVal === 'pass' && !(summary.fail === 0)) return false;
+    return r.tester.toLowerCase().includes(testerVal) &&
+      (!deviceVal || r.device === deviceVal) &&
+      (!osVal || r.os === osVal);
+  });
+
+  const list = document.getElementById('diagRunsList');
+  list.innerHTML = '';
+  document.getElementById('diagEmpty').classList.toggle('hidden', filtered.length > 0);
+  filtered.forEach(run => {
+    const summary = run.summary || { pass: 0, fail: 0 };
+    const item = document.createElement('div');
+    item.className = 'run-item';
+    const header = document.createElement('div');
+    header.className = 'run-header';
+    header.innerHTML = `<div class="who">${escapeHtml(run.tester)} <span class="when">${fmtDate(run.ts)} · ${escapeHtml(DEVICE_LABELS[run.device]||run.device)} · ${escapeHtml(run.os)}</span></div>` +
+      `<div><span class="summary-pass">${summary.pass} passed</span>, <span class="summary-fail">${summary.fail} failed</span></div>`;
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'run-body';
+    const results = run.results || [];
+    bodyEl.innerHTML = results.length ? `<table><thead><tr><th>Test</th><th>Status</th><th>Detail</th><th>ms</th></tr></thead><tbody>${
+      results.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="${r.status==='pass'?'status-pass':'status-fail'}">${escapeHtml(r.status)}</td><td>${escapeHtml(r.detail||'')}</td><td>${r.ms??''}</td></tr>`).join('')
+    }</tbody></table>` : '<div class="empty">No individual test results recorded.</div>';
+    header.addEventListener('click', () => bodyEl.classList.toggle('open'));
+    item.appendChild(header);
+    item.appendChild(bodyEl);
+    list.appendChild(item);
+  });
+}
+['diagFilter','diagStatusFilter','diagDeviceFilter','diagOsFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderDiagnostics);
+  document.getElementById(id).addEventListener('change', renderDiagnostics);
+});
 
 // ── boot ──────────────────────────────────────────────────────────────────
 (function boot(){

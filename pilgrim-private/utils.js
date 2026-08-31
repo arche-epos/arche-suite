@@ -26,6 +26,55 @@ function trackEvent(payload){
     fetch(WORKER_URL+'/track',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify(payload)}).catch(function(){});
   }catch(e){/* never let a tracking failure affect the app */}
 }
+/**
+ * Lightweight, best-effort device/OS classification from navigator.userAgent.
+ * Used to auto-tag passive error/diagnostic beacons — not a substitute for the
+ * tester-picked pill buttons on the manual Feedback form. Never throws.
+ * @returns {{device:'mobile'|'tablet'|'desktop', os:string}}
+ */
+function detectDeviceOS(){
+  try{
+    var ua=navigator.userAgent||'';
+    var os='other';
+    if(/iPhone|iPad|iPod/.test(ua))os='iOS';
+    else if(/Android/.test(ua))os='Android';
+    else if(/Windows/.test(ua))os='Windows';
+    else if(/Macintosh|Mac OS X/.test(ua))os='macOS';
+    else if(/Linux/.test(ua))os='Linux';
+    var device='desktop';
+    if(/iPad|Tablet/.test(ua)||(/Android/.test(ua)&&!/Mobile/.test(ua)))device='tablet';
+    else if(/Mobi|iPhone|iPod|Android/.test(ua))device='mobile';
+    return {device:device,os:os};
+  }catch(e){return {device:'desktop',os:'other'};}
+}
+/**
+ * Fire-and-forget error beacon (spec-usage-tracking-admin-v2.md #6, Aug 30 2026).
+ * Sends the same action/message already recorded locally by logError(), plus
+ * auto-detected device/OS. Free-text message is sent as-is — no redaction —
+ * confirmed acceptable by Boss for diagnostic value. Never throws, never blocks.
+ * @param {string} action
+ * @param {string} message
+ */
+function beaconError(action,message){
+  try{
+    var d=detectDeviceOS();
+    fetch(WORKER_URL+'/error-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({action:action,message:message,device:d.device,os:d.os})}).catch(function(){});
+  }catch(e){/* logging must never itself throw */}
+}
+/**
+ * Fire-and-forget diagnostic-run beacon (spec-usage-tracking-admin-v2.md #6, Aug 30 2026).
+ * Sends the full per-test results array plus pass/fail summary and auto-detected
+ * device/OS. Only fires when a tester actually runs Settings > Diagnostics — there
+ * is no passive equivalent. Never throws, never blocks the diagnostic UI.
+ * @param {Array} results - _diagResults array: [{name,status,detail,ms}, ...]
+ * @param {{pass:number, fail:number}} summary
+ */
+function beaconDiagnostics(results,summary){
+  try{
+    var d=detectDeviceOS();
+    fetch(WORKER_URL+'/diagnostic-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({device:d.device,os:d.os,results:results,summary:summary})}).catch(function(){});
+  }catch(e){/* logging must never itself throw */}
+}
 var BOLLS_TRANS={nkjv:'NKJV',net:'NET',amp:'AMP',csb:'CSB17',nlt:'NLT',msg:'MSG',nasb:'NASB',niv:'NIV2011'};
 var BOLLS_BOOKS={genesis:1,gen:1,ge:1,exodus:2,exod:2,ex:2,leviticus:3,lev:3,le:3,numbers:4,num:4,nu:4,deuteronomy:5,deut:5,dt:5,joshua:6,josh:6,jos:6,judges:7,judg:7,jdg:7,ruth:8,rut:8,'1samuel':9,'1sam':9,'1sa':9,'2samuel':10,'2sam':10,'2sa':10,'1kings':11,'1kgs':11,'1ki':11,'2kings':12,'2kgs':12,'2ki':12,'1chronicles':13,'1chr':13,'1ch':13,'2chronicles':14,'2chr':14,'2ch':14,ezra:15,ezr:15,nehemiah:16,neh:16,ne:16,esther:17,esth:17,est:17,job:18,jb:18,psalms:19,psalm:19,ps:19,psa:19,proverbs:20,prov:20,pr:20,ecclesiastes:21,eccles:21,ecc:21,ec:21,'songofsolomon':22,'songofsongsofsolomon':22,'songofsolomon':22,sos:22,ss:22,isaiah:23,isa:23,jeremiah:24,jer:24,lamentations:25,lam:25,ezekiel:26,ezek:26,eze:26,daniel:27,dan:27,da:27,hosea:28,hos:28,joel:29,joe:29,amos:30,am:30,obadiah:31,obad:31,ob:31,jonah:32,jon:32,micah:33,mic:33,nahum:34,nah:34,habakkuk:35,hab:35,zephaniah:36,zeph:36,zep:36,haggai:37,hag:37,zechariah:38,zech:38,zec:38,malachi:39,mal:39,matthew:40,matt:40,mt:40,mark:41,mk:41,mr:41,luke:42,lk:42,lu:42,john:43,jn:43,joh:43,acts:44,act:44,ac:44,romans:45,rom:45,ro:45,'1corinthians':46,'1cor':46,'1co':46,'2corinthians':47,'2cor':47,'2co':47,galatians:48,gal:48,ga:48,ephesians:49,eph:49,philippians:50,phil:50,php:50,colossians:51,col:51,'1thessalonians':52,'1thess':52,'1th':52,'2thessalonians':53,'2thess':53,'2th':53,'1timothy':54,'1tim':54,'1ti':54,'2timothy':55,'2tim':55,'2ti':55,titus:56,tit:56,philemon:57,phlm:57,phm:57,hebrews:58,heb:58,james:59,jas:59,jm:59,'1peter':60,'1pet':60,'1pe':60,'2peter':61,'2pet':61,'2pe':61,'1john':62,'1jn':62,'1jo':62,'2john':63,'2jn':63,'3john':64,'3jn':64,jude:65,jud:65,revelation:66,rev:66,re:66};
 /**
@@ -402,6 +451,7 @@ function logError(action,err){
     log.unshift({ts:new Date().toISOString(),action:action,message:msg});
     if(log.length>ERROR_LOG_CAP)log=log.slice(0,ERROR_LOG_CAP);
     localStorage.setItem(SK_ERROR_LOG,JSON.stringify(log));
+    beaconError(action,msg);
   }catch(e){/* logging must never itself throw */}
 }
 /**
@@ -423,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.28.17',date:'Aug 29, 2026',label:'Latest',
+    version:'4.29.0',date:'Aug 30, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: errors and diagnostic test runs now phone home automatically for triage — organic errors (already logged locally) and Settings > Run Diagnostics results are sent with an auto-detected device/OS tag. Same no-study-content rule as all other tracking; only action labels, error text, and test pass/fail data are sent.'
+    ]},
+  {
+    version:'4.28.17',date:'Aug 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: usage tracking extended — TTS plays, Notes/Outline/Conclusions usage, AI tool scope (Passage/Book), guided tour starts, and resource upload sizes are now included, same no-content rule as before (usage/size only, never content).',
@@ -1755,6 +1811,7 @@ export {
   parseVerseChunks,
   // Section 28a — Error Log
   SK_ERROR_LOG, ERROR_LOG_CAP, logError, loadErrorLog, clearErrorLog,
+  detectDeviceOS, beaconError, beaconDiagnostics,
   // Section 29 — changelog
   CHANGELOG
 };

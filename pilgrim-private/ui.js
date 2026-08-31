@@ -9,7 +9,7 @@ import {
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_UPDATE_SKIP,
   SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_ERROR_LOG,
-  logError, loadErrorLog, clearErrorLog,
+  logError, loadErrorLog, clearErrorLog, beaconDiagnostics,
   // Section 02 — state
   studies, cur, sett, online, TAGS, ACTIVE_USER, trackEvent,
   studyScope, activeRefIdx, _pendingDeleteId, _pendingDeleteRefIdx, _renameResId,
@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.28.17';
+} from './utils.js?v=4.29.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.28.17';
+} from './storage.js?v=4.29.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.28.17';
+} from './tts.js?v=4.29.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.28.17';
+} from './sync.js?v=4.29.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.28.17';
+} from './studyTools.js?v=4.29.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2632,6 +2632,7 @@ async function runDiagnostics(){
   // Cap log at 20 entries
   if(log.length>20)log=log.slice(0,20);
   saveDiagLog(log);
+  beaconDiagnostics(_diagResults,{pass:passCount,fail:failCount});
   // Feedback form is intentionally NOT auto-shown here — it should only open
   // via the explicit Submit Feedback button (openFeedbackDirect()), never as
   // a side effect of running diagnostics.
