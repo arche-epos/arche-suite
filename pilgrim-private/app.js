@@ -4,28 +4,28 @@
 // registers the service worker, and boots the app via initPinGate().
 
 import {
-  CHANGELOG, setAppHeight, updateOffline, todayStr
-} from './utils.js?v=4.29.0';
+  CHANGELOG, setAppHeight, updateOffline, todayStr, logError
+} from './utils.js?v=4.30.0';
 
 import {
-  wireCallbacks, loadStudies, autoSave
-} from './storage.js?v=4.29.0';
+  wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
+} from './storage.js?v=4.30.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.29.0';
+} from './sync.js?v=4.30.0';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.29.0';
+} from './tts.js?v=4.30.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.29.0';
-import * as Storage from './storage.js?v=4.29.0';
-import * as TTS from './tts.js?v=4.29.0';
-import * as Sync from './sync.js?v=4.29.0';
-import * as StudyTools from './studyTools.js?v=4.29.0';
-import * as UI from './ui.js?v=4.29.0';
+import * as Utils from './utils.js?v=4.30.0';
+import * as Storage from './storage.js?v=4.30.0';
+import * as TTS from './tts.js?v=4.30.0';
+import * as Sync from './sync.js?v=4.30.0';
+import * as StudyTools from './studyTools.js?v=4.30.0';
+import * as UI from './ui.js?v=4.30.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -72,6 +72,23 @@ window.addEventListener('resize', setAppHeight);
 window.addEventListener('orientationchange', function() { setTimeout(setAppHeight, 200); });
 window.addEventListener('online',  function() { updateOffline(); });
 window.addEventListener('offline', function() { updateOffline(); });
+
+// ── Global error safety net (added Aug 30 2026, admin-dashboard deep-dive) ──
+// logError() coverage before this was limited to explicit try/catch blocks
+// scattered across ui.js/studyTools.js/sync.js/utils.js — any exception outside
+// those, and any unhandled promise rejection anywhere, was invisible to both
+// the local error log and the Errors admin card. These two listeners are a
+// safety net UNDER the existing explicit calls, not a replacement for them —
+// explicit logError() calls still carry better action labels; this just
+// guarantees nothing silently escapes both.
+window.addEventListener('error', function(e) {
+  try { logError('Uncaught Error', (e && e.error) ? e.error : (e && e.message) || 'Unknown error'); }
+  catch (err) { /* never let the safety net itself throw */ }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  try { logError('Unhandled Promise Rejection', (e && e.reason) ? e.reason : 'Unknown rejection'); }
+  catch (err) { /* never let the safety net itself throw */ }
+});
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden) UI.checkForUpdate();
 });
@@ -128,6 +145,7 @@ setInterval(autoSave, 30000);
 function startPilgrim() {
   // Data layer — load persisted state into memory
   loadStudies();
+  reportStorageSnapshot(); // current on-device resource totals — added Aug 30 2026
   UI.loadTags();
   UI.loadDeletedTags();
   UI.loadSett();

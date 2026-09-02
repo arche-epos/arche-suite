@@ -10,8 +10,9 @@ import {
   cur,
   htmlToText,
   activeRef,
-  trackEvent
-} from './utils.js?v=4.29.0';
+  trackEvent,
+  logError
+} from './utils.js?v=4.30.0';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -270,7 +271,7 @@ function ttsRestart(source){
  * Loads TTS rate, voice, and volume preferences from localStorage and applies them.
  * Silently no-ops on parse failure. Calls updateTTSRateUI/updateTTSVolumeUI after loading.
  */
-function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;if(typeof s.volume==='number')_ttsVolume=s.volume;}}catch(e){}updateTTSRateUI();updateTTSVolumeUI();}
+function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;if(typeof s.volume==='number')_ttsVolume=s.volume;}}catch(e){logError('Load TTS Settings',e);}updateTTSRateUI();updateTTSVolumeUI();}
 /**
  * Persists the current TTS rate, voice, and volume selections to localStorage.
  */

@@ -58,7 +58,7 @@ function detectDeviceOS(){
 function beaconError(action,message){
   try{
     var d=detectDeviceOS();
-    fetch(WORKER_URL+'/error-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({action:action,message:message,device:d.device,os:d.os})}).catch(function(){});
+    fetch(WORKER_URL+'/error-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({action:action,message:message,device:d.device,os:d.os,appVersion:(CHANGELOG[0]&&CHANGELOG[0].version)||'unknown'})}).catch(function(){});
   }catch(e){/* logging must never itself throw */}
 }
 /**
@@ -72,7 +72,7 @@ function beaconError(action,message){
 function beaconDiagnostics(results,summary){
   try{
     var d=detectDeviceOS();
-    fetch(WORKER_URL+'/diagnostic-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({device:d.device,os:d.os,results:results,summary:summary})}).catch(function(){});
+    fetch(WORKER_URL+'/diagnostic-log',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({device:d.device,os:d.os,appVersion:(CHANGELOG[0]&&CHANGELOG[0].version)||'unknown',results:results,summary:summary})}).catch(function(){});
   }catch(e){/* logging must never itself throw */}
 }
 var BOLLS_TRANS={nkjv:'NKJV',net:'NET',amp:'AMP',csb:'CSB17',nlt:'NLT',msg:'MSG',nasb:'NASB',niv:'NIV2011'};
@@ -473,7 +473,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.29.0',date:'Aug 30, 2026',label:'Latest',
+    version:'4.30.0',date:'Aug 30, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: error and diagnostic beacons now tag which app version sent them, so a stale-cached-client issue can be told apart from a live-version bug.',
+      'feat: Gist sync push/pull now reports success/failure to the admin dashboard — sync health was previously invisible.',
+      'feat: a global error handler now catches anything not already wrapped in an explicit try/catch (plus unhandled promise rejections), closing a gap where uncaught exceptions were invisible to both the local error log and the admin dashboard.',
+      'feat: current on-device photo/document storage totals are now reported at app boot and after every sync — the admin dashboard\\u2019s Resource Storage card previously only showed cumulative uploads, not real current totals.',
+      'internal: broadened logError() coverage to two previously-silent catch blocks (loading studies from localStorage, and hitting the storage quota on save) and one in TTS settings load.'
+    ]},
+  {
+    version:'4.29.0',date:'Aug 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: errors and diagnostic test runs now phone home automatically for triage — organic errors (already logged locally) and Settings > Run Diagnostics results are sent with an auto-detected device/OS tag. Same no-study-content rule as all other tracking; only action labels, error text, and test pass/fail data are sent.'

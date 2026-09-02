@@ -82,6 +82,27 @@ tr.detail-row.open{display:table-row}
 .status-pass{color:var(--sagebright);font-weight:600}
 .status-fail{color:var(--crimsonbright);font-weight:600}
 footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
+.chart-wrap{margin-bottom:10px}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--txt3)}
+.chart-legend .lg{display:flex;align-items:center;gap:5px}
+.chart-legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block}
+.chart-svg{width:100%;height:140px;display:block}
+.chart-svg .gridline{stroke:var(--border);stroke-width:1}
+.chart-svg .line{fill:none;stroke-width:2}
+.chart-svg .dot{fill:var(--bg1)}
+.chart-axis-label{font-size:10px;fill:var(--txt4);font-family:'Crimson Pro',serif}
+.fail-tag{color:var(--crimsonbright);font-size:11px;margin-left:6px;white-space:nowrap}
+.group-item{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
+.group-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--bg2);gap:10px;flex-wrap:wrap;transition:background .15s}
+.group-header:hover{background:var(--bg3)}
+.group-header .action{color:var(--txt1);font-weight:600}
+.group-header .msg{color:var(--txt2);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+.group-header .meta{color:var(--txt3);font-size:12px;white-space:nowrap}
+.group-body{display:none;padding:0;background:var(--bg1)}
+.group-body.open{display:block}
+.group-body table{font-size:13px}
+.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--txt3)}
+.toggle-row input{cursor:pointer}
 </style>
 </head>
 <body>
@@ -126,6 +147,25 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
+      <h2>Trends <span class="muted" id="rangeLabel8"></span></h2>
+      <div class="chart-wrap">
+        <div class="chart-legend"><span class="lg"><span class="sw" style="background:var(--gold)"></span>Active Testers</span></div>
+        <svg class="chart-svg" id="chartActiveTesters" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-legend"><span class="lg"><span class="sw" style="background:var(--sagebright)"></span>Tool Calls</span><span class="lg"><span class="sw" style="background:var(--txt3)"></span>Screen Visits</span></div>
+        <svg class="chart-svg" id="chartActivity" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="empty hidden" id="trendsEmpty">No usage data in this range.</div>
+    </div>
+
+    <div class="card">
+      <h2>Sync Health <span class="muted" id="rangeLabel9"></span></h2>
+      <div class="stat-row" id="syncStats"></div>
+      <div class="empty hidden" id="syncEmpty">No sync activity in this range.</div>
+    </div>
+
+    <div class="card">
       <h2>Usage — Where It's Going <span class="muted" id="rangeLabel2"></span></h2>
       <div class="detail-cols">
         <div class="detail-col">
@@ -163,9 +203,9 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>Resource Storage <span class="muted" id="rangeLabel5"></span></h2>
+      <h2>Resource Storage <span class="muted" id="storageAsOf"></span></h2>
       <div class="stat-row" id="storageStats"></div>
-      <div class="muted" style="margin-top:6px">Bytes added over this range (not current total — deleted resources aren't subtracted). Doc size is extracted-text length, an estimate.</div>
+      <div class="muted" style="margin-top:6px">Current on-device totals, reported by each tester's app at boot and after every sync. Doc size is extracted-text length, an estimate. A tester who hasn't opened the app since this feature shipped won't appear yet.</div>
     </div>
 
     <div class="card">
@@ -177,6 +217,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <thead>
           <tr>
             <th data-key="id">Tester</th>
+            <th data-key="daysActive">Days Active</th>
             <th data-key="screens">Screen Visits</th>
             <th data-key="tools">Tool Calls</th>
             <th data-key="tokens">Tokens</th>
@@ -195,11 +236,14 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <select class="filter-select" id="errorsDeviceFilter"><option value="">All Devices</option></select>
         <select class="filter-select" id="errorsOsFilter"><option value="">All OS</option></select>
         <select class="filter-select" id="errorsActionFilter"><option value="">All Actions</option></select>
+        <select class="filter-select" id="errorsVersionFilter"><option value="">All Versions</option></select>
       </div>
+      <div class="toggle-row"><label><input type="checkbox" id="errorsGroupToggle" checked> Group by error signature</label></div>
       <div class="muted" id="rangeLabel6" style="margin-bottom:8px"></div>
+      <div class="events-list" style="max-height:420px" id="errorsGroupedList"></div>
       <div class="events-list" style="max-height:420px">
         <table id="errorsTable">
-          <thead><tr><th>Tester</th><th>Time</th><th>Action</th><th>Message</th><th>Device</th><th>OS</th></tr></thead>
+          <thead><tr><th>Tester</th><th>Time</th><th>Action</th><th>Message</th><th>Device</th><th>OS</th><th>Version</th></tr></thead>
           <tbody id="errorsBody"></tbody>
         </table>
       </div>
@@ -223,7 +267,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.2.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.3.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -238,6 +282,8 @@ let usageData = null;
 let ratelimitData = null;
 let errorsData = null;
 let diagnosticsData = null;
+let timeseriesData = null;
+let storageData = null;
 let sortKey = 'activity';
 let sortDir = 'desc';
 const DEVICE_LABELS = { mobile:'Mobile', tablet:'Tablet', desktop:'Desktop', other:'Unknown' };
@@ -327,16 +373,21 @@ async function loadData(){
   document.getElementById('rangeLabel2').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel3').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel4').textContent = `(${from} → ${to})`;
-  document.getElementById('rangeLabel5').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel6').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel7').textContent = `(${from} → ${to})`;
-  [usageData, ratelimitData, errorsData, diagnosticsData] = await Promise.all([
+  document.getElementById('rangeLabel8').textContent = `(${from} → ${to})`;
+  document.getElementById('rangeLabel9').textContent = `(${from} → ${to})`;
+  [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData] = await Promise.all([
     fetchAdmin('/admin/usage', { from, to }),
     fetchAdmin('/admin/ratelimits', { from, to }),
     fetchAdmin('/admin/errors', { from, to }),
-    fetchAdmin('/admin/diagnostics', { from, to })
+    fetchAdmin('/admin/diagnostics', { from, to }),
+    fetchAdmin('/admin/timeseries', { from, to }),
+    fetchAdmin('/admin/storage', {})
   ]);
   renderHealth();
+  renderTrends();
+  renderSyncHealth();
   renderTopLists();
   renderEngagement();
   renderToolScope();
@@ -364,6 +415,19 @@ function renderHealth(){
   document.getElementById('statTokens').textContent = totalTokens.toLocaleString();
   document.getElementById('statTesters').textContent = Object.keys(testers).length;
 
+  const byRoute = ratelimitData.byRoute || {};
+  const routeEntries = Object.entries(byRoute).sort((a,b) => b[1]-a[1]);
+  const existingRouteLine = document.getElementById('ratelimitByRoute');
+  if (existingRouteLine) existingRouteLine.remove();
+  if (routeEntries.length) {
+    const line = document.createElement('div');
+    line.id = 'ratelimitByRoute';
+    line.className = 'muted';
+    line.style.margin = '4px 0 10px';
+    line.textContent = 'By route: ' + routeEntries.map(([r,c]) => `${r} (${c})`).join(' · ');
+    document.getElementById('statTesters').closest('.stat-row').insertAdjacentElement('afterend', line);
+  }
+
   const body = document.getElementById('eventsBody');
   const events = ratelimitData.events || [];
   body.innerHTML = '';
@@ -385,23 +449,100 @@ function aggregateAcross(field){
   return Object.entries(totals).sort((a,b) => b[1]-a[1]);
 }
 
-function renderBarList(containerId, entries){
+// ── Trends charts (hand-rolled SVG — no chart library loaded) ──────────────
+// Renders one or more series onto a fixed 600x140 viewBox. Simple polyline +
+// dot markers, gridlines every quarter height. Not interactive (no tooltips)
+// — this is for trend-shape at a glance, not detailed drill-down (the
+// Per-Tester Breakdown table below covers that).
+function renderLineChart(svgId, series){
+  const svg = document.getElementById(svgId);
+  const W = 600, H = 140, padL = 4, padR = 4, padT = 10, padB = 4;
+  const allVals = series.flatMap(s => s.values);
+  const maxV = Math.max(1, ...allVals);
+  const n = series[0] ? series[0].values.length : 0;
+  let html = '';
+  for (let g = 0; g <= 3; g++) {
+    const y = padT + (H - padT - padB) * (g/3);
+    html += `<line class="gridline" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+  }
+  series.forEach(s => {
+    if (!s.values.length) return;
+    const stepX = n > 1 ? (W - padL - padR) / (n - 1) : 0;
+    const pts = s.values.map((v,i) => {
+      const x = padL + i * stepX;
+      const y = padT + (H - padT - padB) * (1 - (v / maxV));
+      return [x,y];
+    });
+    const path = pts.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    html += `<path class="line" d="${path}" stroke="${s.color}"/>`;
+    // Only dot the last point — dotting every point on a 30-90 day range gets noisy
+    const last = pts[pts.length-1];
+    if (last) html += `<circle class="dot" cx="${last[0]}" cy="${last[1]}" r="3" stroke="${s.color}" stroke-width="2"/>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderTrends(){
+  const series = timeseriesData.series || [];
+  document.getElementById('trendsEmpty').classList.toggle('hidden', series.length > 0);
+  if (!series.length) { renderLineChart('chartActiveTesters', []); renderLineChart('chartActivity', []); return; }
+  renderLineChart('chartActiveTesters', [
+    { color: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(), values: series.map(d => d.activeTesters) }
+  ]);
+  renderLineChart('chartActivity', [
+    { color: getComputedStyle(document.documentElement).getPropertyValue('--sagebright').trim(), values: series.map(d => d.toolCalls) },
+    { color: getComputedStyle(document.documentElement).getPropertyValue('--txt3').trim(), values: series.map(d => d.screenVisits) }
+  ]);
+}
+
+// ── Sync Health card ────────────────────────────────────────────────────────
+function renderSyncHealth(){
+  const totals = { 'push:ok':0, 'push:fail':0, 'pull:ok':0, 'pull:fail':0 };
+  Object.values(usageData.testers || {}).forEach(t => {
+    Object.entries(t.sync || {}).forEach(([k,v]) => { totals[k] = (totals[k]||0) + v; });
+  });
+  const el = document.getElementById('syncStats');
+  el.innerHTML = '';
+  const any = Object.values(totals).some(v => v > 0);
+  document.getElementById('syncEmpty').classList.toggle('hidden', any);
+  if (!any) return;
+  const items = [
+    ['Pushes OK', totals['push:ok'], 'sagebright'],
+    ['Pushes Failed', totals['push:fail'], totals['push:fail'] ? 'crimsonbright' : 'txt3'],
+    ['Pulls OK', totals['pull:ok'], 'sagebright'],
+    ['Pulls Failed', totals['pull:fail'], totals['pull:fail'] ? 'crimsonbright' : 'txt3'],
+  ];
+  items.forEach(([label,val,colorVar]) => {
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    stat.innerHTML = `<div class="n" style="color:var(--${colorVar})">${val}</div><div class="l">${label}</div>`;
+    el.appendChild(stat);
+  });
+}
+
+
+function renderBarList(containerId, entries, failMap){
   const el = document.getElementById(containerId);
   el.innerHTML = '';
   if (!entries.length) { el.innerHTML = '<div class="empty">No data in this range.</div>'; return; }
   const max = entries[0][1];
   entries.forEach(([name, count]) => {
     const pct = Math.max(4, Math.round((count / max) * 100));
+    const fails = failMap ? (failMap[name] || 0) : 0;
+    const failTag = fails ? `<span class="fail-tag">⚠ ${fails} failed</span>` : '';
     const row = document.createElement('div');
     row.className = 'bar-item';
-    row.innerHTML = `<div class="name" title="${escapeHtml(name)}">${escapeHtml(name)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="cnt">${count}</div>`;
+    row.innerHTML = `<div class="name" title="${escapeHtml(name)}">${escapeHtml(name)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="cnt">${count}</div>${failTag}`;
     el.appendChild(row);
   });
 }
 
 function renderTopLists(){
   renderBarList('topScreens', aggregateAcross('screens'));
-  renderBarList('topTools', aggregateAcross('tools').map(([k,v]) => [toolLabel(k), v]));
+  const toolFailsByKey = Object.fromEntries(aggregateAcross('toolFails'));
+  const toolFailsByLabel = {};
+  Object.entries(toolFailsByKey).forEach(([k,v]) => { toolFailsByLabel[toolLabel(k)] = v; });
+  renderBarList('topTools', aggregateAcross('tools').map(([k,v]) => [toolLabel(k), v]), toolFailsByLabel);
 }
 
 function renderEngagement(){
@@ -420,19 +561,34 @@ function renderToolScope(){
 }
 
 function renderStorage(){
-  const bytesByType = aggregateAcross('fileBytes');
-  const countsByType = aggregateAcross('fileCounts');
-  const countMap = Object.fromEntries(countsByType);
+  const testers = storageData.testers || {};
+  const ids = Object.keys(testers);
   const el = document.getElementById('storageStats');
+  const asOfEl = document.getElementById('storageAsOf');
   el.innerHTML = '';
-  if (!bytesByType.length) { el.innerHTML = '<div class="empty">No uploads in this range.</div>'; return; }
-  const labels = { image: 'Photos', doc: 'Documents' };
-  bytesByType.forEach(([type,bytes]) => {
-    const count = countMap[type] || 0;
-    const avg = count ? Math.round(bytes/count) : 0;
+  if (!ids.length) {
+    el.innerHTML = '<div class="empty">No storage snapshots reported yet.</div>';
+    asOfEl.textContent = '';
+    return;
+  }
+  let totalImageBytes = 0, totalDocBytes = 0, totalImages = 0, totalDocs = 0, latestTs = null;
+  ids.forEach(id => {
+    const t = testers[id];
+    totalImageBytes += t.imageBytes || 0;
+    totalDocBytes += t.docBytes || 0;
+    totalImages += t.imageCount || 0;
+    totalDocs += t.docCount || 0;
+    if (t.ts && (!latestTs || t.ts > latestTs)) latestTs = t.ts;
+  });
+  asOfEl.textContent = latestTs ? `(most recent report: ${fmtDate(latestTs)})` : '';
+  const stats = [
+    ['Photos', totalImageBytes, totalImages],
+    ['Documents', totalDocBytes, totalDocs],
+  ];
+  stats.forEach(([label, bytes, count]) => {
     const stat = document.createElement('div');
     stat.className = 'stat';
-    stat.innerHTML = `<div class="n">${formatBytes(bytes)}</div><div class="l">${labels[type]||type} — ${count} upload${count!==1?'s':''}, avg ${formatBytes(avg)}</div>`;
+    stat.innerHTML = `<div class="n">${formatBytes(bytes)}</div><div class="l">${label} — ${count} across ${ids.length} tester${ids.length!==1?'s':''}</div>`;
     el.appendChild(stat);
   });
 }
@@ -442,7 +598,7 @@ function testerRows(){
   const rows = Object.entries(usageData.testers || {}).map(([id,t]) => {
     const screenTotal = Object.values(t.screens || {}).reduce((a,b)=>a+b,0);
     const toolTotal = Object.values(t.tools || {}).reduce((a,b)=>a+b,0);
-    return { id, screens: screenTotal, tools: toolTotal, tokens: t.tokens||0, lastseen: t.lastseen, activity: screenTotal+toolTotal, raw: t };
+    return { id, screens: screenTotal, tools: toolTotal, tokens: t.tokens||0, lastseen: t.lastseen, daysActive: t.daysActive||0, activity: screenTotal+toolTotal, raw: t };
   }).filter(r => r.id.toLowerCase().includes(filterVal));
 
   rows.sort((a,b) => {
@@ -470,7 +626,7 @@ function renderTesterTable(){
   rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.className = 'tester-row';
-    tr.innerHTML = `<td>${escapeHtml(r.id)}</td><td>${r.screens}</td><td>${r.tools}</td><td>${r.tokens.toLocaleString()}</td><td>${fmtDate(r.lastseen)}</td>`;
+    tr.innerHTML = `<td>${escapeHtml(r.id)}</td><td>${r.daysActive}</td><td>${r.screens}</td><td>${r.tools}</td><td>${r.tokens.toLocaleString()}</td><td>${fmtDate(r.lastseen)}</td>`;
     const detail = document.createElement('tr');
     detail.className = 'detail-row';
     const screenEntries = Object.entries(r.raw.screens||{}).sort((a,b)=>b[1]-a[1]);
@@ -479,7 +635,7 @@ function renderTesterTable(){
     const tourEntries = Object.entries(r.raw.tours||{}).sort((a,b)=>b[1]-a[1]);
     const ttsEntries = Object.entries(r.raw.ttsPlays||{}).sort((a,b)=>b[1]-a[1]);
     const rowHtml = (label, entries) => `<div class="detail-col"><h4>${label}</h4>${entries.length ? entries.map(([n,c])=>`<div class="bar-item"><div class="name">${escapeHtml(n)}</div><div class="cnt">${c}</div></div>`).join('') : '<div class="empty">None</div>'}</div>`;
-    detail.innerHTML = `<td colspan="5"><div class="detail-cols">
+    detail.innerHTML = `<td colspan="6"><div class="detail-cols">
       ${rowHtml('Screens', screenEntries)}
       ${rowHtml('Tools', toolEntries)}
       ${rowHtml('Notes/Outline/Concl.', fieldEntries)}
@@ -526,30 +682,78 @@ function renderErrors(){
   populateSelect('errorsDeviceFilter', events.map(e => e.device), document.getElementById('errorsDeviceFilter').value);
   populateSelect('errorsOsFilter', events.map(e => e.os), document.getElementById('errorsOsFilter').value);
   populateSelect('errorsActionFilter', events.map(e => e.action), document.getElementById('errorsActionFilter').value);
+  populateSelect('errorsVersionFilter', events.map(e => e.appVersion), document.getElementById('errorsVersionFilter').value);
 
   const testerVal = (document.getElementById('errorsFilter').value || '').toLowerCase();
   const deviceVal = document.getElementById('errorsDeviceFilter').value;
   const osVal = document.getElementById('errorsOsFilter').value;
   const actionVal = document.getElementById('errorsActionFilter').value;
+  const versionVal = document.getElementById('errorsVersionFilter').value;
+  const grouped = document.getElementById('errorsGroupToggle').checked;
 
   const filtered = events.filter(e =>
     e.tester.toLowerCase().includes(testerVal) &&
     (!deviceVal || e.device === deviceVal) &&
     (!osVal || e.os === osVal) &&
-    (!actionVal || e.action === actionVal)
+    (!actionVal || e.action === actionVal) &&
+    (!versionVal || e.appVersion === versionVal)
   );
+
+  document.getElementById('errorsEmpty').classList.toggle('hidden', filtered.length > 0);
+  document.getElementById('errorsGroupedList').classList.toggle('hidden', !grouped || filtered.length === 0);
+  document.getElementById('errorsTable').parentElement.classList.toggle('hidden', grouped);
+
+  if (grouped) {
+    renderErrorsGrouped(filtered);
+    return;
+  }
 
   const body = document.getElementById('errorsBody');
   body.innerHTML = '';
-  document.getElementById('errorsEmpty').classList.toggle('hidden', filtered.length > 0);
-  document.getElementById('errorsTable').classList.toggle('hidden', filtered.length === 0);
   filtered.forEach(e => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(e.tester)}</td><td>${fmtDate(e.ts)}</td><td>${escapeHtml(e.action)}</td><td>${escapeHtml(e.message)}</td><td>${escapeHtml(DEVICE_LABELS[e.device]||e.device)}</td><td>${escapeHtml(e.os)}</td>`;
+    tr.innerHTML = `<td>${escapeHtml(e.tester)}</td><td>${fmtDate(e.ts)}</td><td>${escapeHtml(e.action)}</td><td>${escapeHtml(e.message)}</td><td>${escapeHtml(DEVICE_LABELS[e.device]||e.device)}</td><td>${escapeHtml(e.os)}</td><td>${escapeHtml(e.appVersion||'—')}</td>`;
     body.appendChild(tr);
   });
 }
-['errorsFilter','errorsDeviceFilter','errorsOsFilter','errorsActionFilter'].forEach(id => {
+
+// Groups filtered error events by action+message signature — a single bug
+// firing 200 times previously buried everything else in a flat chronological
+// list. Each group shows occurrence count, distinct-tester count, and the
+// most recent occurrence; expand to see every individual instance.
+function renderErrorsGrouped(filtered){
+  const groups = {};
+  filtered.forEach(e => {
+    const key = e.action + '\u0000' + e.message;
+    if (!groups[key]) groups[key] = { action: e.action, message: e.message, events: [] };
+    groups[key].events.push(e);
+  });
+  const list = Object.values(groups).sort((a,b) => b.events.length - a.events.length);
+  const el = document.getElementById('errorsGroupedList');
+  el.innerHTML = '';
+  list.forEach(g => {
+    const testerSet = new Set(g.events.map(e => e.tester));
+    const latest = g.events.reduce((a,b) => (a.ts > b.ts ? a : b));
+    const item = document.createElement('div');
+    item.className = 'group-item';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.innerHTML = `<div><span class="action">${escapeHtml(g.action)}</span> — <span class="msg" title="${escapeHtml(g.message)}">${escapeHtml(g.message)}</span></div>` +
+      `<div class="meta">${g.events.length}× · ${testerSet.size} tester${testerSet.size!==1?'s':''} · last ${fmtDate(latest.ts)}</div>`;
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'group-body';
+    bodyEl.innerHTML = `<table><thead><tr><th>Tester</th><th>Time</th><th>Device</th><th>OS</th><th>Version</th></tr></thead><tbody>${
+      g.events.sort((a,b)=>new Date(b.ts)-new Date(a.ts)).map(e =>
+        `<tr><td>${escapeHtml(e.tester)}</td><td>${fmtDate(e.ts)}</td><td>${escapeHtml(DEVICE_LABELS[e.device]||e.device)}</td><td>${escapeHtml(e.os)}</td><td>${escapeHtml(e.appVersion||'—')}</td></tr>`
+      ).join('')
+    }</tbody></table>`;
+    header.addEventListener('click', () => bodyEl.classList.toggle('open'));
+    item.appendChild(header);
+    item.appendChild(bodyEl);
+    el.appendChild(item);
+  });
+}
+['errorsFilter','errorsDeviceFilter','errorsOsFilter','errorsActionFilter','errorsVersionFilter','errorsGroupToggle'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderErrors);
   document.getElementById(id).addEventListener('change', renderErrors);
 });
@@ -583,7 +787,7 @@ function renderDiagnostics(){
     item.className = 'run-item';
     const header = document.createElement('div');
     header.className = 'run-header';
-    header.innerHTML = `<div class="who">${escapeHtml(run.tester)} <span class="when">${fmtDate(run.ts)} · ${escapeHtml(DEVICE_LABELS[run.device]||run.device)} · ${escapeHtml(run.os)}</span></div>` +
+    header.innerHTML = `<div class="who">${escapeHtml(run.tester)} <span class="when">${fmtDate(run.ts)} · ${escapeHtml(DEVICE_LABELS[run.device]||run.device)} · ${escapeHtml(run.os)} · v${escapeHtml(run.appVersion||'?')}</span></div>` +
       `<div><span class="summary-pass">${summary.pass} passed</span>, <span class="summary-fail">${summary.fail} failed</span></div>`;
     const bodyEl = document.createElement('div');
     bodyEl.className = 'run-body';

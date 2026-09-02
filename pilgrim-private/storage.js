@@ -12,8 +12,9 @@ import {
   studyScope, setStudyScope,
   _pendingDeleteId, setPendingDeleteId,
   toast, toastSuccess, closeOverlay,
-  migrateStudy, activeRef
-} from './utils.js?v=4.29.0';
+  migrateStudy, activeRef,
+  logError, trackEvent
+} from './utils.js?v=4.30.0';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -79,7 +80,7 @@ export function loadStudies() {
     var loaded = JSON.parse(localStorage.getItem(SK)) || [];
     loaded.forEach(function(s) { migrateStudy(s); });
     setStudies(loaded);
-  } catch(e) { setStudies([]); }
+  } catch(e) { logError('Load Studies (localStorage parse)', e); setStudies([]); }
   if (cur) {
     var _resync = studies.find(function(s) { return s.id === cur.id; });
     if (_resync) setCur(_resync);
@@ -92,7 +93,49 @@ export function loadStudies() {
  */
 export function persist() {
   try { localStorage.setItem(SK, JSON.stringify(studies)); }
-  catch(e) { toast('Storage full — remove large attachments to free space'); }
+  catch(e) { logError('Persist Studies (quota)', e); toast('Storage full — remove large attachments to free space'); }
+}
+
+/**
+ * Computes CURRENT total on-device resource bytes across all studies — a
+ * point-in-time snapshot, not a running/additive count (added Aug 30 2026,
+ * admin-dashboard deep-dive, spec-usage-tracking-admin-v3.md addendum).
+ * Photo bytes only ever live on-device (see stubResourcesForSync in sync.js —
+ * they're stubbed out before every Gist push), so this is computed from the
+ * local `studies` array, the only place the real current total exists.
+ * Beaconed via trackEvent({storageSnapshot:...}); the Worker OVERWRITES the
+ * prior value for this tester rather than adding to it.
+ * @returns {{imageBytes:number, docBytes:number, imageCount:number, docCount:number}}
+ */
+export function computeStorageSnapshot() {
+  var imageBytes = 0, docBytes = 0, imageCount = 0, docCount = 0;
+  try {
+    studies.forEach(function(s) {
+      if (!s.resources || !s.resources.length) return;
+      s.resources.forEach(function(r) {
+        if (r.dataUrl) {
+          var b64 = r.dataUrl.indexOf(',') >= 0 ? r.dataUrl.slice(r.dataUrl.indexOf(',') + 1) : r.dataUrl;
+          imageBytes += Math.round(b64.length * 0.75);
+          imageCount++;
+        } else if (r.ocrText) {
+          docBytes += r.ocrText.length;
+          docCount++;
+        }
+      });
+    });
+  } catch (e) { /* never let a snapshot computation break the app */ }
+  return { imageBytes: imageBytes, docBytes: docBytes, imageCount: imageCount, docCount: docCount };
+}
+
+/**
+ * Fire-and-forget wrapper — computes and beacons the current storage snapshot.
+ * Called at app boot (after loadStudies) and after every successful Gist
+ * push/pull, since those are the natural points where the on-device resource
+ * set is known to be settled.
+ */
+export function reportStorageSnapshot() {
+  try { trackEvent({ storageSnapshot: computeStorageSnapshot() }); }
+  catch (e) { /* never let a snapshot beacon break the app */ }
 }
 
 
