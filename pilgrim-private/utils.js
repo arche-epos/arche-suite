@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.30.0',date:'Aug 30, 2026',label:'Latest',
+    version:'4.30.1',date:'Sep 2, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: the 4 diagnostic /groq ping tests (Settings \\u2192 Test connectivity, Quick Test dots, Run Full Diagnostics) now send X-Tester-Id and an X-Tool-Name of "diag_ping" \\u2014 these pings were previously landing in pilgrim-admin\\u2019s "unknown" tester bucket with no way to attribute them; they\\u2019ll now show under the correct tester going forward, tagged separately from real AI Study Tools usage'
+    ]},
+  {
+    version:'4.30.0',date:'Aug 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: error and diagnostic beacons now tag which app version sent them, so a stale-cached-client issue can be told apart from a live-version bug.',
