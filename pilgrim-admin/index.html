@@ -125,6 +125,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <div class="pill" data-range="30">Last 30 days</div>
         <div class="pill" data-range="90">Last 90 days</div>
         <div class="pill" data-range="all">All time</div>
+        <button class="btn btn-ghost" id="exportAllBtn" title="Export all data as JSON">⬇ Export All</button>
         <button class="btn btn-ghost" id="refreshBtn" title="Refresh">↻ Refresh</button>
         <button class="btn btn-ghost" id="logoutBtn">Log out</button>
       </div>
@@ -133,7 +134,10 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     <div class="card">
       <h2>
         Per-Tester Breakdown
+        <span style="display:flex;align-items:center;gap:10px">
         <input type="text" class="filter-input" id="testerFilter" placeholder="Filter by tester…">
+        <button class="btn btn-ghost export-btn" data-export="usage" title="Export tester data as JSON">⬇</button>
+        </span>
       </h2>
       <div class="table-wrap">
       <table id="testerTable">
@@ -154,7 +158,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>Health <span class="muted" id="rangeLabel1"></span></h2>
+      <h2>Health <span class="muted" id="rangeLabel1"></span> <button class="btn btn-ghost export-btn" data-export="ratelimits" title="Export health/rate-limit data as JSON">⬇</button></h2>
       <div class="stat-row">
         <div class="stat"><div class="n" id="statRatelimits">–</div><div class="l">429s</div></div>
         <div class="stat"><div class="n" id="statTokens">–</div><div class="l">Total Tokens</div></div>
@@ -171,7 +175,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>Trends <span class="muted" id="rangeLabel8"></span></h2>
+      <h2>Trends <span class="muted" id="rangeLabel8"></span> <button class="btn btn-ghost export-btn" data-export="timeseries" title="Export trends data as JSON">⬇</button></h2>
       <div class="chart-wrap">
         <div class="chart-legend"><span class="lg"><span class="sw" style="background:var(--gold)"></span>Active Testers</span></div>
         <svg class="chart-svg" id="chartActiveTesters" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
@@ -227,13 +231,13 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>Resource Storage <span class="muted" id="storageAsOf"></span></h2>
+      <h2>Resource Storage <span class="muted" id="storageAsOf"></span> <button class="btn btn-ghost export-btn" data-export="storage" title="Export storage data as JSON">⬇</button></h2>
       <div class="stat-row" id="storageStats"></div>
       <div class="muted" style="margin-top:6px">Current on-device totals, reported by each tester's app at boot and after every sync. Doc size is extracted-text length, an estimate. A tester who hasn't opened the app since this feature shipped won't appear yet.</div>
     </div>
 
     <div class="card">
-      <h2>Errors</h2>
+      <h2>Errors <button class="btn btn-ghost export-btn" data-export="errors" title="Export errors data as JSON">⬇</button></h2>
       <div class="filter-row">
         <input type="text" class="filter-input" id="errorsFilter" placeholder="Filter by tester…" style="width:180px">
         <select class="filter-select" id="errorsDeviceFilter"><option value="">All Devices</option></select>
@@ -254,7 +258,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>Diagnostic Runs</h2>
+      <h2>Diagnostic Runs <button class="btn btn-ghost export-btn" data-export="diagnostics" title="Export diagnostic runs data as JSON">⬇</button></h2>
       <div class="filter-row">
         <input type="text" class="filter-input" id="diagFilter" placeholder="Filter by tester…" style="width:180px">
         <select class="filter-select" id="diagStatusFilter">
@@ -270,7 +274,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.3.2 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.4.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -408,6 +412,52 @@ function setRange(range){
 
 document.querySelectorAll('.pill[data-range]').forEach(p => p.addEventListener('click', () => setRange(p.dataset.range)));
 document.getElementById('refreshBtn').addEventListener('click', () => loadData());
+
+// ── export ────────────────────────────────────────────────────────────────
+function downloadJSON(filename, data){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function exportMeta(){
+  const { from, to } = rangeToDates(currentRange);
+  return { exportedAt: new Date().toISOString(), range: currentRange, from, to };
+}
+const EXPORT_SOURCES = {
+  usage: () => usageData,
+  ratelimits: () => ratelimitData,
+  errors: () => errorsData,
+  diagnostics: () => diagnosticsData,
+  timeseries: () => timeseriesData,
+  storage: () => storageData
+};
+document.querySelectorAll('.export-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const key = btn.dataset.export;
+    const getter = EXPORT_SOURCES[key];
+    if (!getter || getter() == null) return;
+    downloadJSON(`pilgrim-admin-${key}-${currentRange}d.json`, { meta: exportMeta(), section: key, data: getter() });
+  });
+});
+document.getElementById('exportAllBtn').addEventListener('click', () => {
+  if (!usageData) return;
+  downloadJSON(`pilgrim-admin-full-export-${currentRange}d.json`, {
+    meta: exportMeta(),
+    usage: usageData,
+    ratelimits: ratelimitData,
+    errors: errorsData,
+    diagnostics: diagnosticsData,
+    timeseries: timeseriesData,
+    storage: storageData
+  });
+});
 
 // ── rendering ─────────────────────────────────────────────────────────────
 function renderHealth(){
