@@ -83,6 +83,12 @@ tr.detail-row.open{display:table-row}
 .status-pass{color:var(--sagebright);font-weight:600}
 .status-fail{color:var(--crimsonbright);font-weight:600}
 footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
+.last-updated{font-size:12px;color:var(--txt4);white-space:nowrap}
+.toast-stack{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--bg3);border:1px solid var(--borderlit);color:var(--txt1);padding:10px 18px;border-radius:var(--r);font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.toast-ok{border-color:var(--sagebright)}
+.toast.toast-err{border-color:var(--crimsonbright)}
 .chart-wrap{margin-bottom:10px}
 .chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--txt3)}
 .chart-legend .lg{display:flex;align-items:center;gap:5px}
@@ -120,6 +126,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
   <div id="dashboard" class="hidden">
     <div class="topbar">
       <h1>Pilgrim Admin</h1>
+      <span class="last-updated" id="lastUpdated"></span>
       <div class="pill-row">
         <div class="pill" data-range="7">Last 7 days</div>
         <div class="pill" data-range="30">Last 30 days</div>
@@ -274,10 +281,11 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.4.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.5.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
+<div class="toast-stack" id="toastStack"></div>
 
 <script>
 const PROXY = 'https://arche-proxy.archestudytools.workers.dev';
@@ -374,6 +382,27 @@ async function fetchAdmin(path, params){
   return res.json();
 }
 
+function fmtStamp(d){
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+function fmtClock(d){
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function showToast(msg, kind){
+  const stack = document.getElementById('toastStack');
+  const t = document.createElement('div');
+  t.className = 'toast' + (kind ? ' toast-'+kind : '');
+  t.textContent = msg;
+  stack.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 250);
+  }, 3200);
+}
+
 async function loadData(){
   const { from, to } = rangeToDates(currentRange);
   document.getElementById('rangeLabel1').textContent = `(${from} → ${to})`;
@@ -384,14 +413,19 @@ async function loadData(){
   document.getElementById('rangeLabel7').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel8').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel9').textContent = `(${from} → ${to})`;
-  [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData] = await Promise.all([
-    fetchAdmin('/admin/usage', { from, to }),
-    fetchAdmin('/admin/ratelimits', { from, to }),
-    fetchAdmin('/admin/errors', { from, to }),
-    fetchAdmin('/admin/diagnostics', { from, to }),
-    fetchAdmin('/admin/timeseries', { from, to }),
-    fetchAdmin('/admin/storage', {})
-  ]);
+  try {
+    [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData] = await Promise.all([
+      fetchAdmin('/admin/usage', { from, to }),
+      fetchAdmin('/admin/ratelimits', { from, to }),
+      fetchAdmin('/admin/errors', { from, to }),
+      fetchAdmin('/admin/diagnostics', { from, to }),
+      fetchAdmin('/admin/timeseries', { from, to }),
+      fetchAdmin('/admin/storage', {})
+    ]);
+  } catch (e) {
+    if (e.message !== 'unauthorized') showToast('Failed to load data — check connection', 'err');
+    throw e;
+  }
   renderHealth();
   renderTrends();
   renderSyncHealth();
@@ -402,6 +436,9 @@ async function loadData(){
   renderTesterTable();
   renderErrors();
   renderDiagnostics();
+  const now = new Date();
+  document.getElementById('lastUpdated').textContent = `Loaded ${fmtClock(now)}`;
+  showToast(`Data loaded — ${fmtClock(now)}`, 'ok');
 }
 
 function setRange(range){
@@ -411,7 +448,7 @@ function setRange(range){
 }
 
 document.querySelectorAll('.pill[data-range]').forEach(p => p.addEventListener('click', () => setRange(p.dataset.range)));
-document.getElementById('refreshBtn').addEventListener('click', () => loadData());
+document.getElementById('refreshBtn').addEventListener('click', () => loadData().catch(e => { if (e.message !== 'unauthorized') console.error(e); }));
 
 // ── export ────────────────────────────────────────────────────────────────
 function downloadJSON(filename, data){
@@ -442,13 +479,16 @@ document.querySelectorAll('.export-btn').forEach(btn => {
     e.stopPropagation();
     const key = btn.dataset.export;
     const getter = EXPORT_SOURCES[key];
-    if (!getter || getter() == null) return;
-    downloadJSON(`pilgrim-admin-${key}-${currentRange}d.json`, { meta: exportMeta(), section: key, data: getter() });
+    if (!getter || getter() == null) { showToast('No data loaded yet — refresh first', 'err'); return; }
+    const now = new Date();
+    downloadJSON(`pilgrim-admin-${key}-${fmtStamp(now)}.json`, { meta: exportMeta(), section: key, data: getter() });
+    showToast(`Exported ${key} — ${fmtClock(now)}`, 'ok');
   });
 });
 document.getElementById('exportAllBtn').addEventListener('click', () => {
-  if (!usageData) return;
-  downloadJSON(`pilgrim-admin-full-export-${currentRange}d.json`, {
+  if (!usageData) { showToast('No data loaded yet — refresh first', 'err'); return; }
+  const now = new Date();
+  downloadJSON(`pilgrim-admin-full-export-${fmtStamp(now)}.json`, {
     meta: exportMeta(),
     usage: usageData,
     ratelimits: ratelimitData,
@@ -457,6 +497,7 @@ document.getElementById('exportAllBtn').addEventListener('click', () => {
     timeseries: timeseriesData,
     storage: storageData
   });
+  showToast(`Full export downloaded — ${fmtClock(now)}`, 'ok');
 });
 
 // ── rendering ─────────────────────────────────────────────────────────────
