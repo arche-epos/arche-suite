@@ -130,6 +130,27 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
+      <h2>
+        Per-Tester Breakdown
+        <input type="text" class="filter-input" id="testerFilter" placeholder="Filter by tester…">
+      </h2>
+      <table id="testerTable">
+        <thead>
+          <tr>
+            <th data-key="id">Tester</th>
+            <th data-key="daysActive">Days Active</th>
+            <th data-key="screens">Screen Visits</th>
+            <th data-key="tools">Tool Calls</th>
+            <th data-key="tokens">Tokens</th>
+            <th data-key="lastseen">Last Active</th>
+          </tr>
+        </thead>
+        <tbody id="testerBody"></tbody>
+      </table>
+      <div class="empty hidden" id="testerEmpty">No usage data in this range.</div>
+    </div>
+
+    <div class="card">
       <h2>Health <span class="muted" id="rangeLabel1"></span></h2>
       <div class="stat-row">
         <div class="stat"><div class="n" id="statRatelimits">–</div><div class="l">429s</div></div>
@@ -209,27 +230,6 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     </div>
 
     <div class="card">
-      <h2>
-        Per-Tester Breakdown
-        <input type="text" class="filter-input" id="testerFilter" placeholder="Filter by tester…">
-      </h2>
-      <table id="testerTable">
-        <thead>
-          <tr>
-            <th data-key="id">Tester</th>
-            <th data-key="daysActive">Days Active</th>
-            <th data-key="screens">Screen Visits</th>
-            <th data-key="tools">Tool Calls</th>
-            <th data-key="tokens">Tokens</th>
-            <th data-key="lastseen">Last Active</th>
-          </tr>
-        </thead>
-        <tbody id="testerBody"></tbody>
-      </table>
-      <div class="empty hidden" id="testerEmpty">No usage data in this range.</div>
-    </div>
-
-    <div class="card">
       <h2>Errors</h2>
       <div class="filter-row">
         <input type="text" class="filter-input" id="errorsFilter" placeholder="Filter by tester…" style="width:180px">
@@ -267,7 +267,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.3.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.3.1 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -450,20 +450,32 @@ function aggregateAcross(field){
 }
 
 // ── Trends charts (hand-rolled SVG — no chart library loaded) ──────────────
-// Renders one or more series onto a fixed 600x140 viewBox. Simple polyline +
-// dot markers, gridlines every quarter height. Not interactive (no tooltips)
-// — this is for trend-shape at a glance, not detailed drill-down (the
-// Per-Tester Breakdown table below covers that).
-function renderLineChart(svgId, series){
+// Renders one or more series onto a fixed 600x140 viewBox with a labeled,
+// quantified y-axis (4 gridlines, value at each) and x-axis (date labels,
+// capped at ~6 to avoid crowding on long ranges). Every data point gets a
+// small dot with a native <title> tooltip (date + exact value) — cheap
+// hover/tap detail without pulling in a chart library. The Per-Tester
+// Breakdown table below remains the place for full per-tester drill-down.
+function fmtAxisDate(iso){
+  // 'YYYY-MM-DD' -> 'M/D'
+  const parts = (iso||'').split('-');
+  if (parts.length !== 3) return iso || '';
+  return `${parseInt(parts[1],10)}/${parseInt(parts[2],10)}`;
+}
+function renderLineChart(svgId, series, dates){
   const svg = document.getElementById(svgId);
-  const W = 600, H = 140, padL = 4, padR = 4, padT = 10, padB = 4;
+  const W = 600, H = 140, padL = 34, padR = 8, padT = 10, padB = 18;
   const allVals = series.flatMap(s => s.values);
   const maxV = Math.max(1, ...allVals);
   const n = series[0] ? series[0].values.length : 0;
   let html = '';
+  // Gridlines + quantified y-axis labels (top = max, bottom = 0)
   for (let g = 0; g <= 3; g++) {
-    const y = padT + (H - padT - padB) * (g/3);
+    const frac = g/3;
+    const y = padT + (H - padT - padB) * frac;
+    const val = Math.round(maxV * (1 - frac));
     html += `<line class="gridline" x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"/>`;
+    html += `<text class="chart-axis-label" x="${padL-6}" y="${y+3}" text-anchor="end">${val}</text>`;
   }
   series.forEach(s => {
     if (!s.values.length) return;
@@ -471,28 +483,45 @@ function renderLineChart(svgId, series){
     const pts = s.values.map((v,i) => {
       const x = padL + i * stepX;
       const y = padT + (H - padT - padB) * (1 - (v / maxV));
-      return [x,y];
+      return [x,y,v];
     });
     const path = pts.map((p,i) => (i===0?'M':'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
     html += `<path class="line" d="${path}" stroke="${s.color}"/>`;
-    // Only dot the last point — dotting every point on a 30-90 day range gets noisy
-    const last = pts[pts.length-1];
-    if (last) html += `<circle class="dot" cx="${last[0]}" cy="${last[1]}" r="3" stroke="${s.color}" stroke-width="2"/>`;
+    // Every point gets a dot + native tooltip (date: value) — not just the last point
+    pts.forEach((p,i) => {
+      const dLbl = dates && dates[i] ? fmtAxisDate(dates[i]) + ': ' : '';
+      html += `<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.5" stroke="${s.color}" stroke-width="1.5"><title>${dLbl}${p[2]}</title></circle>`;
+    });
   });
+  // Quantified x-axis date labels, capped at ~6 to stay legible on long ranges
+  if (dates && dates.length && n > 0) {
+    const stepX = n > 1 ? (W - padL - padR) / (n - 1) : 0;
+    const labelStep = Math.max(1, Math.ceil(n / 6));
+    for (let i = 0; i < n; i += labelStep) {
+      const x = padL + i * stepX;
+      const anchor = i === 0 ? 'start' : (i >= n-1 ? 'end' : 'middle');
+      html += `<text class="chart-axis-label" x="${x}" y="${H-2}" text-anchor="${anchor}">${fmtAxisDate(dates[i])}</text>`;
+    }
+    if ((n-1) % labelStep !== 0) {
+      const x = padL + (n-1) * stepX;
+      html += `<text class="chart-axis-label" x="${x}" y="${H-2}" text-anchor="end">${fmtAxisDate(dates[n-1])}</text>`;
+    }
+  }
   svg.innerHTML = html;
 }
 
 function renderTrends(){
   const series = timeseriesData.series || [];
+  const dates = series.map(d => d.date);
   document.getElementById('trendsEmpty').classList.toggle('hidden', series.length > 0);
-  if (!series.length) { renderLineChart('chartActiveTesters', []); renderLineChart('chartActivity', []); return; }
+  if (!series.length) { renderLineChart('chartActiveTesters', [], []); renderLineChart('chartActivity', [], []); return; }
   renderLineChart('chartActiveTesters', [
     { color: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(), values: series.map(d => d.activeTesters) }
-  ]);
+  ], dates);
   renderLineChart('chartActivity', [
     { color: getComputedStyle(document.documentElement).getPropertyValue('--sagebright').trim(), values: series.map(d => d.toolCalls) },
     { color: getComputedStyle(document.documentElement).getPropertyValue('--txt3').trim(), values: series.map(d => d.screenVisits) }
-  ]);
+  ], dates);
 }
 
 // ── Sync Health card ────────────────────────────────────────────────────────
