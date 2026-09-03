@@ -2433,9 +2433,13 @@ function openDiagModal(){
   var overlay=document.getElementById('diag-overlay');
   if(overlay)overlay.style.display='flex';
   document.getElementById('diag-test-list').innerHTML='<div style="font-size:13px;color:var(--txt4);text-align:center;padding:20px 0">Tap <em>Run Tests</em> to begin.</div>';
-  document.getElementById('diag-modal-status').textContent='Ready to run';
-  document.getElementById('diag-run-btn').disabled=false;
-  document.getElementById('diag-run-btn').textContent='Run Tests';
+  if(Date.now()<_diagCooldownUntil){
+    document.getElementById('diag-modal-status').textContent='Please wait before running again';
+  }else{
+    document.getElementById('diag-modal-status').textContent='Ready to run';
+    document.getElementById('diag-run-btn').disabled=false;
+    document.getElementById('diag-run-btn').textContent='Run Tests';
+  }
   var fb=document.getElementById('diag-feedback-form');
   if(fb)fb.style.display='none';
   _diagResults=[];
@@ -2522,8 +2526,10 @@ function openFeedbackDirect(){
   if(overlay)overlay.style.display='flex';
   document.getElementById('diag-test-list').innerHTML='<div style="font-size:13px;color:var(--txt4);text-align:center;padding:20px 0">Tap <em>Run Tests</em> to run a full diagnostic.</div>';
   document.getElementById('diag-modal-status').textContent='Feedback mode';
-  document.getElementById('diag-run-btn').disabled=false;
-  document.getElementById('diag-run-btn').textContent='Run Tests';
+  if(Date.now()>=_diagCooldownUntil){
+    document.getElementById('diag-run-btn').disabled=false;
+    document.getElementById('diag-run-btn').textContent='Run Tests';
+  }
   _diagResults=[];
   var fb=document.getElementById('diag-feedback-form');
   if(fb){fb.style.display='block';}
@@ -2533,7 +2539,33 @@ function openFeedbackDirect(){
  * Runs the full diagnostics suite, tests all services, saves results to the log,
  * and enables the feedback form for submission.
  */
+var _diagCooldownUntil=0,_diagCooldownTimer=null;
+var DIAG_COOLDOWN_SEC=30; // min gap between full diagnostic runs — Groq ping inside gets rate-limited (429) if re-triggered too fast
+/**
+ * Disables the diagnostics button for DIAG_COOLDOWN_SEC and updates its label with a live countdown.
+ * @param {HTMLElement} btn - The diagnostics run button.
+ */
+function startDiagCooldown(btn){
+  _diagCooldownUntil=Date.now()+DIAG_COOLDOWN_SEC*1000;
+  if(_diagCooldownTimer)clearInterval(_diagCooldownTimer);
+  function tick(){
+    var remain=Math.ceil((_diagCooldownUntil-Date.now())/1000);
+    if(remain<=0){
+      clearInterval(_diagCooldownTimer);_diagCooldownTimer=null;
+      if(btn){btn.disabled=false;btn.textContent='Run Again';}
+      return;
+    }
+    if(btn){btn.disabled=true;btn.textContent='Wait '+remain+'s';}
+  }
+  tick();
+  _diagCooldownTimer=setInterval(tick,1000);
+}
 async function runDiagnostics(){
+  if(Date.now()<_diagCooldownUntil){
+    var waitSec=Math.ceil((_diagCooldownUntil-Date.now())/1000);
+    toast('Please wait '+waitSec+'s before running diagnostics again');
+    return;
+  }
   var btn=document.getElementById('diag-run-btn');
   if(btn){btn.disabled=true;btn.textContent='Running...';}
   document.getElementById('diag-modal-status').textContent='Running tests\u2026';
@@ -2625,7 +2657,7 @@ async function runDiagnostics(){
   var failCount=_diagResults.filter(function(r){return r.status==='fail';}).length;
   var summary=passCount+' passed, '+failCount+' failed';
   document.getElementById('diag-modal-status').textContent='Complete — '+summary;
-  if(btn){btn.disabled=false;btn.textContent='Run Again';}
+  startDiagCooldown(btn);
   // Save to log
   var log=loadDiagLog();
   log.unshift({id:runId,ts:new Date().toISOString(),results:_diagResults,summary:{pass:passCount,fail:failCount}});
