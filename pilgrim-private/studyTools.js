@@ -910,6 +910,7 @@ async function runSnapshot(){
   if(!ar||!ar.reference){toast('Add a scripture reference first');return;}
   if(!online){toast('AI tools require internet');return;}
   trackEvent({tool:'snapshot'}); // usage tracking — batch-mode counter, separate from per-tool tags (spec-usage-tracking-admin-v2.md)
+  var _snapT0=Date.now(),_snapFailCount=0;
   _snapshotRunning=true;
   _snapshotCancelled=false;
   _snapshotAbortControllers={};
@@ -972,6 +973,7 @@ async function runSnapshot(){
         logError('Snapshot: '+item.tool,e);
         setSnapshotRowStatus(item.tool,'failed');
         toast('Snapshot: '+item.tool+' failed \u2014 '+e.message);
+        _snapFailCount++;
       }
     }finally{
       delete _snapshotAbortControllers[item.tool];
@@ -985,6 +987,10 @@ async function runSnapshot(){
   _snapshotAbortControllers={};
   var wasCancelled=_snapshotCancelled;
   _snapshotCancelled=false;
+  // Full-batch wall-clock timing beacon — separate from per-tool timings, which
+  // are recorded server-side in the Worker for each sub-call's own /groq round-trip.
+  // This is the end-to-end Snapshot duration as the tester experienced it.
+  trackEvent({toolTiming:{name:'snapshot',ms:Date.now()-_snapT0,status:wasCancelled?'cancelled':(_snapFailCount>0?'partial':'pass')}});
   finishSnapshotProgressModal(wasCancelled);
   if(btn){btn.style.opacity='';btn.style.pointerEvents='';}
   if(!wasCancelled){

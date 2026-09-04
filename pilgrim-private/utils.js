@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.30.2',date:'Sep 2, 2026',label:'Latest',
+    version:'4.30.3',date:'Sep 2, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: AI tool run duration is now tracked for admin visibility \\u2014 individual tool calls (Word Study, Grammar, etc.) time themselves server-side, and Snapshot now beacons its full-batch run time too. No content or study data is ever included, only timing.'
+    ]},
+  {
+    version:'4.30.2',date:'Sep 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: "Run Full Diagnostics" now enforces a 30-second cooldown after each run \\u2014 back-to-back runs were tripping Groq\\u2019s rate limit on the AI test (HTTP 429). The button shows a live "Wait Xs" countdown, and a toast explains the wait if you try again early.'

@@ -281,7 +281,14 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="diagEmpty">No diagnostic runs in this range.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.5.0 — no study content is ever logged here.</footer>
+    <div class="card">
+      <h2>AI Tool Run Timing <button class="btn btn-ghost export-btn" data-export="timing" title="Export timing data as JSON">⬇</button></h2>
+      <div class="muted" style="margin-bottom:8px">Running average (all-time) + last 5 runs per tool — covers individual tool-button calls, Snapshot's sub-calls (same tool tags), and Snapshot's own full-batch time.</div>
+      <div id="timingList"></div>
+      <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
+    </div>
+
+    <footer>Arché · Pilgrim Admin v1.6.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -299,6 +306,7 @@ let errorsData = null;
 let diagnosticsData = null;
 let timeseriesData = null;
 let storageData = null;
+let timingData = null;
 let sortKey = 'activity';
 let sortDir = 'desc';
 const DEVICE_LABELS = { mobile:'Mobile', tablet:'Tablet', desktop:'Desktop', other:'Unknown' };
@@ -414,13 +422,14 @@ async function loadData(){
   document.getElementById('rangeLabel8').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel9').textContent = `(${from} → ${to})`;
   try {
-    [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData] = await Promise.all([
+    [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData, timingData] = await Promise.all([
       fetchAdmin('/admin/usage', { from, to }),
       fetchAdmin('/admin/ratelimits', { from, to }),
       fetchAdmin('/admin/errors', { from, to }),
       fetchAdmin('/admin/diagnostics', { from, to }),
       fetchAdmin('/admin/timeseries', { from, to }),
-      fetchAdmin('/admin/storage', {})
+      fetchAdmin('/admin/storage', {}),
+      fetchAdmin('/admin/timing', {})
     ]);
   } catch (e) {
     if (e.message !== 'unauthorized') showToast('Failed to load data — check connection', 'err');
@@ -436,6 +445,7 @@ async function loadData(){
   renderTesterTable();
   renderErrors();
   renderDiagnostics();
+  renderTiming();
   const now = new Date();
   document.getElementById('lastUpdated').textContent = `Loaded ${fmtClock(now)}`;
   showToast(`Data loaded — ${fmtClock(now)}`, 'ok');
@@ -472,7 +482,8 @@ const EXPORT_SOURCES = {
   errors: () => errorsData,
   diagnostics: () => diagnosticsData,
   timeseries: () => timeseriesData,
-  storage: () => storageData
+  storage: () => storageData,
+  timing: () => timingData
 };
 document.querySelectorAll('.export-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
@@ -928,6 +939,43 @@ function renderDiagnostics(){
   document.getElementById(id).addEventListener('input', renderDiagnostics);
   document.getElementById(id).addEventListener('change', renderDiagnostics);
 });
+
+// ── AI Tool Run Timing ──────────────────────────────────────────────────────
+// timingData.tools: { [toolName]: { avgMs, count, lastRuns:[{tester,ms,status,ts}] } }
+// 'snapshot' is included as its own entry (full-batch wall-clock time), alongside
+// the individual AI tools — same card, same display treatment, per Boss's request.
+function fmtMs(ms){
+  if (ms == null) return '';
+  return ms >= 1000 ? (ms/1000).toFixed(1)+'s' : ms+'ms';
+}
+function renderTiming(){
+  const tools = (timingData && timingData.tools) || {};
+  const names = Object.keys(tools);
+  const list = document.getElementById('timingList');
+  list.innerHTML = '';
+  document.getElementById('timingEmpty').classList.toggle('hidden', names.length > 0);
+  // Snapshot pinned last — it's the batch aggregate, not one of the individual tools
+  names.sort((a, b) => (a === 'snapshot') - (b === 'snapshot') || a.localeCompare(b));
+  names.forEach(name => {
+    const t = tools[name];
+    const item = document.createElement('div');
+    item.className = 'run-item';
+    const header = document.createElement('div');
+    header.className = 'run-header';
+    header.innerHTML = `<div class="who">${escapeHtml(toolLabel(name))} <span class="when">${t.count} run${t.count===1?'':'s'} recorded</span></div>` +
+      `<div><span class="summary-pass">avg ${fmtMs(t.avgMs)}</span></div>`;
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'run-body';
+    const runs = t.lastRuns || [];
+    bodyEl.innerHTML = runs.length ? `<table><thead><tr><th>Tester</th><th>Duration</th><th>Status</th><th>Time</th></tr></thead><tbody>${
+      runs.map(r => `<tr><td>${escapeHtml(r.tester)}</td><td>${fmtMs(r.ms)}</td><td class="${r.status==='pass'?'status-pass':'status-fail'}">${escapeHtml(r.status)}</td><td>${fmtDate(r.ts)}</td></tr>`).join('')
+    }</tbody></table>` : '<div class="empty">No runs recorded.</div>';
+    header.addEventListener('click', () => bodyEl.classList.toggle('open'));
+    item.appendChild(header);
+    item.appendChild(bodyEl);
+    list.appendChild(item);
+  });
+}
 
 // ── boot ──────────────────────────────────────────────────────────────────
 (function boot(){
