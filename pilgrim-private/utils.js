@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.30.5',date:'Sep 7, 2026',label:'Latest',
+    version:'4.30.6',date:'Sep 7, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: unified Pilgrim Guide entry point \\u2014 the Library-only \\u201c+\\u201d button is now a single FAB present on every screen. On Library it opens a small menu (New Study / Pilgrim Guide); everywhere else it launches Pilgrim Guide directly. Pilgrim Guide itself (App Help, Scripture Finder, Word Study modes) is not yet built \u2014 tapping it currently shows a \u201ccoming soon\u201d notice. See spec-pilgrim-assistant-v2.md.'
+    ]},
+  {
+    version:'4.30.5',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: internal module cross-imports (storage.js, sync.js, studyTools.js, ui.js, tts.js) were still referencing the stale ?v=4.30.0 cache-bust string while app.js and index.html had advanced to 4.30.4 across the last three releases \\u2014 different query strings resolve to separate ES module instances in the browser, meaning app.js\\u2019s boot-time state (storage, sync, utils) could diverge from the instances ui.js/studyTools.js actually run against. All cross-import references resynced to 4.30.5 in lockstep. No logic changes.'

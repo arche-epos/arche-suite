@@ -241,6 +241,9 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <h2>Resource Storage <span class="muted" id="storageAsOf"></span> <button class="btn btn-ghost export-btn" data-export="storage" title="Export storage data as JSON">⬇</button></h2>
       <div class="stat-row" id="storageStats"></div>
       <div class="muted" style="margin-top:6px">Current on-device totals, reported by each tester's app at boot and after every sync. Doc size is extracted-text length, an estimate. A tester who hasn't opened the app since this feature shipped won't appear yet.</div>
+      <h2 style="margin-top:16px;font-size:14px" class="muted">Uploaded <span id="rangeLabel7"></span></h2>
+      <div class="stat-row" id="uploadStats"></div>
+      <div class="muted" style="margin-top:6px">Cumulative uploads in the selected range — additive, not a point-in-time total (see Resource Storage above for that). Tracked since Aug 27 2026; wired into this dashboard Sep 7 2026.</div>
     </div>
 
     <div class="card">
@@ -288,7 +291,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.7.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.8.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -442,6 +445,7 @@ async function loadData(){
   renderEngagement();
   renderToolScope();
   renderStorage();
+  renderUploads();
   renderTesterTable();
   renderErrors();
   renderDiagnostics();
@@ -723,6 +727,31 @@ function renderStorage(){
     const stat = document.createElement('div');
     stat.className = 'stat';
     stat.innerHTML = `<div class="n">${formatBytes(bytes)}</div><div class="l">${label} — ${count} across ${ids.length} tester${ids.length!==1?'s':''}</div>`;
+    el.appendChild(stat);
+  });
+}
+
+function renderUploads(){
+  const el = document.getElementById('uploadStats');
+  const labelEl = document.getElementById('rangeLabel7');
+  if (labelEl && usageData) labelEl.textContent = `(${usageData.from} → ${usageData.to})`;
+  el.innerHTML = '';
+  const bytesByType = Object.fromEntries(aggregateAcross('fileBytes'));
+  const countsByType = Object.fromEntries(aggregateAcross('fileCounts'));
+  const imageBytes = bytesByType.image || 0, docBytes = bytesByType.doc || 0;
+  const imageCount = countsByType.image || 0, docCount = countsByType.doc || 0;
+  if (!imageCount && !docCount) {
+    el.innerHTML = '<div class="empty">No uploads recorded in this range.</div>';
+    return;
+  }
+  const stats = [
+    ['Photos', imageBytes, imageCount],
+    ['Documents', docBytes, docCount],
+  ];
+  stats.forEach(([label, bytes, count]) => {
+    const stat = document.createElement('div');
+    stat.className = 'stat';
+    stat.innerHTML = `<div class="n">${formatBytes(bytes)}</div><div class="l">${label} — ${count} uploaded</div>`;
     el.appendChild(stat);
   });
 }

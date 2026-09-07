@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.30.5';
+} from './utils.js?v=4.30.6';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.30.5';
+} from './storage.js?v=4.30.6';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.30.5';
+} from './tts.js?v=4.30.6';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.30.5';
+} from './sync.js?v=4.30.6';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.30.5';
+} from './studyTools.js?v=4.30.6';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -142,6 +142,41 @@ function initEditors(){
  * nav buttons, then calls the render function appropriate for the target screen.
  * @param {string} id - Screen id: 'library' | 'read' | 'study' | 'stats' | 'settings'.
  */
+// ── Unified Pilgrim Guide FAB (spec-pilgrim-assistant-v2.md, Sep 7 2026) ──────
+// Library tab: FAB opens a small menu (New Study / Pilgrim Guide).
+// Every other tab: FAB launches Pilgrim Guide directly, no menu.
+var _currentScreen='library';
+function fabTap(){
+  if(_currentScreen==='library'){toggleFabMenu();}
+  else{openPilgrimGuide();}
+}
+function toggleFabMenu(){
+  var m=document.getElementById('fab-menu');
+  if(!m)return;
+  if(m.classList.contains('on')){closeFabMenu();}else{m.classList.add('on');}
+}
+function closeFabMenu(){
+  var m=document.getElementById('fab-menu');
+  if(m)m.classList.remove('on');
+}
+function fabMenuNewStudy(){
+  closeFabMenu();
+  newStudy();
+}
+function fabMenuPilgrimGuide(){
+  closeFabMenu();
+  openPilgrimGuide();
+}
+function openPilgrimGuide(){
+  // Pilgrim Guide core (App Help / Scripture Finder / Word Study modes) is Phase 2 —
+  // not yet built. This is a placeholder so the FAB entry point is testable now.
+  toast('Pilgrim Guide \u2014 coming soon');
+}
+document.addEventListener('click',function(e){
+  var w=document.querySelector('.fab-wrap');
+  if(w && !w.contains(e.target))closeFabMenu();
+});
+
 function navTo(id){
   trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
   dismissTabHints();
@@ -153,7 +188,7 @@ function navTo(id){
   document.querySelectorAll('.navbtn').forEach(function(b){b.classList.remove('on');});
   document.getElementById('scr-'+id).classList.add('on');
   document.getElementById('nav-'+id).classList.add('on');
-  var fabBtn=document.querySelector('.fab');if(fabBtn)fabBtn.style.display=(id==='library')?'':'none';
+  _currentScreen=id; closeFabMenu(); // FAB is unified (Pilgrim Guide spec v2) — always visible, no per-screen hide
   if(id==='library')renderLib();
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
@@ -2329,7 +2364,7 @@ var TOUR_A_STEPS=[
   {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
   {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
   {screen:'library',target:'#lib-sort',title:'Sorting Your Library',body:'Sort by Date, Modified, Reference, Teacher, or Series. Choosing Reference, Teacher, or Series reveals a sub-filter bar so you can narrow things down further.'},
-  {screen:'library',target:'.fab',title:'Start a New Study',body:'Tap here any time to start a new study. This button only appears on the Library tab.'},
+  {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here any time to start a new study.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#f-date',title:'Date',body:"Today's date is filled in automatically — you can change it any time."},
@@ -3217,6 +3252,7 @@ export {
   initEditors,
   // S06 — Navigation
   navTo, saveAndGoLib, goField, newStudy, createFromTemplate, switchStudyTab,
+  fabTap, toggleFabMenu, closeFabMenu, fabMenuNewStudy, fabMenuPilgrimGuide, openPilgrimGuide,
   // S09 — Library
   renderLib, setTagFilter, setLibSort,
   // S10 — Field Notes Panel
