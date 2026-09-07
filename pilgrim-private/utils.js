@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.30.3',date:'Sep 2, 2026',label:'Latest',
+    version:'4.30.4',date:'Sep 7, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Lexicon lookup was capped at max_tokens:3000 \\u2014 tight for its own prompt, which can ask for up to 30 full-verse occurrences plus a scholarly entry, occasionally causing a truncated/malformed JSON response (\\u201cCould not parse lexicon data\\u201d). Raised to 16000 (matching the ceiling used for other AI tools during their right-sizing pass) as a temporary wide cap while server-side token tracking (see Admin) collects real usage data to set a permanent, right-sized limit.'
+    ]},
+  {
+    version:'4.30.3',date:'Sep 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: AI tool run duration is now tracked for admin visibility \\u2014 individual tool calls (Word Study, Grammar, etc.) time themselves server-side, and Snapshot now beacons its full-batch run time too. No content or study data is ever included, only timing.'

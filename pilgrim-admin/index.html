@@ -288,7 +288,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.6.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.7.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -941,9 +941,12 @@ function renderDiagnostics(){
 });
 
 // ── AI Tool Run Timing ──────────────────────────────────────────────────────
-// timingData.tools: { [toolName]: { avgMs, count, lastRuns:[{tester,ms,status,ts}] } }
+// timingData.tools: { [toolName]: { avgMs, count, lastRuns:[{tester,ms,status,ts,tokens?,truncated?}],
+//                                    avgTokens, maxTokens, truncatedCount } }
 // 'snapshot' is included as its own entry (full-batch wall-clock time), alongside
 // the individual AI tools — same card, same display treatment, per Boss's request.
+// avgTokens/maxTokens/truncatedCount added Sep 7 2026 for right-sizing max_tokens
+// caps from real usage instead of guesswork — see spec-usage-tracking-admin-v2.md.
 function fmtMs(ms){
   if (ms == null) return '';
   return ms >= 1000 ? (ms/1000).toFixed(1)+'s' : ms+'ms';
@@ -962,13 +965,17 @@ function renderTiming(){
     item.className = 'run-item';
     const header = document.createElement('div');
     header.className = 'run-header';
+    const tokenBits = [];
+    if (t.avgTokens) tokenBits.push(`avg ${t.avgTokens.toLocaleString()} tok`);
+    if (t.maxTokens) tokenBits.push(`max ${t.maxTokens.toLocaleString()} tok`);
+    if (t.truncatedCount) tokenBits.push(`<span class="status-fail">${t.truncatedCount} truncated</span>`);
     header.innerHTML = `<div class="who">${escapeHtml(toolLabel(name))} <span class="when">${t.count} run${t.count===1?'':'s'} recorded</span></div>` +
-      `<div><span class="summary-pass">avg ${fmtMs(t.avgMs)}</span></div>`;
+      `<div><span class="summary-pass">avg ${fmtMs(t.avgMs)}</span>${tokenBits.length ? ' &middot; '+tokenBits.join(' &middot; ') : ''}</div>`;
     const bodyEl = document.createElement('div');
     bodyEl.className = 'run-body';
     const runs = t.lastRuns || [];
-    bodyEl.innerHTML = runs.length ? `<table><thead><tr><th>Tester</th><th>Duration</th><th>Status</th><th>Time</th></tr></thead><tbody>${
-      runs.map(r => `<tr><td>${escapeHtml(r.tester)}</td><td>${fmtMs(r.ms)}</td><td class="${r.status==='pass'?'status-pass':'status-fail'}">${escapeHtml(r.status)}</td><td>${fmtDate(r.ts)}</td></tr>`).join('')
+    bodyEl.innerHTML = runs.length ? `<table><thead><tr><th>Tester</th><th>Duration</th><th>Tokens</th><th>Status</th><th>Time</th></tr></thead><tbody>${
+      runs.map(r => `<tr><td>${escapeHtml(r.tester)}</td><td>${fmtMs(r.ms)}</td><td>${r.tokens ? r.tokens.toLocaleString()+(r.truncated?' <span class="status-fail">(cut off)</span>':'') : '—'}</td><td class="${r.status==='pass'?'status-pass':'status-fail'}">${escapeHtml(r.status)}</td><td>${fmtDate(r.ts)}</td></tr>`).join('')
     }</tbody></table>` : '<div class="empty">No runs recorded.</div>';
     header.addEventListener('click', () => bodyEl.classList.toggle('open'));
     item.appendChild(header);
