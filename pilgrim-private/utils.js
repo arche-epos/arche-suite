@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.31.0',date:'Sep 7, 2026',label:'Latest',
+    version:'4.32.0',date:'Sep 8, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Scripture Finder mode is live in Pilgrim Guide \\u2014 ask to locate a passage by topic (\\u201cwhere was the flood of Noah\\u201d) or a partial/misremembered quote and it proposes candidate references, verifies each against real fetched text, and shows only what checks out (never AI-recalled scripture). Tap a result to open it in the Read tab. \\u201cDeeper Dive\\u201d asks for more candidates on the same request; \\u201cSearch All Translations\\u201d re-fetches the same verified references in 1-2 additional translations to compare wording. Word Study mode is still coming soon.'
+    ]},
+  {
+    version:'4.31.0',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Pilgrim Guide App Help mode is live \\u2014 tapping the FAB now opens a real chat instead of the \\u201ccoming soon\\u201d stub. Ask any \\u201chow do I...\\u201d question about the app and it answers from a maintained reference doc (never invents an answer beyond it). The same message also decides intent: if you ask to find a passage or word meaning instead, Pilgrim Guide currently replies that those modes (Scripture Finder, Word Study) are coming soon rather than guessing \\u2014 no scripture content is ever generated from memory. No chat history is saved between sessions.'

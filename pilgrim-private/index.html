@@ -153,6 +153,15 @@ input[type="range"]{accent-color:var(--gold)}
 .pg-msg.user{align-self:flex-end;background:var(--gold);color:var(--bg0);border-bottom-right-radius:4px}
 .pg-msg.assistant{align-self:flex-start;background:var(--bg3);color:var(--txt1);border:1px solid var(--border);border-bottom-left-radius:4px}
 .pg-msg.loading{align-self:flex-start;display:flex;align-items:center;gap:8px;color:var(--txt3);background:none;border:none;padding:4px 2px}
+.pg-msg.scripture-results{align-self:stretch;max-width:100%;background:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.pg-scr-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer}
+.pg-scr-card:active{background:var(--bg2)}
+.pg-scr-ref{font-weight:600;color:var(--gold);font-size:13.5px;margin-bottom:3px}
+.pg-scr-why{color:var(--txt4);font-size:11.5px;font-style:italic;margin-bottom:4px}
+.pg-scr-snippet{color:var(--txt2);font-size:13px;line-height:1.5}
+.pg-scr-alt{margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-size:12px;color:var(--txt3)}
+.pg-scr-alt b{color:var(--txt2)}
+.pg-scr-actions{display:flex;gap:8px;margin-top:2px}
 .concl textarea{background:var(--bg1);border:1px solid var(--golddim);min-height:140px;font-size:15px;line-height:1.7}
 .conclbadge{display:inline-block;background:var(--golddim);color:var(--goldpale);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:middle}
 .scope-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:3px;gap:3px;margin-bottom:14px}
@@ -1589,7 +1598,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.31.0"></script>
+<script type="module" src="app.js?v=4.32.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.31.0';
+} from './utils.js?v=4.32.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.31.0';
+} from './storage.js?v=4.32.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.31.0';
+} from './tts.js?v=4.32.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.31.0';
+} from './sync.js?v=4.32.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.31.0';
+} from './studyTools.js?v=4.32.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -167,23 +167,30 @@ function fabMenuPilgrimGuide(){
   closeFabMenu();
   openPilgrimGuide();
 }
-// ── PILGRIM GUIDE — App Help mode (added Sep 7 2026) ────────────────────────
+// ── PILGRIM GUIDE — App Help + Scripture Finder (App Help added Sep 7 2026,
+// Scripture Finder added Sep 7/8 2026) ──────────────────────────────────────
 // One assistant, no manual mode switcher — a single reference doc (fetched
 // fresh from GitHub, not bundled/cached beyond the browser's own HTTP cache)
 // does double duty as (a) the answer key for "how do I..." questions and
 // (b) the intent-triage signal the model uses to recognize a Scripture Finder
-// or Word Study question when it sees one. Those two pipelines aren't built
-// yet — the build-status note appended below tells the model to say so
-// rather than guess at scripture content from memory, which is a hard rule
-// for this feature regardless of build phase.
+// or Word Study question when it sees one. Every reply is a JSON envelope
+// (see reference doc v3, "Response format") — {mode, reply, candidates} —
+// which is what lets Scripture Finder candidates get verified against real
+// fetched text (getESV/getBibleAPI, same pipeline as Notes/Read) before the
+// user ever sees them. Word Study isn't wired up yet — the build-status note
+// appended below tells the model to say so rather than guess, a hard rule
+// regardless of build phase.
 // No conversation history is persisted to localStorage or any KV store —
 // _pgMessages is in-memory only and resets on page reload. Server-side usage
 // tracking already covers this call generically via X-Tool-Name, same as
 // every other AI Study Tool — no extra client-side tracking needed here.
-var _pgMessages=[]; // {role:'user'|'assistant', content:string}
+var _pgMessages=[]; // {role, content, display?, type?, results?, sourceQuery?, altLoading?, altLoaded?}
 var _pgReferenceDoc=null;
 var _pgLoading=false;
 var PG_REFERENCE_URL='https://raw.githubusercontent.com/arche-epos/arche-suite/main/docs/pilgrim-guide-app-help-reference.md';
+var _pgShownRefs=[];        // normalized (lower/trimmed) refs already verified+shown this session — de-dupe guard
+var _pgShownRefsDisplay=[]; // same refs, original casing — used as the exclusion hint sent back to the model
+var PG_ALT_TRANS=['kjv','nasb','niv','esv']; // preference order for "Search All Translations"; current default is filtered out at use time
 
 /**
  * Fetches the Pilgrim Guide reference doc once per page load and caches it
@@ -199,7 +206,7 @@ async function _pgFetchReference(){
     _pgReferenceDoc=await r.text();
   }catch(e){
     logError('Pilgrim Guide: reference fetch',e);
-    _pgReferenceDoc='(Reference doc unavailable right now. Tell the user you\'re having trouble accessing app help information and to try again shortly — do not guess at app features.)';
+    _pgReferenceDoc='(Reference doc unavailable right now. Reply with mode "out_of_scope" and tell the user you\'re having trouble accessing app help information and to try again shortly — do not guess at app features or scripture.)';
   }
   return _pgReferenceDoc;
 }
@@ -224,27 +231,161 @@ function _pgRenderMessages(){
     el.innerHTML='<div style="color:var(--txt4);font-size:13px;font-style:italic;text-align:center;padding:24px 10px">Ask how to do something in the app, or ask about finding a passage of scripture.</div>';
     return;
   }
-  el.innerHTML=_pgMessages.map(function(m){
-    if(m.role==='user')return '<div class="pg-msg user">'+escHtml(m.content)+'</div>';
+  el.innerHTML=_pgMessages.map(function(m,i){
+    if(m.role==='user')return '<div class="pg-msg user">'+escHtml(m.display||m.content)+'</div>';
+    if(m.type==='scripture-results')return _pgRenderResultsMsg(m,i);
     return '<div class="pg-msg assistant">'+mdToHtml(m.content)+'</div>';
   }).join('');
   el.scrollTop=el.scrollHeight;
 }
 
 /**
- * Sends the current input as a user message, calls /groq with X-Tool-Name
- * 'pilgrim_guide_help', and renders the reply. The reference doc is prepended
- * as the system message on every call along with a build-status note (see
- * comment above) — no separate Scripture Finder/Word Study backend exists yet.
+ * Renders one Scripture Finder results bubble: a tappable card per verified
+ * reference (real fetched snippet, never AI-recalled text) plus Deeper Dive
+ * and Search All Translations actions. Tapping a card opens it in the Read
+ * tab via _pgOpenInRead — from there the existing "Start a Study from this
+ * Passage" button covers turning it into a study, no new code needed there.
  */
-async function pilgrimGuideSend(){
+function _pgRenderResultsMsg(m,i){
+  var cards=m.results.map(function(r){
+    var altHtml=(r.alt&&r.alt.length)?'<div class="pg-scr-alt">'+r.alt.map(function(a){
+      return '<div><b>'+a.trans.toUpperCase()+':</b> '+escHtml(a.text.slice(0,180))+(a.text.length>180?'\u2026':'')+'</div>';
+    }).join('')+'</div>':'';
+    return '<div class="pg-scr-card" data-ref="'+escHtml(r.ref)+'" data-trans="'+escHtml(r.trans)+'" onclick="_pgOpenInRead(this.dataset.ref,this.dataset.trans)">'+
+      '<div class="pg-scr-ref">'+escHtml(r.ref)+' <span style="color:var(--txt4);font-weight:400;font-size:11px">'+escHtml(r.trans.toUpperCase())+'</span></div>'+
+      (r.why?'<div class="pg-scr-why">'+escHtml(r.why)+'</div>':'')+
+      '<div class="pg-scr-snippet">'+escHtml(r.text.slice(0,220))+(r.text.length>220?'\u2026':'')+'</div>'+
+      altHtml+
+    '</div>';
+  }).join('');
+  var altBtn=m.altLoading?'<button class="btn btn-sec btn-sm" disabled>Searching\u2026</button>':
+    (m.altLoaded?'':'<button class="btn btn-sec btn-sm" onclick="_pgSearchAllTranslations('+i+')">Search All Translations</button>');
+  return '<div class="pg-msg scripture-results">'+cards+
+    '<div class="pg-scr-actions">'+
+      '<button class="btn btn-sec btn-sm" onclick="_pgDeeperDive('+i+')">Deeper Dive</button>'+
+      altBtn+
+    '</div></div>';
+}
+
+/**
+ * Verifies AI-proposed candidate references against real fetched text before
+ * any of them can be shown — the hard rule for Scripture Finder (never show
+ * unverified/AI-recalled scripture). Fetches in the user's current default
+ * translation (sett.defaultTrans), skips anything already shown this session
+ * (_pgShownRefs) or a within-batch duplicate, and stops once 10 verified.
+ * Silently drops candidates that fail to fetch — that's the safeguard doing
+ * its job, not an error.
+ */
+async function _pgVerifyCandidates(candidates){
+  var trans=sett.defaultTrans||'esv';
+  var seen={};
+  var results=[];
+  var attempted=[];
+  for(var i=0;i<candidates.length&&results.length<10;i++){
+    var c=candidates[i];
+    var ref=typeof c==='string'?c:(c&&c.ref);
+    if(!ref)continue;
+    ref=String(ref).trim();
+    var why=(c&&typeof c==='object'&&c.why)?c.why:'';
+    var norm=ref.toLowerCase().replace(/\s+/g,' ');
+    attempted.push(ref);
+    if(seen[norm]||_pgShownRefs.indexOf(norm)>=0)continue;
+    seen[norm]=true;
+    try{
+      var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
+      if(!text)continue;
+      results.push({ref:ref,why:why,trans:trans,text:text,alt:[]});
+      _pgShownRefs.push(norm);
+      _pgShownRefsDisplay.push(ref);
+    }catch(e){/* verification failure — skip silently, never show unverified scripture */}
+  }
+  return {results:results,attempted:attempted};
+}
+
+/**
+ * Fetches the same verified references in 1-2 additional translations
+ * (beyond the default they were first shown in) so the user can compare
+ * wording — useful for partial-verse recall where the remembered phrasing
+ * may match one translation but not another. Purely client-side re-fetch,
+ * no AI call.
+ */
+async function _pgSearchAllTranslations(idx){
+  var m=_pgMessages[idx];
+  if(!m||m.type!=='scripture-results'||m.altLoaded||m.altLoading)return;
+  m.altLoading=true;_pgRenderMessages();
+  var current=(m.results[0]&&m.results[0].trans)||sett.defaultTrans||'esv';
+  var alts=PG_ALT_TRANS.filter(function(t){return t!==current;}).slice(0,2);
+  for(var i=0;i<m.results.length;i++){
+    var r=m.results[i];
+    for(var j=0;j<alts.length;j++){
+      var t=alts[j];
+      try{
+        var text=t==='esv'?await getESV(r.ref):await getBibleAPI(r.ref,t);
+        if(text)r.alt.push({trans:t,text:text});
+      }catch(e){/* skip that translation for this ref */}
+    }
+  }
+  m.altLoading=false;m.altLoaded=true;_pgRenderMessages();
+}
+
+/**
+ * Opens a verified reference in the Read tab (translation matched to how it
+ * was verified) and closes the Pilgrim Guide overlay so the passage is
+ * immediately visible. The Read tab's existing "Start a Study from this
+ * Passage" button (shown once text loads) covers turning it into a study.
+ */
+function _pgOpenInRead(ref,trans){
+  closePilgrimGuide();
+  navTo('read');
+  var refInput=document.getElementById('read-ref');
+  var transSel=document.getElementById('read-trans');
+  if(refInput)refInput.value=ref;
+  if(transSel&&trans)transSel.value=trans;
+  fetchReadChapter();
+}
+
+/**
+ * Requests a fresh batch of candidates for the same original question,
+ * telling the model which references were already shown. The client-side
+ * de-dupe in _pgVerifyCandidates (_pgShownRefs) is the real safeguard against
+ * repeats — this exclusion list is just a hint so the model doesn't waste
+ * candidate slots proposing them again.
+ */
+function _pgDeeperDive(idx){
+  var msg=_pgMessages[idx];
+  if(!msg||msg.type!=='scripture-results')return;
+  var api='Show me more scripture matches for: "'+msg.sourceQuery+'". Do not repeat these references: '+_pgShownRefsDisplay.join('; ')+'.';
+  _pgRunTurn(api,'Show me more',msg.sourceQuery);
+}
+
+/**
+ * Tries to parse a model reply as the required JSON envelope
+ * ({mode, reply, candidates}), stripping stray markdown fences defensively.
+ * Falls back to treating the raw text as an app_help reply if parsing fails
+ * or the shape is missing "mode" — degrades to plain prose rather than
+ * breaking the chat.
+ */
+function _pgParseEnvelope(raw){
+  var s=(raw||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
+  try{
+    var obj=JSON.parse(s);
+    if(obj&&typeof obj==='object'&&obj.mode)return obj;
+  }catch(e){}
+  return {mode:'app_help',reply:raw};
+}
+
+/**
+ * Shared turn handler for both a typed message and a Deeper Dive request:
+ * pushes the user turn, calls /groq with X-Tool-Name 'pilgrim_guide_help',
+ * parses the JSON envelope, and for scripture_finder runs candidates through
+ * verification before rendering. apiContent is what the model sees; display
+ * is what renders in the chat bubble (they differ for Deeper Dive, where the
+ * exclusion list is sent to the model but the user just sees "Show me more").
+ */
+async function _pgRunTurn(apiContent,display,sourceQuery){
   if(_pgLoading)return;
-  var input=document.getElementById('pg-input');
-  var text=(input.value||'').trim();
-  if(!text)return;
   if(!online){toast('Pilgrim Guide requires internet');return;}
-  input.value='';
-  _pgMessages.push({role:'user',content:text});
+  _pgMessages.push({role:'user',content:apiContent,display:display});
   _pgRenderMessages();
   _pgLoading=true;
   var sendBtn=document.getElementById('pg-send-btn');
@@ -258,23 +399,34 @@ async function pilgrimGuideSend(){
   el.scrollTop=el.scrollHeight;
   try{
     var refDoc=await _pgFetchReference();
-    var sysContent=refDoc+'\n\n---\n**Build status note:** Scripture Finder and Word '+
-      'Study pipelines are not connected to this chat yet. If this message\'s intent is '+
-      'Scripture Finder or Word Study per the triage rules above, tell the user in one '+
-      'short, friendly sentence that capability is coming soon \u2014 never attempt to '+
-      'answer from memory or invent a verse or reference.';
+    var sysContent=refDoc+'\n\n---\n**Build status note:** Word Study is not connected to '+
+      'this chat yet. If this message\'s intent is Word Study per the triage rules above, '+
+      'reply with mode "word_study" and a one-sentence reply saying lookups like this '+
+      'aren\'t available yet \u2014 never attempt one or answer from memory.';
     var apiMessages=[{role:'system',content:sysContent}].concat(
       _pgMessages.map(function(m){return{role:m.role,content:m.content};})
     );
     var res=await fetch(WORKER_URL+'/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'pilgrim_guide_help'},
-      body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:apiMessages,max_tokens:400,temperature:0.3,frequency_penalty:0.3})
+      body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:apiMessages,max_tokens:700,temperature:0.3,frequency_penalty:0.3})
     });
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
-    var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
-    _pgMessages.push({role:'assistant',content:content});
+    var raw=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
+    var env=_pgParseEnvelope(raw);
+    if(env.mode==='scripture_finder'&&env.candidates&&env.candidates.length){
+      var v=await _pgVerifyCandidates(env.candidates);
+      if(v.results.length){
+        _pgMessages.push({role:'assistant',type:'scripture-results',
+          content:'Proposed candidates: '+v.attempted.join('; ')+'.',
+          results:v.results,sourceQuery:sourceQuery||display,altLoading:false,altLoaded:false});
+      }else{
+        _pgMessages.push({role:'assistant',content:'None of those references checked out against the real text \u2014 try rephrasing, or give me a bit more to go on.'});
+      }
+    }else{
+      _pgMessages.push({role:'assistant',content:env.reply||'No response received.'});
+    }
   }catch(e){
     logError('Pilgrim Guide: send',e);
     _pgMessages.push({role:'assistant',content:groqErrMsg(e.message)});
@@ -286,6 +438,19 @@ async function pilgrimGuideSend(){
     _pgRenderMessages();
   }
 }
+
+/**
+ * Sends the current input as a user message. Thin wrapper around _pgRunTurn
+ * where apiContent, display, and sourceQuery are all the same typed text.
+ */
+function pilgrimGuideSend(){
+  var input=document.getElementById('pg-input');
+  var text=(input.value||'').trim();
+  if(!text)return;
+  input.value='';
+  _pgRunTurn(text,text,text);
+}
+
 document.addEventListener('click',function(e){
   var w=document.querySelector('.fab-wrap');
   if(w && !w.contains(e.target))closeFabMenu();
