@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.32.0';
+} from './utils.js?v=4.32.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.32.0';
+} from './storage.js?v=4.32.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.32.0';
+} from './tts.js?v=4.32.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.32.0';
+} from './sync.js?v=4.32.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.32.0';
+} from './studyTools.js?v=4.32.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -406,10 +406,15 @@ async function _pgRunTurn(apiContent,display,sourceQuery){
     var apiMessages=[{role:'system',content:sysContent}].concat(
       _pgMessages.map(function(m){return{role:m.role,content:m.content};})
     );
+    // reasoning_effort:'low' — gpt-oss-120b is a reasoning model; its chain-of-thought
+    // (reasoning_content) counts against max_tokens same as the visible reply. Found live
+    // Sep 8 2026: a Scripture Finder request burned all 700 tokens on reasoning_content and
+    // returned empty content (finish_reason:'length'). 'low' cuts reasoning verbosity;
+    // max_tokens raised to 1200 as a buffer for the larger candidate-list JSON payload.
     var res=await fetch(WORKER_URL+'/groq',{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'pilgrim_guide_help'},
-      body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:apiMessages,max_tokens:700,temperature:0.3,frequency_penalty:0.3})
+      body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:apiMessages,max_tokens:1200,temperature:0.3,frequency_penalty:0.3,reasoning_effort:'low'})
     });
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();

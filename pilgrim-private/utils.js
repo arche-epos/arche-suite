@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.32.0',date:'Sep 8, 2026',label:'Latest',
+    version:'4.32.1',date:'Sep 8, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Scripture Finder was returning \\u201cNo response received\\u201d on every query \\u2014 gpt-oss-120b spent its entire token budget on internal reasoning before ever writing the reply, so content came back empty. Added reasoning_effort:\\u2019low\\u2019 and raised the token ceiling to give the model room to actually answer.'
+    ]},
+  {
+    version:'4.32.0',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Scripture Finder mode is live in Pilgrim Guide \\u2014 ask to locate a passage by topic (\\u201cwhere was the flood of Noah\\u201d) or a partial/misremembered quote and it proposes candidate references, verifies each against real fetched text, and shows only what checks out (never AI-recalled scripture). Tap a result to open it in the Read tab. \\u201cDeeper Dive\\u201d asks for more candidates on the same request; \\u201cSearch All Translations\\u201d re-fetches the same verified references in 1-2 additional translations to compare wording. Word Study mode is still coming soon.'
