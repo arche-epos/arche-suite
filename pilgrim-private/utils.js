@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.30.6',date:'Sep 7, 2026',label:'Latest',
+    version:'4.31.0',date:'Sep 7, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Pilgrim Guide App Help mode is live \\u2014 tapping the FAB now opens a real chat instead of the \\u201ccoming soon\\u201d stub. Ask any \\u201chow do I...\\u201d question about the app and it answers from a maintained reference doc (never invents an answer beyond it). The same message also decides intent: if you ask to find a passage or word meaning instead, Pilgrim Guide currently replies that those modes (Scripture Finder, Word Study) are coming soon rather than guessing \\u2014 no scripture content is ever generated from memory. No chat history is saved between sessions.'
+    ]},
+  {
+    version:'4.30.6',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: unified Pilgrim Guide entry point \\u2014 the Library-only \\u201c+\\u201d button is now a single FAB present on every screen. On Library it opens a small menu (New Study / Pilgrim Guide); everywhere else it launches Pilgrim Guide directly. Pilgrim Guide itself (App Help, Scripture Finder, Word Study modes) is not yet built \u2014 tapping it currently shows a \u201ccoming soon\u201d notice. See spec-pilgrim-assistant-v2.md.'

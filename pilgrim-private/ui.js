@@ -29,31 +29,31 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.30.6';
+} from './utils.js?v=4.31.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.30.6';
+} from './storage.js?v=4.31.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.30.6';
+} from './tts.js?v=4.31.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.30.6';
+} from './sync.js?v=4.31.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
   copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,
-  toggleResSection, setScope, getBookFromRef, updateToolDots, buildPrompt, runTool,
+  toggleResSection, setScope, getBookFromRef, updateToolDots, buildPrompt, groqErrMsg, runTool,
   snapshotIntent, runSnapshot, showAIPanel, renderAITabs,
   switchAITab, renderAIPanelContent, closeAIPanel,
   updateExpandBtn, expandCurrentTool, copyAIResult, shareAIResult,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.30.6';
+} from './studyTools.js?v=4.31.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -167,10 +167,124 @@ function fabMenuPilgrimGuide(){
   closeFabMenu();
   openPilgrimGuide();
 }
+// ── PILGRIM GUIDE — App Help mode (added Sep 7 2026) ────────────────────────
+// One assistant, no manual mode switcher — a single reference doc (fetched
+// fresh from GitHub, not bundled/cached beyond the browser's own HTTP cache)
+// does double duty as (a) the answer key for "how do I..." questions and
+// (b) the intent-triage signal the model uses to recognize a Scripture Finder
+// or Word Study question when it sees one. Those two pipelines aren't built
+// yet — the build-status note appended below tells the model to say so
+// rather than guess at scripture content from memory, which is a hard rule
+// for this feature regardless of build phase.
+// No conversation history is persisted to localStorage or any KV store —
+// _pgMessages is in-memory only and resets on page reload. Server-side usage
+// tracking already covers this call generically via X-Tool-Name, same as
+// every other AI Study Tool — no extra client-side tracking needed here.
+var _pgMessages=[]; // {role:'user'|'assistant', content:string}
+var _pgReferenceDoc=null;
+var _pgLoading=false;
+var PG_REFERENCE_URL='https://raw.githubusercontent.com/arche-epos/arche-suite/main/docs/pilgrim-guide-app-help-reference.md';
+
+/**
+ * Fetches the Pilgrim Guide reference doc once per page load and caches it
+ * in memory. Public repo, permissive CORS — no proxy/auth needed. Falls back
+ * to a short inline note (rather than throwing) so a fetch failure degrades
+ * to "I'm not sure" instead of breaking the chat.
+ */
+async function _pgFetchReference(){
+  if(_pgReferenceDoc)return _pgReferenceDoc;
+  try{
+    var r=await fetch(PG_REFERENCE_URL);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    _pgReferenceDoc=await r.text();
+  }catch(e){
+    logError('Pilgrim Guide: reference fetch',e);
+    _pgReferenceDoc='(Reference doc unavailable right now. Tell the user you\'re having trouble accessing app help information and to try again shortly — do not guess at app features.)';
+  }
+  return _pgReferenceDoc;
+}
+
 function openPilgrimGuide(){
-  // Pilgrim Guide core (App Help / Scripture Finder / Word Study modes) is Phase 2 —
-  // not yet built. This is a placeholder so the FAB entry point is testable now.
-  toast('Pilgrim Guide \u2014 coming soon');
+  document.getElementById('pilgrim-guide-overlay').classList.add('on');
+  _pgRenderMessages();
+  setTimeout(function(){
+    var inp=document.getElementById('pg-input');
+    if(inp)inp.focus();
+  },150);
+}
+
+function closePilgrimGuide(){
+  closeOverlay('pilgrim-guide-overlay');
+}
+
+function _pgRenderMessages(){
+  var el=document.getElementById('pg-messages');
+  if(!el)return;
+  if(!_pgMessages.length){
+    el.innerHTML='<div style="color:var(--txt4);font-size:13px;font-style:italic;text-align:center;padding:24px 10px">Ask how to do something in the app, or ask about finding a passage of scripture.</div>';
+    return;
+  }
+  el.innerHTML=_pgMessages.map(function(m){
+    if(m.role==='user')return '<div class="pg-msg user">'+escHtml(m.content)+'</div>';
+    return '<div class="pg-msg assistant">'+mdToHtml(m.content)+'</div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+/**
+ * Sends the current input as a user message, calls /groq with X-Tool-Name
+ * 'pilgrim_guide_help', and renders the reply. The reference doc is prepended
+ * as the system message on every call along with a build-status note (see
+ * comment above) — no separate Scripture Finder/Word Study backend exists yet.
+ */
+async function pilgrimGuideSend(){
+  if(_pgLoading)return;
+  var input=document.getElementById('pg-input');
+  var text=(input.value||'').trim();
+  if(!text)return;
+  if(!online){toast('Pilgrim Guide requires internet');return;}
+  input.value='';
+  _pgMessages.push({role:'user',content:text});
+  _pgRenderMessages();
+  _pgLoading=true;
+  var sendBtn=document.getElementById('pg-send-btn');
+  if(sendBtn)sendBtn.disabled=true;
+  var el=document.getElementById('pg-messages');
+  var loadingRow=document.createElement('div');
+  loadingRow.className='pg-msg loading';
+  loadingRow.id='pg-loading-row';
+  loadingRow.innerHTML='<div class="spin"></div>Thinking...';
+  el.appendChild(loadingRow);
+  el.scrollTop=el.scrollHeight;
+  try{
+    var refDoc=await _pgFetchReference();
+    var sysContent=refDoc+'\n\n---\n**Build status note:** Scripture Finder and Word '+
+      'Study pipelines are not connected to this chat yet. If this message\'s intent is '+
+      'Scripture Finder or Word Study per the triage rules above, tell the user in one '+
+      'short, friendly sentence that capability is coming soon \u2014 never attempt to '+
+      'answer from memory or invent a verse or reference.';
+    var apiMessages=[{role:'system',content:sysContent}].concat(
+      _pgMessages.map(function(m){return{role:m.role,content:m.content};})
+    );
+    var res=await fetch(WORKER_URL+'/groq',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'pilgrim_guide_help'},
+      body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:apiMessages,max_tokens:400,temperature:0.3,frequency_penalty:0.3})
+    });
+    if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
+    var data=await res.json();
+    var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
+    _pgMessages.push({role:'assistant',content:content});
+  }catch(e){
+    logError('Pilgrim Guide: send',e);
+    _pgMessages.push({role:'assistant',content:groqErrMsg(e.message)});
+  }finally{
+    _pgLoading=false;
+    if(sendBtn)sendBtn.disabled=false;
+    var lr=document.getElementById('pg-loading-row');
+    if(lr)lr.remove();
+    _pgRenderMessages();
+  }
 }
 document.addEventListener('click',function(e){
   var w=document.querySelector('.fab-wrap');
@@ -3305,4 +3419,6 @@ export {
   // S28-partial — Startup helpers
   updateWordCount, toggleNotesFontSize, checkForUpdate,
   refreshForUpdate, dismissUpdateBanner,
+  // Pilgrim Guide — App Help mode (added Sep 7 2026)
+  closePilgrimGuide, pilgrimGuideSend,
 };
