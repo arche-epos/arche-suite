@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.32.1';
+} from './utils.js?v=4.32.2';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.32.1';
+} from './storage.js?v=4.32.2';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.32.1';
+} from './tts.js?v=4.32.2';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.32.1';
+} from './sync.js?v=4.32.2';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.32.1';
+} from './studyTools.js?v=4.32.2';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -268,18 +268,46 @@ function _pgRenderResultsMsg(m,i){
 }
 
 /**
+ * Parses a single-chapter reference into {book, chapter, vStart, vEnd} for
+ * overlap comparison. Handles "Book C", "Book C:V", "Book C:V-V" — a
+ * cross-chapter range like "Genesis 6:5-7:24" won't match and returns null,
+ * which _pgVerifyCandidates treats as "unknown, don't collapse" rather than
+ * risk a wrong collapse.
+ */
+function _pgParseRefRange(ref){
+  var m=String(ref).trim().match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/);
+  if(!m)return null;
+  var vStart=m[3]?parseInt(m[3],10):1;
+  var vEnd=m[4]?parseInt(m[4],10):(m[3]?vStart:9999);
+  return {book:m[1].trim().toLowerCase(),chapter:parseInt(m[2],10),vStart:vStart,vEnd:vEnd};
+}
+function _pgRangesOverlap(a,b){
+  if(!a||!b||a.book!==b.book||a.chapter!==b.chapter)return false;
+  return a.vStart<=b.vEnd&&b.vStart<=a.vEnd;
+}
+
+/**
  * Verifies AI-proposed candidate references against real fetched text before
  * any of them can be shown — the hard rule for Scripture Finder (never show
  * unverified/AI-recalled scripture). Fetches in the user's current default
  * translation (sett.defaultTrans), skips anything already shown this session
- * (_pgShownRefs) or a within-batch duplicate, and stops once 10 verified.
- * Silently drops candidates that fail to fetch — that's the safeguard doing
+ * (_pgShownRefs) or a within-batch duplicate, stops once 10 verified, and
+ * silently drops candidates that fail to fetch — that's the safeguard doing
  * its job, not an error.
+ *
+ * Also collapses nested/overlapping candidates within the same batch (found
+ * live Sep 8 2026: the model proposed "Luke 15:11-32", "Luke 15:11-26", and
+ * "Luke 15:27-32" as three separate candidates for one prodigal-son query —
+ * all the same passage, sliced three ways). Order is best-fit-first per the
+ * reference doc, so the first candidate covering a verse range wins and any
+ * later one that overlaps it is skipped as redundant, without spending a
+ * fetch call on it.
  */
 async function _pgVerifyCandidates(candidates){
   var trans=sett.defaultTrans||'esv';
   var seen={};
   var results=[];
+  var acceptedRanges=[];
   var attempted=[];
   for(var i=0;i<candidates.length&&results.length<10;i++){
     var c=candidates[i];
@@ -291,10 +319,19 @@ async function _pgVerifyCandidates(candidates){
     attempted.push(ref);
     if(seen[norm]||_pgShownRefs.indexOf(norm)>=0)continue;
     seen[norm]=true;
+    var range=_pgParseRefRange(ref);
+    if(range){
+      var overlaps=false;
+      for(var k=0;k<acceptedRanges.length;k++){
+        if(_pgRangesOverlap(range,acceptedRanges[k])){overlaps=true;break;}
+      }
+      if(overlaps)continue;
+    }
     try{
       var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
       if(!text)continue;
       results.push({ref:ref,why:why,trans:trans,text:text,alt:[]});
+      if(range)acceptedRanges.push(range);
       _pgShownRefs.push(norm);
       _pgShownRefsDisplay.push(ref);
     }catch(e){/* verification failure — skip silently, never show unverified scripture */}

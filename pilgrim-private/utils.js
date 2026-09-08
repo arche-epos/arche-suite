@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.32.1',date:'Sep 8, 2026',label:'Latest',
+    version:'4.32.2',date:'Sep 8, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Scripture Finder was returning several overlapping/nested results for one passage (e.g. \\u201cLuke 15:11-32\\u201d + \\u201cLuke 15:11-26\\u201d + \\u201cLuke 15:27-32\\u201d for one prodigal-son query) instead of distinct answers. Tightened the candidate-quality guidance and added a client-side filter that drops any candidate whose verse range overlaps one already accepted \\u2014 holds regardless of what the model proposes.'
+    ]},
+  {
+    version:'4.32.1',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Scripture Finder was returning \\u201cNo response received\\u201d on every query \\u2014 gpt-oss-120b spent its entire token budget on internal reasoning before ever writing the reply, so content came back empty. Added reasoning_effort:\\u2019low\\u2019 and raised the token ceiling to give the model room to actually answer.'
