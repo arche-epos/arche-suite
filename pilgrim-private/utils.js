@@ -473,7 +473,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.32.2',date:'Sep 8, 2026',label:'Latest',
+    version:'4.32.3',date:'Sep 8, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Pilgrim Guide\\u2019s intro caption still described App Help only, from before Scripture Finder existed. Updated it to state both: app navigation help and verified-passage lookup.'
+    ]},
+  {
+    version:'4.32.2',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Scripture Finder was returning several overlapping/nested results for one passage (e.g. \\u201cLuke 15:11-32\\u201d + \\u201cLuke 15:11-26\\u201d + \\u201cLuke 15:27-32\\u201d for one prodigal-son query) instead of distinct answers. Tightened the candidate-quality guidance and added a client-side filter that drops any candidate whose verse range overlaps one already accepted \\u2014 holds regardless of what the model proposes.'
