@@ -473,7 +473,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.32.3',date:'Sep 8, 2026',label:'Latest',
+    version:'4.33.0',date:'Sep 8, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Word Study mode is live in the Lexicon \\u2014 looking up a word with more than one meaningfully distinct original-language sense (e.g. \\u201clove\\u201d \\u2192 agap\\u0113/phile\\u014d/eros/storg\\u0113) now shows 3-5 tappable candidate senses instead of the AI silently picking one. Tap a sense to run the full lookup on that Strong\\u2019s number. Strong\\u2019s-number input and unambiguous words are unaffected \\u2014 same single-lookup behavior as before.',
+      'feat: sense picks are now tracked (word searched + Strong\\u2019s number chosen, no study content) to see whether testers re-pick the same sense for a word or it varies by passage.',
+      'fix: Word List and study word-list cards showed only the Greek/Hebrew word (e.g. \\u201c\\u03b8\\u03ac\\u03c1\\u03c3\\u03bf\\u03c2\\u201d), making saved words hard to identify at a glance. Cards now show \\u201cEnglish gloss \\u2014 original word (Strong\\u2019s#)\\u201d, e.g. \\u201cCourage \\u2014 \\u03b8\\u03ac\\u03c1\\u03c3\\u03bf\\u03c2 (G2294)\\u201d. Words saved before this update fall back to just the original word/Strong\\u2019s# until re-saved.'
+    ]},
+  {
+    version:'4.32.3',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Pilgrim Guide\\u2019s intro caption still described App Help only, from before Scripture Finder existed. Updated it to state both: app navigation help and verified-passage lookup.'

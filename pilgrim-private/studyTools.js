@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.32.3';
+} from './utils.js?v=4.33.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.32.3';
-import { syncToGist } from './sync.js?v=4.32.3';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.32.3';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.33.0';
+import { syncToGist } from './sync.js?v=4.33.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.33.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -55,6 +55,10 @@ var _lexLastResult  = null;
 var _lexSaveContext = null;
 var _wlCache = [];
 var _swCache = [];
+// Word Study — holds the query + candidate senses between _lexClassify
+// flagging ambiguity and the user tapping a sense card (pickWordSense).
+var _lexPendingQuery = null;
+var _lexPendingSenses = null;
 var _scrVerses = []; // {num,text}[] for the currently rendered Scripture panel passage — TTS chunk source
 var _scrSelectedIdx = null; // set by scrSelectVerse() (tap verse to focus/jump WITHOUT auto-playing) — cleared on new passage render
 // S16 — Resource methods lookup (populated at bottom of section)
@@ -1249,6 +1253,23 @@ function switchLibTab(tab){
  * Renders the global Word List: all words with inGlobal=true from every study,
  * plus words saved without a study. Sorts alphabetically. Shows empty state if none saved.
  */
+/**
+ * Builds the Word List / study word-card heading: "Gloss — original (Strong's#)".
+ * englishGloss/strongsNumber were added Sep 8 2026 (Word Study delivery) — words
+ * saved before that date won't have them, so this falls back gracefully to just
+ * "original (Strong's#)" or the bare original word rather than showing "undefined".
+ * @param {Object} w - Saved word object.
+ * @returns {string} HTML-safe heading string.
+ */
+function _wordCardHeading(w){
+  var orig=escHtml(w.query||'');
+  var suffix=w.strongsNumber?' ('+escHtml(w.strongsNumber)+')':'';
+  if(!w.englishGloss)return orig+suffix;
+  var gloss=w.englishGloss.split(/[,;]/)[0].trim();
+  if(gloss)gloss=gloss.charAt(0).toUpperCase()+gloss.slice(1);
+  return (gloss?escHtml(gloss)+' — ':'')+orig+suffix;
+}
+
 function renderWordList(){
   loadStudies();
   var words=[];
@@ -1270,7 +1291,7 @@ function renderWordList(){
     var excerpt=htmlToText(w.html||'').replace(/\s+/g,' ').slice(0,120).trim();
     var meta=(w.reference||'')+' — '+(w._studyTitle||'');
     return '<div class="word-card">'+
-      '<div class="word-card-word">'+escHtml(w.query||'')+'</div>'+
+      '<div class="word-card-word">'+_wordCardHeading(w)+'</div>'+
       '<div class="word-card-excerpt">'+escHtml(excerpt)+'</div>'+
       '<div class="word-card-meta">'+escHtml(meta)+'</div>'+
       '<div class="word-card-actions">'+
@@ -1310,7 +1331,7 @@ function renderStudyWords(){
   list.innerHTML=words.map(function(w,i){
     var excerpt=htmlToText(w.html||'').replace(/\s+/g,' ').slice(0,100).trim();
     return '<div class="word-card">'+
-      '<div class="word-card-word">'+escHtml(w.query||'')+'</div>'+
+      '<div class="word-card-word">'+_wordCardHeading(w)+'</div>'+
       '<div class="word-card-excerpt">'+escHtml(excerpt)+'</div>'+
       '<div class="word-card-meta">'+(w.reference?escHtml(w.reference):'')+'</div>'+
       '<div class="word-card-actions">'+
@@ -1411,7 +1432,7 @@ function saveLexWord(){
   if(toGlobal&&!toStudy&&!cur){
     var gWords=[];try{gWords=JSON.parse(localStorage.getItem(SK_WORDS)||'[]');}catch(e){}
     var ar2=activeRef();
-    var gWord={id:String(Date.now()+Math.random()),query:_lexLastResult.query,html:_lexLastResult.html,reference:ar2?ar2.reference:'',savedAt:new Date().toISOString(),inGlobal:true,inStudy:false,_studyId:null,_studyTitle:'(no study)'};
+    var gWord={id:String(Date.now()+Math.random()),query:_lexLastResult.query,englishGloss:_lexLastResult.englishGloss||'',strongsNumber:_lexLastResult.strongsNumber||'',html:_lexLastResult.html,reference:ar2?ar2.reference:'',savedAt:new Date().toISOString(),inGlobal:true,inStudy:false,_studyId:null,_studyTitle:'(no study)'};
     gWords=gWords.filter(function(w){return w.query!==gWord.query;}); // Remove prior entry for same word before re-adding
     gWords.push(gWord);
     try{localStorage.setItem(SK_WORDS,JSON.stringify(gWords));}catch(e){toast('Storage full');return;}
@@ -1423,6 +1444,8 @@ function saveLexWord(){
   var word={
     id:String(Date.now()+Math.random()),
     query:_lexLastResult.query,
+    englishGloss:_lexLastResult.englishGloss||'',
+    strongsNumber:_lexLastResult.strongsNumber||'',
     html:_lexLastResult.html,
     reference:ar?ar.reference:'',
     savedAt:new Date().toISOString(),
@@ -1437,6 +1460,8 @@ function saveLexWord(){
     if(toGlobal)existing.inGlobal=true;
     if(toStudy)existing.inStudy=true;
     existing.html=word.html;
+    existing.englishGloss=word.englishGloss;
+    existing.strongsNumber=word.strongsNumber;
     existing.savedAt=word.savedAt;
     if(!existing.reference&&word.reference)existing.reference=word.reference;
   } else {
@@ -1508,9 +1533,13 @@ function openLexiconModalFor(context){
  */
 function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');}
 /**
- * Runs a lexicon lookup for the query in the lexicon input field via the Groq API.
- * Requests a JSON response with Strong's number, definitions, scholarly entry, and concordance.
- * Renders the result with renderLexiconEntry() and stores it in _lexLastResult.
+ * Word Study — entry point wired to the Lexicon button. A Strong's-number
+ * input (G#### / H####) is already unambiguous, so it skips straight to
+ * _lexFullLookup. Anything else goes through the cheap classify pre-check
+ * (_lexClassify) first: an ambiguous word (e.g. "love") renders a sense
+ * picker instead of letting the AI silently guess one meaning; an
+ * unambiguous word (or a failed/unparseable classify call, which fails open)
+ * runs today's single full-lookup path, unchanged. See spec-pilgrim-assistant-v2.md.
  */
 async function runLexiconLookup(){
   var inp=document.getElementById('lexicon-input');
@@ -1518,6 +1547,118 @@ async function runLexiconLookup(){
   var btn=document.getElementById('lexicon-btn');
   var bar=document.getElementById('lex-save-bar');
   var query=(inp?inp.value.trim():'');if(!query)return;
+  bar.style.display='none';
+  if(/^[GH]\d+$/i.test(query)){await _lexFullLookup(query,btn,res,bar);return;}
+  btn.disabled=true;btn.textContent='Checking\u2026';
+  res.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);padding:8px 0;"><div class="spin"></div>Checking word\u2026</div>';
+  var cls=await _lexClassify(query);
+  if(cls&&cls.ambiguous&&cls.senses&&cls.senses.length){
+    _lexRenderSensePicker(query,cls.senses,res);
+    btn.disabled=false;btn.textContent='Look up';
+    return;
+  }
+  await _lexFullLookup(query,btn,res,bar);
+}
+
+/**
+ * Word Study — cheap first-pass classification call. Determines whether the
+ * searched word has one clear original-language source or multiple
+ * meaningfully distinct ones (e.g. "love" -> agap\u0113/phile\u014d/eros/storg\u0113).
+ * Small max_tokens \u2014 this is a triage call, not the full lookup, and its cost
+ * shouldn't approach the main lookup's. Fails open (returns null) on any
+ * network/parse error so Lexicon degrades to its prior single-lookup
+ * behavior rather than blocking on a broken classify call.
+ * @param {string} query - The raw text from the lexicon input.
+ * @returns {Promise<Object|null>} {ambiguous, senses} or null on failure.
+ */
+async function _lexClassify(query){
+  var prompt='You are a biblical lexicographer. The user searched for the word: "'+query+'".\n\nDetermine whether this word, in a Bible-study context, has ONE clear original-language (Greek/Hebrew) source, or MULTIPLE meaningfully distinct original-language sources with genuinely different shades of meaning (e.g. "love" -> agap\u0113/phile\u014d/eros/storg\u0113; "know" -> gin\u014dsk\u014d/oida/yada).\n\nReturn ONLY a valid JSON object — no markdown fences, no preamble, no text before or after it. Exact shape:\n{"ambiguous":true|false,"senses":[{"originalWord":"word in original script","transliteration":"romanized form","strongsNumber":"G#### or H####","differentiator":"one short phrase distinguishing this sense, e.g. \'selfless, unconditional love\'"}]}\n\n"senses" is REQUIRED when ambiguous (3-5 entries, most common/relevant first), and should be omitted or empty when not ambiguous.';
+  try{
+    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'word_study_classify'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:500,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],frequency_penalty:0.3})});
+    if(!r.ok)return null;
+    var d=await r.json();
+    var raw=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+    if(!raw)return null;
+    var clean=raw.replace(/```json|```/g,'').trim();
+    var firstBrace=clean.indexOf('{'),lastBrace=clean.lastIndexOf('}');
+    if(firstBrace>-1&&lastBrace>-1)clean=clean.slice(firstBrace,lastBrace+1);
+    var obj=JSON.parse(clean);
+    return (obj&&typeof obj==='object')?obj:null;
+  }catch(e){return null;}
+}
+
+/**
+ * Word Study — renders 3-5 tappable sense-candidate cards in the Lexicon
+ * result area when _lexClassify flags the query as ambiguous. Stashes the
+ * query + senses on module state (_lexPendingQuery/_lexPendingSenses) for
+ * pickWordSense to read when a card is tapped.
+ * @param {string} query - The original searched word.
+ * @param {Array<Object>} senses - Candidate senses from _lexClassify.
+ * @param {HTMLElement} res - The #lexicon-result element to render into.
+ */
+function _lexRenderSensePicker(query,senses,res){
+  _lexPendingQuery=query;
+  _lexPendingSenses=senses;
+  var cards=senses.map(function(s,i){
+    return '<button type="button" class="btn btn-sec" data-sense-i="'+i+'" onclick="pickWordSense(this)" style="display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;min-height:auto;">'+
+      '<div style="font-size:16px;">'+escHtml(s.originalWord||'')+' <span style="color:var(--txt4);font-weight:400;font-size:12px;">'+escHtml(s.transliteration||'')+(s.strongsNumber?' \u00b7 '+escHtml(s.strongsNumber):'')+'</span></div>'+
+      (s.differentiator?'<div style="color:var(--txt3);font-size:13px;margin-top:4px;font-weight:400;">'+escHtml(s.differentiator)+'</div>':'')+
+    '</button>';
+  }).join('');
+  res.innerHTML='<div style="color:var(--txt3);font-size:13px;margin-bottom:10px;">\u201c'+escHtml(query)+'\u201d has more than one sense in the original languages — which do you mean?</div>'+cards;
+}
+
+/**
+ * Word Study — handles a sense-card tap: fires the sense-pick tracking
+ * beacon (fire-and-forget, see _trackWordSense) then runs the full lexicon
+ * lookup by the chosen sense's Strong's number instead of the original
+ * ambiguous word — never a silent AI guess.
+ * @param {HTMLElement} btn - The tapped sense-card button (carries data-sense-i).
+ */
+async function pickWordSense(btn){
+  var i=parseInt(btn.getAttribute('data-sense-i'));
+  var s=_lexPendingSenses&&_lexPendingSenses[i];
+  if(!s)return;
+  var query=_lexPendingQuery||'';
+  _trackWordSense(query,s.strongsNumber);
+  var inp=document.getElementById('lexicon-input');
+  var lookupQuery=s.strongsNumber||query;
+  if(inp)inp.value=lookupQuery;
+  var lexBtn=document.getElementById('lexicon-btn');
+  var res=document.getElementById('lexicon-result');
+  var bar=document.getElementById('lex-save-bar');
+  await _lexFullLookup(lookupQuery,lexBtn,res,bar);
+}
+
+/**
+ * Word Study — fires the sense-pick usage-tracking beacon. Fire-and-forget;
+ * failures never surface to the tester. Logs only the searched word string
+ * and the chosen Strong's number — no study content, same "no content"
+ * boundary as every other usage counter (see spec-usage-tracking-admin-v2.md).
+ * @param {string} query - The original searched word.
+ * @param {string} strongsNumber - The Strong's number of the chosen sense.
+ */
+function _trackWordSense(query,strongsNumber){
+  if(!strongsNumber)return;
+  try{
+    fetch(WORKER_URL+'/track',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown'},body:JSON.stringify({wordSense:{query:query,strongsNumber:strongsNumber}})}).catch(function(){});
+  }catch(e){}
+}
+
+/**
+ * Runs the full lexicon lookup for a resolved (unambiguous) query — typed
+ * directly, confirmed unambiguous by _lexClassify, or a Strong's number
+ * chosen from the Word Study sense picker. Requests a JSON response with
+ * Strong's number, definitions, scholarly entry, and concordance. Renders
+ * the result with renderLexiconEntry() and stores it in _lexLastResult.
+ * Unchanged from the pre-Word-Study lookup — only extracted into its own
+ * function so both the classify-confirmed and sense-picked paths share it.
+ * @param {string} query - The resolved query (word, transliteration, or Strong's number).
+ * @param {HTMLElement} btn - The lookup button (for disabled/label state).
+ * @param {HTMLElement} res - The #lexicon-result element to render into.
+ * @param {HTMLElement} bar - The #lex-save-bar element to show/hide.
+ */
+async function _lexFullLookup(query,btn,res,bar){
   btn.disabled=true;btn.textContent='Looking up\u2026';
   res.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);padding:8px 0;"><div class="spin"></div>Searching lexicon\u2026</div>';
   bar.style.display='none';
@@ -1534,7 +1675,7 @@ async function runLexiconLookup(){
     var lex=JSON.parse(clean);
     var html=renderLexiconEntry(lex,query);
     res.innerHTML=html;
-    _lexLastResult={query:lex.originalWord||lex.transliteration||query,html:html,reference:(activeRef()&&activeRef().reference)||''};
+    _lexLastResult={query:lex.originalWord||lex.transliteration||query,englishGloss:lex.primaryDefinition||'',strongsNumber:lex.strongsNumber||'',html:html,reference:(activeRef()&&activeRef().reference)||''};
     bar.style.display='';
   }catch(e){
     logError('Lexicon Lookup',e);
@@ -1889,7 +2030,7 @@ export {
   openLexSaveSheet, toggleLexCb, saveLexWord,
   removeWordGlobal, removeWordStudy,
   openLexiconModal, openLexiconModalFor, closeLexiconModal,
-  runLexiconLookup, renderLexiconEntry,
+  runLexiconLookup, renderLexiconEntry, pickWordSense,
   // S16 — Resources & OCR
   resCapture, resAddDocPrompt, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
