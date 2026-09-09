@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.33.0';
+} from './utils.js?v=4.34.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.33.0';
-import { syncToGist } from './sync.js?v=4.33.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.33.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.0';
+import { syncToGist } from './sync.js?v=4.34.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1601,11 +1601,11 @@ function _lexRenderSensePicker(query,senses,res){
   _lexPendingSenses=senses;
   var cards=senses.map(function(s,i){
     return '<button type="button" class="btn btn-sec" data-sense-i="'+i+'" onclick="pickWordSense(this)" style="display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;min-height:auto;">'+
-      '<div style="font-size:16px;">'+escHtml(s.originalWord||'')+' <span style="color:var(--txt4);font-weight:400;font-size:12px;">'+escHtml(s.transliteration||'')+(s.strongsNumber?' \u00b7 '+escHtml(s.strongsNumber):'')+'</span></div>'+
-      (s.differentiator?'<div style="color:var(--txt3);font-size:13px;margin-top:4px;font-weight:400;">'+escHtml(s.differentiator)+'</div>':'')+
+      '<div style="font-size:calc(16px * var(--content-scale));">'+escHtml(s.originalWord||'')+' <span style="color:var(--txt4);font-weight:400;font-size:calc(12px * var(--content-scale));">'+escHtml(s.transliteration||'')+(s.strongsNumber?' \u00b7 '+escHtml(s.strongsNumber):'')+'</span></div>'+
+      (s.differentiator?'<div style="color:var(--txt3);font-size:calc(13px * var(--content-scale));margin-top:4px;font-weight:400;">'+escHtml(s.differentiator)+'</div>':'')+
     '</button>';
   }).join('');
-  res.innerHTML='<div style="color:var(--txt3);font-size:13px;margin-bottom:10px;">\u201c'+escHtml(query)+'\u201d has more than one sense in the original languages — which do you mean?</div>'+cards;
+  res.innerHTML='<div style="color:var(--txt3);font-size:calc(13px * var(--content-scale));margin-bottom:10px;">\u201c'+escHtml(query)+'\u201d has more than one sense in the original languages — which do you mean?</div>'+cards;
 }
 
 /**

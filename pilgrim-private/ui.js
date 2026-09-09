@@ -22,31 +22,31 @@ import {
   mfBlob, prevDay,
   // Section 07 — data model
   makeRef, migrateStudy, activeRef, TEMPLATES, TAG_PALETTE, DEFAULT_TAGS,
-  TOOL_LABELS, TOOL_DESCS,
+  TOOL_LABELS, TOOL_DESCS, FONT_OPTIONS, FONT_SCALE_STEPS,
   // Section 27 — namespace helpers (defined in utils.js)
   migrateLegacyKey, activateUser,
   // Shared verse-chunk parsing (Read tab + Scripture panel)
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.33.0';
+} from './utils.js?v=4.34.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.33.0';
+} from './storage.js?v=4.34.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx
-} from './tts.js?v=4.33.0';
+} from './tts.js?v=4.34.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.33.0';
+} from './sync.js?v=4.34.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.33.0';
+} from './studyTools.js?v=4.34.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1581,7 +1581,9 @@ function confirmClearAll(){setStudies([]);setCur(null);persist();renderLib();clo
  */
 function loadSett(){try{var s=JSON.parse(localStorage.getItem(SK_SETT));if(s)Object.assign(sett,s);
   // Apply defaults for any settings key absent from the stored object
-  if(!sett.scrMode)sett.scrMode='auto';if(!sett.defaultTrans)sett.defaultTrans='esv';if(typeof sett.diagFeedback==='undefined')sett.diagFeedback=false;updateScrModeUI();updateDefaultTransUI();}catch(e){}}
+  if(!sett.scrMode)sett.scrMode='auto';if(!sett.defaultTrans)sett.defaultTrans='esv';if(typeof sett.diagFeedback==='undefined')sett.diagFeedback=false;
+  if(!sett.theme)sett.theme='light';if(!sett.fontFamily)sett.fontFamily='original';if(typeof sett.fontScale!=='number')sett.fontScale=1;
+  updateScrModeUI();updateDefaultTransUI();applyAppearance();}catch(e){}}
 /**
  * Sets the scripture fetch mode ('auto' or 'paste'), persists it, and updates the UI.
  * If switching to 'paste' with an open study, opens the paste modal.
@@ -1636,6 +1638,110 @@ function updateScrModeUI(){
 }
 /** Persists the current sett object to localStorage and shows a confirmation toast. */
 function saveSettings(){localStorage.setItem(SK_SETT,JSON.stringify(sett));toast('Settings saved');}
+
+// ── APPEARANCE (theme, content font, content font-size) ──────────────────
+// Added Sep 9 2026 in response to a real readability complaint (light gold
+// text on a near-black background caused a halation/blur effect for at
+// least one tester). Scope is deliberately split in two:
+//   - Theme (light/dark) recolors the WHOLE app — cheap, it's one CSS
+//     variable block swap via html[data-theme].
+//   - Font family + size apply ONLY to reading/writing content — scripture
+//     text, Field Notes/Outline/Conclusions editors (all share .ql-editor),
+//     AI Study Tools output (.aicontent), Lexicon results (#lexicon-result
+//     and its .lex-* classes, including the Word Study sense picker which
+//     renders inside it), and Word List cards (.word-card-*). App chrome
+//     (nav, buttons, headers, settings screens themselves) intentionally
+//     keeps the fixed EB Garamond/Crimson Pro pair at fixed sizes — see
+//     --font-display/--font-body vs --content-scale in the stylesheet.
+// Parchment (light) is the default as of v4.34.0; dark is opt-in.
+
+/** Applies sett.theme/fontFamily/fontScale to the document. Call after any load or change. */
+function applyAppearance(){
+  document.documentElement.setAttribute('data-theme',sett.theme==='dark'?'dark':'light');
+  var f=FONT_OPTIONS.find(function(x){return x.key===sett.fontFamily;})||FONT_OPTIONS[0];
+  document.documentElement.style.setProperty('--font-display',f.display);
+  document.documentElement.style.setProperty('--font-body',f.body);
+  document.documentElement.style.setProperty('--content-scale',String(sett.fontScale||1));
+  updateThemeUI();updateFontFamilyUI();updateFontScaleUI();
+}
+/**
+ * Sets the color theme ('light' parchment or 'dark' original), persists,
+ * applies, and updates the toggle UI.
+ * @param {string} val - 'light' or 'dark'.
+ */
+function setTheme(val){
+  sett.theme=(val==='dark')?'dark':'light';
+  localStorage.setItem(SK_SETT,JSON.stringify(sett));
+  applyAppearance();
+}
+/**
+ * Sets the content-area font family by FONT_OPTIONS key, persists, applies,
+ * and updates the font-tile grid's active state.
+ * @param {string} key - One of FONT_OPTIONS[].key.
+ */
+function setFontFamily(key){
+  if(!FONT_OPTIONS.some(function(f){return f.key===key;}))return;
+  sett.fontFamily=key;
+  localStorage.setItem(SK_SETT,JSON.stringify(sett));
+  applyAppearance();
+}
+/**
+ * Steps the content font-size up or down through FONT_SCALE_STEPS, clamped
+ * at the ends. Persists, applies, and updates the A-/A+ label + disabled state.
+ * @param {number} dir - +1 to grow, -1 to shrink.
+ */
+function adjustFontScale(dir){
+  var steps=FONT_SCALE_STEPS;
+  var cur=typeof sett.fontScale==='number'?sett.fontScale:1;
+  var i=steps.reduce(function(best,v,idx){return Math.abs(v-cur)<Math.abs(steps[best]-cur)?idx:best;},0);
+  i=Math.max(0,Math.min(steps.length-1,i+(dir>0?1:-1)));
+  sett.fontScale=steps[i];
+  localStorage.setItem(SK_SETT,JSON.stringify(sett));
+  applyAppearance();
+}
+/** Highlights the active theme button in Settings > Appearance. */
+function updateThemeUI(){
+  var isDark=sett.theme==='dark';
+  var btnLight=document.getElementById('theme-btn-light'),btnDark=document.getElementById('theme-btn-dark');
+  if(!btnLight||!btnDark)return;
+  if(isDark){
+    btnDark.style.background='var(--gold)';btnDark.style.color='var(--bg0)';btnDark.style.fontWeight='600';
+    btnLight.style.background='none';btnLight.style.color='var(--txt3)';btnLight.style.fontWeight='400';
+  } else {
+    btnLight.style.background='var(--gold)';btnLight.style.color='var(--bg0)';btnLight.style.fontWeight='600';
+    btnDark.style.background='none';btnDark.style.color='var(--txt3)';btnDark.style.fontWeight='400';
+  }
+}
+/** Renders the 11-tile font-family grid in Settings > Appearance and marks the active choice. */
+function renderFontTiles(){
+  var grid=document.getElementById('font-tile-grid');if(!grid)return;
+  grid.innerHTML=FONT_OPTIONS.map(function(f){
+    var active=sett.fontFamily===f.key;
+    return '<div class="font-tile'+(active?' font-default':'')+'" data-font-key="'+f.key+'" onclick="setFontFamily(\''+f.key+'\')">'+
+      '<div class="font-tile-label">'+escHtml(f.label)+'</div>'+
+      '<div class="font-tile-preview" style="font-family:'+f.body+'">Aa</div>'+
+    '</div>';
+  }).join('');
+}
+/** Updates font-tile active-state classes without a full re-render (cheap path for applyAppearance). */
+function updateFontFamilyUI(){
+  var grid=document.getElementById('font-tile-grid');if(!grid)return;
+  if(!grid.children.length){renderFontTiles();return;}
+  Array.prototype.forEach.call(grid.children,function(el){
+    el.classList.toggle('font-default',el.getAttribute('data-font-key')===sett.fontFamily);
+  });
+}
+/** Updates the font-scale percentage label and disables A-/A+ at the ends of FONT_SCALE_STEPS. */
+function updateFontScaleUI(){
+  var label=document.getElementById('font-scale-label');
+  var minus=document.getElementById('font-scale-minus'),plus=document.getElementById('font-scale-plus');
+  var steps=FONT_SCALE_STEPS;
+  var cur=typeof sett.fontScale==='number'?sett.fontScale:1;
+  var i=steps.reduce(function(best,v,idx){return Math.abs(v-cur)<Math.abs(steps[best]-cur)?idx:best;},0);
+  if(label)label.textContent=Math.round(steps[i]*100)+'%';
+  if(minus)minus.disabled=(i===0);
+  if(plus)plus.disabled=(i===steps.length-1);
+}
 
 // ── TRANSLATION SPECTRUM ─────────────────────────────────────────
 var TRANS_DATA=[
@@ -3485,8 +3591,7 @@ function switchUser(){
  * to the original unconditional window.load handler; it's just deferred now.
  */
 
-// WORD COUNT & FONT SIZE
-var notesFontLarge=false;
+// WORD COUNT
 /**
  * Updates the word count display in the field notes header using the current Quill editor content.
  */
@@ -3496,17 +3601,6 @@ function updateWordCount(){
   var text=_qFN?_qFN.getText().trim():'';
   var words=text?text.split(/\s+/).filter(function(w){return w.length>0;}):[]; 
   el.textContent=words.length+' words';
-}
-/**
- * Toggles the field notes editor between normal and large font size.
- * Updates the toggle button label and color to reflect the current state.
- */
-function toggleNotesFontSize(){
-  notesFontLarge=!notesFontLarge;
-  var editor=_qFN&&_qFN.root;var btn=document.getElementById('notes-font-btn');
-  if(editor){if(notesFontLarge)editor.classList.add('notes-font-lg');else editor.classList.remove('notes-font-lg');}
-  // A- = currently large (tap to shrink), A+ = currently normal (tap to grow)
-  if(btn){btn.textContent=notesFontLarge?'A-':'A+';btn.style.color=notesFontLarge?'var(--gold)':'var(--txt3)';}
 }
 
 // ── UPDATE AVAILABLE BANNER ────────────────────────────────────────────
@@ -3595,6 +3689,8 @@ export {
   fetchAllMissingScripture, clearAll, confirmClearAll,
   // S21 — Settings
   loadSett, setScrMode, setDefaultTrans, updateDefaultTransUI, updateScrModeUI,
+  applyAppearance, setTheme, setFontFamily, adjustFontScale, renderFontTiles,
+  updateThemeUI, updateFontFamilyUI, updateFontScaleUI,
   saveSettings,
   // S23 — Book Picker
   bpOpen, bpClose, bpSetTestament, bpPickBook, bpPickChapter, bpUpdatePreview,
@@ -3624,7 +3720,7 @@ export {
   // S27-partial — PIN Auth UI
   initPinGate, submitPin, switchUser,
   // S28-partial — Startup helpers
-  updateWordCount, toggleNotesFontSize, checkForUpdate,
+  updateWordCount, checkForUpdate,
   refreshForUpdate, dismissUpdateBanner,
   // Pilgrim Guide — App Help mode (added Sep 7 2026)
   closePilgrimGuide, pilgrimGuideSend,

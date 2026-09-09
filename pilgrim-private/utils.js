@@ -109,7 +109,7 @@ var SK_TOUR_STUDY_SEEN='bsn_tour_study_seen', SK_TOUR_SETTINGS_SEEN='bsn_tour_se
 // Initialized at startup; mutated throughout the session.
 // ════════════════════════════════════════════════════════
 
-var studies=[], cur=null, online=navigator.onLine, sett={scrMode:'auto', lastPasteTrans:'', defaultTrans:'esv', diagFeedback:false};
+var studies=[], cur=null, online=navigator.onLine, sett={scrMode:'auto', lastPasteTrans:'', defaultTrans:'esv', diagFeedback:false, theme:'light', fontFamily:'original', fontScale:1};
 var _diagResults=[];
 var hdrCollapsed=false, scrCollapsed=false, studyScope='passage';
 var activeRefIdx=0;
@@ -120,6 +120,29 @@ var _pendingDeleteRefIdx=null;
 var _renameResId=null;
 var _pendingUpdateVersion=null; // Version string detected by checkForUpdate(), set right before the update banner is shown; consumed by dismissUpdateBanner()
 var TOOL_LABELS={lexical:'Word Study',grammar:'Language & Structure',historical:'Historical Context',cultural:'Cultural Context',crossrefs:'Cross-References',geography:'Places & Geography'};
+// ── Appearance: content-area font choices (Settings > Appearance) ──────────
+// Applied only to reading/writing content — scripture text, Field Notes/
+// Outline/Conclusions editors, AI Study Tools output, Lexicon results, and
+// Word List cards. App chrome (nav, buttons, headers) keeps the fixed
+// EB Garamond/Crimson Pro pair regardless of this choice.
+// 'original' is the only entry with two different families (matches what
+// ships today); every other option uses one family for both roles, per the
+// readability test — see spec context Sep 9 2026.
+var FONT_OPTIONS=[
+  {key:'original',   label:'Original',            display:"'EB Garamond',serif",  body:"'Crimson Pro',serif"},
+  {key:'literata',   label:'Literata',             display:"'Literata',serif",     body:"'Literata',serif"},
+  {key:'lora',       label:'Lora',                 display:"'Lora',serif",         body:"'Lora',serif"},
+  {key:'spectral',   label:'Spectral',             display:"'Spectral',serif",     body:"'Spectral',serif"},
+  {key:'vollkorn',   label:'Vollkorn',             display:"'Vollkorn',serif",     body:"'Vollkorn',serif"},
+  {key:'ptserif',    label:'PT Serif',             display:"'PT Serif',serif",     body:"'PT Serif',serif"},
+  {key:'atkinson',   label:'Atkinson Hyperlegible',display:"'Atkinson Hyperlegible',sans-serif", body:"'Atkinson Hyperlegible',sans-serif"},
+  {key:'sourcesans', label:'Source Sans 3',        display:"'Source Sans 3',sans-serif", body:"'Source Sans 3',sans-serif"},
+  {key:'publicsans', label:'Public Sans',          display:"'Public Sans',sans-serif",   body:"'Public Sans',sans-serif"},
+  {key:'merriweather',label:'Merriweather Sans',   display:"'Merriweather Sans',sans-serif", body:"'Merriweather Sans',sans-serif"},
+  {key:'bitter',     label:'Bitter',               display:"'Bitter',serif",       body:"'Bitter',serif"},
+];
+// ── Appearance: content font-size steps (Settings > Appearance A-/A+) ──────
+var FONT_SCALE_STEPS=[0.85,0.9,0.95,1,1.05,1.1,1.15,1.2,1.3];
 var TOOL_DESCS={lexical:"Greek/Hebrew word meanings and Strong's numbers",grammar:'Verb tense, mood, sentence structure',historical:'Time period, political setting, authorship',cultural:'Customs, geography, social context',crossrefs:'Thematic, linguistic & narrative connections',geography:'Named locations, distances & terrain'};
 
 var DEFAULT_TAGS=[
@@ -473,7 +496,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.33.0',date:'Sep 8, 2026',label:'Latest',
+    version:'4.34.0',date:'Sep 9, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: new Appearance section in Settings \\u2014 Parchment (light) is now the default theme, with the original dark theme available as a toggle. Fixes a real readability complaint: bright text on the old near-black background caused a halation/blur effect for at least one tester; parchment uses the same gold/crimson/sepia palette, just inverted (dark ink on light paper).',
+      'feat: content font picker \\u2014 11 font choices (6 serif, 4 sans-serif, 1 slab) apply to scripture text, Field Notes/Outline/Conclusions, AI Study Tools results, Lexicon lookups, and Word List cards. Menus, buttons, and headers keep the original EB Garamond/Crimson Pro pair regardless of choice.',
+      'feat: content text-size control (A\\u2212/A+ in Settings > Appearance, 9 steps from 85% to 130%) applies to the same reading surfaces as the font picker.',
+      'fix: the Field Notes header\\u2019s old \\u201cA+\\u201d button was a separate, non-persisted, two-state toggle that only affected Field Notes. It now uses the same persisted, app-wide text-size setting as everything else \\u2014 full control (both directions) lives in Settings > Appearance.'
+    ]},
+  {
+    version:'4.33.0',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Word Study mode is live in the Lexicon \\u2014 looking up a word with more than one meaningfully distinct original-language sense (e.g. \\u201clove\\u201d \\u2192 agap\\u0113/phile\\u014d/eros/storg\\u0113) now shows 3-5 tappable candidate senses instead of the AI silently picking one. Tap a sense to run the full lookup on that Strong\\u2019s number. Strong\\u2019s-number input and unambiguous words are unaffected \\u2014 same single-lookup behavior as before.',
@@ -1879,7 +1911,7 @@ export {
   setStudies, setCur, setActiveRefIdx, setStudyScope, setPendingDeleteId, setPendingDeleteRefIdx, setTags,
   studyScope, activeRefIdx, _editingTagId, _pendingDeleteId,
   _pendingDeleteTagId, _pendingDeleteRefIdx, _renameResId, _pendingUpdateVersion,
-  TOOL_LABELS, TOOL_DESCS, DEFAULT_TAGS, TAGS, TAG_PALETTE,
+  TOOL_LABELS, TOOL_DESCS, DEFAULT_TAGS, TAGS, TAG_PALETTE, FONT_OPTIONS, FONT_SCALE_STEPS,
   // Section 03 — utilities
   closeOverlay, _tt, toast, toastSuccess, htmlToText, setAppHeight,
   todayStr, updateOffline, bookOrder, fmtDate, escHtml, mdToHtml,
