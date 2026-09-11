@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.1',date:'Sep 10, 2026',label:'Latest',
+    version:'4.34.2',date:'Sep 10, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'feat: Scripture Finder result cards now open a small action menu (Open in Read / Start a Study) on tap instead of jumping straight to the Read tab. Start a Study uses the result\\u2019s already-verified text directly \\u2014 no detour through Read, no re-fetch.',
+      'fix: Scripture Finder\\u2019s result-card tap, Deeper Dive, and Search All Translations buttons were silently non-functional since the Sep 8 release \\u2014 the underlying functions were never added to ui.js\\u2019s module export list, so they never reached window for the onclick= handlers to find. All three now work.'
+    ]},
+  {
+    version:'4.34.1',date:'Sep 10, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Read tab Skip Prev/Next Verse arrows no longer start audio playback on their own. Tapping a verse now enlarges/focuses it without reading it aloud (as designed) \\u2014 but the skip arrows still unexpectedly kicked off playback if nothing was actively speaking. They now just move the enlarged verse, matching a direct verse tap. If TTS is already speaking, skip still continues playback into the next verse as before.',

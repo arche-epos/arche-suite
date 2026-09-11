@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.1';
+} from './utils.js?v=4.34.2';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.1';
+} from './storage.js?v=4.34.2';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.1';
+} from './tts.js?v=4.34.2';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.1';
+} from './sync.js?v=4.34.2';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.1';
+} from './studyTools.js?v=4.34.2';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -242,20 +242,25 @@ function _pgRenderMessages(){
 /**
  * Renders one Scripture Finder results bubble: a tappable card per verified
  * reference (real fetched snippet, never AI-recalled text) plus Deeper Dive
- * and Search All Translations actions. Tapping a card opens it in the Read
- * tab via _pgOpenInRead — from there the existing "Start a Study from this
- * Passage" button covers turning it into a study, no new code needed there.
+ * and Search All Translations actions. Tapping a card opens a small inline
+ * action menu (Open in Read / Start a Study) rather than acting immediately —
+ * see _pgToggleResultMenu. "Start a Study" uses the result's already-fetched
+ * text directly (_pgStartStudyFromResult), no detour through the Read tab.
  */
 function _pgRenderResultsMsg(m,i){
-  var cards=m.results.map(function(r){
+  var cards=m.results.map(function(r,ri){
     var altHtml=(r.alt&&r.alt.length)?'<div class="pg-scr-alt">'+r.alt.map(function(a){
       return '<div><b>'+a.trans.toUpperCase()+':</b> '+escHtml(a.text.slice(0,180))+(a.text.length>180?'\u2026':'')+'</div>';
     }).join('')+'</div>':'';
-    return '<div class="pg-scr-card" data-ref="'+escHtml(r.ref)+'" data-trans="'+escHtml(r.trans)+'" onclick="_pgOpenInRead(this.dataset.ref,this.dataset.trans)">'+
+    return '<div class="pg-scr-card" onclick="_pgToggleResultMenu('+i+','+ri+')">'+
       '<div class="pg-scr-ref">'+escHtml(r.ref)+' <span style="color:var(--txt4);font-weight:400;font-size:11px">'+escHtml(r.trans.toUpperCase())+'</span></div>'+
       (r.why?'<div class="pg-scr-why">'+escHtml(r.why)+'</div>':'')+
       '<div class="pg-scr-snippet">'+escHtml(r.text.slice(0,220))+(r.text.length>220?'\u2026':'')+'</div>'+
       altHtml+
+      '<div class="pg-scr-menu" id="pg-scr-menu-'+i+'-'+ri+'">'+
+        '<button class="btn btn-sec btn-sm" data-ref="'+escHtml(r.ref)+'" data-trans="'+escHtml(r.trans)+'" onclick="event.stopPropagation();_pgOpenInRead(this.dataset.ref,this.dataset.trans)">Open in Read</button>'+
+        '<button class="btn btn-sec btn-sm" onclick="event.stopPropagation();_pgStartStudyFromResult('+i+','+ri+')">Start a Study</button>'+
+      '</div>'+
     '</div>';
   }).join('');
   var altBtn=m.altLoading?'<button class="btn btn-sec btn-sm" disabled>Searching\u2026</button>':
@@ -379,6 +384,49 @@ function _pgOpenInRead(ref,trans){
   if(refInput)refInput.value=ref;
   if(transSel&&trans)transSel.value=trans;
   fetchReadChapter();
+}
+/**
+ * Toggles the inline action menu (Open in Read / Start a Study) on one
+ * Scripture Finder result card. Closes any other open menu first so only one
+ * is ever visible — same on/off toggle pattern as .fab-menu. A one-shot
+ * document click listener closes it on any tap outside (menu buttons call
+ * stopPropagation so picking an action doesn't also retrigger this toggle).
+ * @param {number} msgIdx - Index into _pgMessages.
+ * @param {number} resultIdx - Index into that message's results array.
+ */
+function _pgToggleResultMenu(msgIdx,resultIdx){
+  var menu=document.getElementById('pg-scr-menu-'+msgIdx+'-'+resultIdx);
+  if(!menu)return;
+  var opening=!menu.classList.contains('on');
+  _pgCloseResultMenus();
+  if(opening){
+    menu.classList.add('on');
+    setTimeout(function(){document.addEventListener('click',_pgCloseResultMenus,{once:true});},0);
+  }
+}
+/**
+ * Closes any open Scripture Finder result-card action menu. Used both as a
+ * direct call and as the one-shot outside-click listener from
+ * _pgToggleResultMenu (extra {} event arg is harmless/ignored there).
+ */
+function _pgCloseResultMenus(){
+  document.querySelectorAll('.pg-scr-menu.on').forEach(function(el){el.classList.remove('on');});
+}
+/**
+ * Starts a new study directly from a verified Scripture Finder result, using
+ * the result's already-fetched {ref, trans, text} — no re-fetch, no detour
+ * through the Read tab. Same handoff shape/consumer as startStudyFromReading().
+ * @param {number} msgIdx - Index into _pgMessages.
+ * @param {number} resultIdx - Index into that message's results array.
+ */
+function _pgStartStudyFromResult(msgIdx,resultIdx){
+  var msg=_pgMessages[msgIdx];
+  if(!msg||msg.type!=='scripture-results')return;
+  var r=msg.results[resultIdx];
+  if(!r)return;
+  closePilgrimGuide();
+  _readHandoff={reference:r.ref,translation:r.trans,scriptureText:r.text,type:'primary'};
+  newStudy();
 }
 
 /**
@@ -3729,4 +3777,8 @@ export {
   refreshForUpdate, dismissUpdateBanner,
   // Pilgrim Guide — App Help mode (added Sep 7 2026)
   closePilgrimGuide, pilgrimGuideSend,
+  // Pilgrim Guide — Scripture Finder result actions (added Sep 8 2026, export
+  // gap fixed Sep 10 2026 — these were unreachable from onclick= until now)
+  _pgOpenInRead, _pgDeeperDive, _pgSearchAllTranslations,
+  _pgToggleResultMenu, _pgCloseResultMenus, _pgStartStudyFromResult,
 };
