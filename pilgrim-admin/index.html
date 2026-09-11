@@ -128,6 +128,9 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <h1>Pilgrim Admin</h1>
       <span class="last-updated" id="lastUpdated"></span>
       <div class="pill-row">
+        <select class="filter-select" id="globalTesterFilter" title="Filter the whole dashboard to one tester">
+          <option value="">All Testers</option>
+        </select>
         <div class="pill" data-range="7">Last 7 days</div>
         <div class="pill" data-range="30">Last 30 days</div>
         <div class="pill" data-range="90">Last 90 days</div>
@@ -171,6 +174,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <div class="stat"><div class="n" id="statTokens">–</div><div class="l">Total Tokens</div></div>
         <div class="stat"><div class="n" id="statTesters">–</div><div class="l">Active Testers</div></div>
       </div>
+      <div class="muted hidden" id="ratelimitFilterNote" style="margin-top:6px">429 count and route breakdown reflect all testers — not worth per-tester tracking for a rare health signal. Only the events list below is filtered.</div>
       <h3 style="font-size:13px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px">Recent Rate-Limit Events</h3>
       <div class="events-list table-wrap">
         <table id="eventsTable">
@@ -184,7 +188,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     <div class="card">
       <h2>Trends <span class="muted" id="rangeLabel8"></span> <button class="btn btn-ghost export-btn" data-export="timeseries" title="Export trends data as JSON">⬇</button></h2>
       <div class="chart-wrap">
-        <div class="chart-legend"><span class="lg"><span class="sw" style="background:var(--gold)"></span>Active Testers</span></div>
+        <div class="chart-legend"><span class="lg"><span class="sw" style="background:var(--gold)"></span><span id="chartActiveTestersLabel">Active Testers</span></span></div>
         <svg class="chart-svg" id="chartActiveTesters" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
       </div>
       <div class="chart-wrap">
@@ -287,11 +291,12 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
     <div class="card">
       <h2>AI Tool Run Timing <button class="btn btn-ghost export-btn" data-export="timing" title="Export timing data as JSON">⬇</button></h2>
       <div class="muted" style="margin-bottom:8px">Running average (all-time) + last 5 runs per tool — covers individual tool-button calls, Snapshot's sub-calls (same tool tags), and Snapshot's own full-batch time.</div>
+      <div class="muted hidden" id="timingFilterNote" style="margin-bottom:8px">Averages and run counts reflect all testers — not worth per-tester tracking for a tool-performance metric. Only the sampled runs below are filtered.</div>
       <div id="timingList"></div>
       <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.8.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.9.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -303,6 +308,7 @@ const ANALYTICS_START = '2026-08-27'; // feature launch date — used for "All t
 const SS_KEY = 'pilgrimAdminPass';
 
 let currentRange = '7';
+let globalTester = '';
 let usageData = null;
 let ratelimitData = null;
 let errorsData = null;
@@ -438,6 +444,21 @@ async function loadData(){
     if (e.message !== 'unauthorized') showToast('Failed to load data — check connection', 'err');
     throw e;
   }
+  populateGlobalTesterFilter();
+  renderAll();
+  const now = new Date();
+  document.getElementById('lastUpdated').textContent = `Loaded ${fmtClock(now)}`;
+  showToast(`Data loaded — ${fmtClock(now)}`, 'ok');
+}
+
+// ── global tester filter ──────────────────────────────────────────────────
+// One dropdown drives every card. Cards whose data already carries a tester
+// dimension (Per-Tester Breakdown, Errors, Diagnostics, Storage, Uploads,
+// Sync Health, Top Lists, Engagement, Tool Scope, and now Trends) filter
+// exactly. 429 totals/byRoute and AI Tool Run Timing averages stay
+// all-testers by design (see the muted notes on those two cards) — only
+// their tester-tagged event/run lists narrow with the filter.
+function renderAll(){
   renderHealth();
   renderTrends();
   renderSyncHealth();
@@ -450,10 +471,23 @@ async function loadData(){
   renderErrors();
   renderDiagnostics();
   renderTiming();
-  const now = new Date();
-  document.getElementById('lastUpdated').textContent = `Loaded ${fmtClock(now)}`;
-  showToast(`Data loaded — ${fmtClock(now)}`, 'ok');
 }
+function populateGlobalTesterFilter(){
+  const el = document.getElementById('globalTesterFilter');
+  const current = el.value;
+  const ids = Object.keys(usageData.testers || {}).sort((a,b) => a.localeCompare(b));
+  el.innerHTML = '<option value="">All Testers</option>' + ids.map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
+  if (ids.includes(current)) { el.value = current; globalTester = current; }
+  else { el.value = ''; globalTester = ''; }
+}
+function syncPerCardTesterInputs(){
+  ['testerFilter','errorsFilter','diagFilter'].forEach(id => { document.getElementById(id).value = globalTester; });
+}
+document.getElementById('globalTesterFilter').addEventListener('change', () => {
+  globalTester = document.getElementById('globalTesterFilter').value;
+  syncPerCardTesterInputs();
+  renderAll();
+});
 
 function setRange(range){
   currentRange = range;
@@ -520,9 +554,11 @@ function renderHealth(){
   document.getElementById('statRatelimits').textContent = ratelimitData.count || 0;
   let totalTokens = 0;
   const testers = usageData.testers || {};
-  Object.values(testers).forEach(t => totalTokens += (t.tokens || 0));
+  const idsForTokens = globalTester ? (testers[globalTester] ? [globalTester] : []) : Object.keys(testers);
+  idsForTokens.forEach(id => totalTokens += (testers[id].tokens || 0));
   document.getElementById('statTokens').textContent = totalTokens.toLocaleString();
-  document.getElementById('statTesters').textContent = Object.keys(testers).length;
+  document.getElementById('statTesters').textContent = globalTester ? (testers[globalTester] ? 1 : 0) : Object.keys(testers).length;
+  document.getElementById('ratelimitFilterNote').classList.toggle('hidden', !globalTester);
 
   const byRoute = ratelimitData.byRoute || {};
   const routeEntries = Object.entries(byRoute).sort((a,b) => b[1]-a[1]);
@@ -538,7 +574,7 @@ function renderHealth(){
   }
 
   const body = document.getElementById('eventsBody');
-  const events = ratelimitData.events || [];
+  const events = (ratelimitData.events || []).filter(ev => !globalTester || ev.tester === globalTester);
   body.innerHTML = '';
   document.getElementById('eventsEmpty').classList.toggle('hidden', events.length > 0);
   events.forEach(ev => {
@@ -550,8 +586,10 @@ function renderHealth(){
 
 function aggregateAcross(field){
   const totals = {};
-  Object.values(usageData.testers || {}).forEach(t => {
-    Object.entries(t[field] || {}).forEach(([name,count]) => {
+  const allTesters = usageData.testers || {};
+  const ids = globalTester ? (allTesters[globalTester] ? [globalTester] : []) : Object.keys(allTesters);
+  ids.forEach(id => {
+    Object.entries(allTesters[id][field] || {}).forEach(([name,count]) => {
       totals[name] = (totals[name] || 0) + count;
     });
   });
@@ -621,23 +659,43 @@ function renderLineChart(svgId, series, dates){
 
 function renderTrends(){
   const series = timeseriesData.series || [];
+  const byTester = timeseriesData.byTester || {};
   const dates = series.map(d => d.date);
+  const activeLabel = document.getElementById('chartActiveTestersLabel');
   document.getElementById('trendsEmpty').classList.toggle('hidden', series.length > 0);
   if (!series.length) { renderLineChart('chartActiveTesters', [], []); renderLineChart('chartActivity', [], []); return; }
-  renderLineChart('chartActiveTesters', [
-    { color: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(), values: series.map(d => d.activeTesters) }
-  ], dates);
-  renderLineChart('chartActivity', [
-    { color: getComputedStyle(document.documentElement).getPropertyValue('--sagebright').trim(), values: series.map(d => d.toolCalls) },
-    { color: getComputedStyle(document.documentElement).getPropertyValue('--txt3').trim(), values: series.map(d => d.screenVisits) }
-  ], dates);
+
+  if (globalTester) {
+    // Per-tester series is date-aligned/zero-filled by the Worker; fall back
+    // to an all-zero series if this tester had no activity in range at all.
+    const tSeries = byTester[globalTester] || dates.map(date => ({ date, toolCalls: 0, screenVisits: 0, tokens: 0 }));
+    activeLabel.textContent = 'Active';
+    renderLineChart('chartActiveTesters', [
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(), values: tSeries.map(d => (d.toolCalls > 0 || d.screenVisits > 0) ? 1 : 0) }
+    ], dates);
+    renderLineChart('chartActivity', [
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--sagebright').trim(), values: tSeries.map(d => d.toolCalls) },
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--txt3').trim(), values: tSeries.map(d => d.screenVisits) }
+    ], dates);
+  } else {
+    activeLabel.textContent = 'Active Testers';
+    renderLineChart('chartActiveTesters', [
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--gold').trim(), values: series.map(d => d.activeTesters) }
+    ], dates);
+    renderLineChart('chartActivity', [
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--sagebright').trim(), values: series.map(d => d.toolCalls) },
+      { color: getComputedStyle(document.documentElement).getPropertyValue('--txt3').trim(), values: series.map(d => d.screenVisits) }
+    ], dates);
+  }
 }
 
 // ── Sync Health card ────────────────────────────────────────────────────────
 function renderSyncHealth(){
   const totals = { 'push:ok':0, 'push:fail':0, 'pull:ok':0, 'pull:fail':0 };
-  Object.values(usageData.testers || {}).forEach(t => {
-    Object.entries(t.sync || {}).forEach(([k,v]) => { totals[k] = (totals[k]||0) + v; });
+  const allTesters = usageData.testers || {};
+  const ids = globalTester ? (allTesters[globalTester] ? [globalTester] : []) : Object.keys(allTesters);
+  ids.forEach(id => {
+    Object.entries(allTesters[id].sync || {}).forEach(([k,v]) => { totals[k] = (totals[k]||0) + v; });
   });
   const el = document.getElementById('syncStats');
   el.innerHTML = '';
@@ -699,7 +757,8 @@ function renderToolScope(){
 }
 
 function renderStorage(){
-  const testers = storageData.testers || {};
+  const allTesters = storageData.testers || {};
+  const testers = globalTester ? (allTesters[globalTester] ? { [globalTester]: allTesters[globalTester] } : {}) : allTesters;
   const ids = Object.keys(testers);
   const el = document.getElementById('storageStats');
   const asOfEl = document.getElementById('storageAsOf');
@@ -986,6 +1045,7 @@ function renderTiming(){
   const list = document.getElementById('timingList');
   list.innerHTML = '';
   document.getElementById('timingEmpty').classList.toggle('hidden', names.length > 0);
+  document.getElementById('timingFilterNote').classList.toggle('hidden', !globalTester);
   // Snapshot pinned last — it's the batch aggregate, not one of the individual tools
   names.sort((a, b) => (a === 'snapshot') - (b === 'snapshot') || a.localeCompare(b));
   names.forEach(name => {
@@ -1002,10 +1062,10 @@ function renderTiming(){
       `<div><span class="summary-pass">avg ${fmtMs(t.avgMs)}</span>${tokenBits.length ? ' &middot; '+tokenBits.join(' &middot; ') : ''}</div>`;
     const bodyEl = document.createElement('div');
     bodyEl.className = 'run-body';
-    const runs = t.lastRuns || [];
+    const runs = (t.lastRuns || []).filter(r => !globalTester || r.tester === globalTester);
     bodyEl.innerHTML = runs.length ? `<table><thead><tr><th>Tester</th><th>Duration</th><th>Tokens</th><th>Status</th><th>Time</th></tr></thead><tbody>${
       runs.map(r => `<tr><td>${escapeHtml(r.tester)}</td><td>${fmtMs(r.ms)}</td><td>${r.tokens ? r.tokens.toLocaleString()+(r.truncated?' <span class="status-fail">(cut off)</span>':'') : '—'}</td><td class="${r.status==='pass'?'status-pass':'status-fail'}">${escapeHtml(r.status)}</td><td>${fmtDate(r.ts)}</td></tr>`).join('')
-    }</tbody></table>` : '<div class="empty">No runs recorded.</div>';
+    }</tbody></table>` : `<div class="empty">${globalTester ? 'No runs by this tester in the last 5 samples.' : 'No runs recorded.'}</div>`;
     header.addEventListener('click', () => bodyEl.classList.toggle('open'));
     item.appendChild(header);
     item.appendChild(bodyEl);
