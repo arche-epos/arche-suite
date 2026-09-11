@@ -11,7 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
-:root{--bg0:#0b0907;--bg1:#120f0a;--bg2:#1b1710;--bg3:#252019;--bg4:#2f2a1f;--border:#3a3022;--borderlit:#4d4430;--gold:#c9a84c;--golddim:#7a6520;--goldpale:#e8ca80;--crimson:#8b3535;--crimsonbright:#c05050;--sagebright:#5a9b70;--txt1:#e8d5a3;--txt2:#c4a870;--txt3:#b59a68;--txt4:#8a7850;--r:8px;--rl:14px;}
+:root{--bg0:#0b0907;--bg1:#120f0a;--bg2:#1b1710;--bg3:#252019;--bg4:#2f2a1f;--border:#3a3022;--borderlit:#4d4430;--gold:#c9a84c;--golddim:#7a6520;--goldpale:#e8ca80;--crimson:#8b3535;--crimsonbright:#c05050;--sagebright:#5a9b70;--txt1:#e8d5a3;--txt2:#c4a870;--txt3:#b59a68;--txt4:#8a7850;--ink:#0b0907;--r:8px;--rl:14px;}
+html[data-theme="light"]{--bg0:#f3ecd8;--bg1:#fbf7ea;--bg2:#efe6cc;--bg3:#e6d9b4;--bg4:#dccb9c;--border:#c9b787;--borderlit:#ad9760;--gold:#8a6a1c;--golddim:#b08f3f;--goldpale:#c9a44e;--crimson:#a83f3f;--crimsonbright:#a13636;--sagebright:#2f7a48;--txt1:#2b2013;--txt2:#4a3c22;--txt3:#6b5a38;--txt4:#7a6840;--ink:#1a1408;}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%;background:var(--bg0);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:16px;-webkit-font-smoothing:antialiased}
 #app{max-width:1080px;margin:0 auto;padding:20px 20px 60px}
@@ -21,10 +22,10 @@ h1,h2,h3{font-family:'EB Garamond',serif;font-weight:500;color:var(--gold)}
 .pill-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pill{background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:6px 14px;font-size:13px;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:'Crimson Pro',serif}
 .pill:hover{border-color:var(--borderlit);color:var(--txt1)}
-.pill.on{background:var(--gold);color:var(--bg0);border-color:var(--gold);font-weight:600}
+.pill.on{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--r);font-family:'Crimson Pro',serif;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--borderlit);background:var(--bg3);color:var(--txt1);transition:all .15s}
 .btn:hover{background:var(--bg4)}
-.btn-primary{background:var(--gold);color:var(--bg0);font-weight:600;border-color:var(--gold)}
+.btn-primary{background:var(--gold);color:var(--ink);font-weight:600;border-color:var(--gold)}
 .btn-primary:hover{background:var(--goldpale)}
 .btn-ghost{background:none;border:1px solid var(--border);color:var(--txt3)}
 .card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rl);padding:18px 20px;margin-bottom:18px}
@@ -128,6 +129,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <h1>Pilgrim Admin</h1>
       <span class="last-updated" id="lastUpdated"></span>
       <div class="pill-row">
+        <button class="btn btn-ghost" id="themeToggleBtn" title="Toggle light/dark theme">🌙</button>
         <select class="filter-select" id="globalTesterFilter" title="Filter the whole dashboard to one tester">
           <option value="">All Testers</option>
         </select>
@@ -296,7 +298,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.9.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.10.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -319,6 +321,27 @@ let timingData = null;
 let sortKey = 'activity';
 let sortDir = 'desc';
 const DEVICE_LABELS = { mobile:'Mobile', tablet:'Tablet', desktop:'Desktop', other:'Unknown' };
+
+// ── theme ─────────────────────────────────────────────────────────────────
+const THEME_KEY = 'pilgrimAdminTheme';
+function getTheme(){ return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; }
+function applyTheme(theme){
+  if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+  else document.documentElement.removeAttribute('data-theme');
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+}
+function setTheme(theme){
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme(theme);
+  // Chart line colors are read from CSS vars at render time (getComputedStyle),
+  // not live-bound — a re-render is needed to pick up the new theme's palette.
+  if (usageData) renderAll();
+}
+applyTheme(getTheme());
+document.getElementById('themeToggleBtn').addEventListener('click', () => {
+  setTheme(getTheme() === 'light' ? 'dark' : 'light');
+});
 
 // ── date helpers ──────────────────────────────────────────────────────────
 function todayStr(){ return new Date().toISOString().slice(0,10); }
