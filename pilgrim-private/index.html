@@ -113,7 +113,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
 .color-swatch.on{border-color:var(--txt1);box-shadow:0 0 0 2px var(--bg2)}
 .ttag{display:inline-block;background:var(--bg3);color:var(--gold);border:1px solid var(--border);border-radius:3px;font-size:10px;font-weight:600;padding:1px 5px}
-.fab-wrap{position:fixed;bottom:calc(68px + var(--safe-b));right:max(16px,calc((100vw - 480px)/2 + 16px));z-index:60}.fab{position:static;width:56px;height:56px;border-radius:50%;background:var(--gold);color:var(--bg0);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(201,168,76,.35);font-size:26px;}.fab-menu{position:absolute;bottom:68px;right:0;display:none;flex-direction:column;align-items:flex-end;gap:8px}.fab-menu.on{display:flex}.fab-menu-item{background:var(--bg2);color:var(--txt1);border:1px solid var(--golddim);border-radius:24px;padding:10px 18px;font-size:14px;font-family:'Crimson Pro',serif;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
+.fab-wrap{position:fixed;bottom:calc(68px + var(--safe-b));right:max(16px,calc((100vw - 480px)/2 + 16px));z-index:60}.fab{position:static;width:56px;height:56px;box-sizing:border-box;border-radius:50%;background:var(--gold);color:var(--bg0);border:3px solid var(--bg0);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.45),0 4px 24px rgba(201,168,76,.35);font-size:26px;}.fab-menu{position:absolute;bottom:68px;right:0;display:none;flex-direction:column;align-items:flex-end;gap:8px}.fab-menu.on{display:flex}.fab-menu-item{background:var(--bg2);color:var(--txt1);border:1px solid var(--golddim);border-radius:24px;padding:10px 18px;font-size:14px;font-family:'Crimson Pro',serif;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
 .fab:active{transform:scale(.9)}
 .hdrfields{background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0}
 .hdrfields-body{padding:12px 16px}
@@ -1637,7 +1637,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.0"></script>
+<script type="module" src="app.js?v=4.34.1"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

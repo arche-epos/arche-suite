@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.0';
+} from './utils.js?v=4.34.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.0';
+} from './storage.js?v=4.34.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
-  _ttsSource, _ttsIdx
-} from './tts.js?v=4.34.0';
+  _ttsSource, _ttsIdx, _ttsActive
+} from './tts.js?v=4.34.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.0';
+} from './sync.js?v=4.34.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.0';
+} from './studyTools.js?v=4.34.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2197,9 +2197,13 @@ function clearReadFocus(){
   document.querySelectorAll('#read-display .readverse-focus').forEach(function(e){e.classList.remove('readverse-focus');});
 }
 /**
- * Skips Read-tab TTS playback forward or backward by one verse.
- * If nothing is currently playing/paused, starts playback near the current
- * reading position instead of no-op'ing — matches expected podcast-style behavior.
+ * Moves the Read tab's verse focus forward or backward by one verse.
+ * If Read-tab TTS is actively speaking, this continues that playback from the
+ * adjacent verse (podcast-style skip, unchanged). Otherwise — nothing playing,
+ * or only paused/selected — it just moves the enlarged/focused verse like
+ * tapping a verse number does, WITHOUT starting audio. (Was: always started
+ * playback, which unexpectedly began reading aloud when the user only meant
+ * to browse verses after enlarging one.)
  * @param {number} dir - +1 for next verse, -1 for previous verse.
  */
 function readSkipVerse(dir){
@@ -2208,7 +2212,8 @@ function readSkipVerse(dir){
   var curIdx=(_ttsSource==='read')?_ttsIdx:getReadStartIdx();
   var nextIdx=curIdx+dir;
   if(nextIdx<0||nextIdx>=chunks.length)return;
-  ttsPlayReadFrom(nextIdx);
+  if(_ttsSource==='read'&&_ttsActive){ttsPlayReadFrom(nextIdx);return;}
+  readSelectVerse(nextIdx);
 }
 /**
  * Toggles the Read tab player bar's volume popout (a vertical slider anchored

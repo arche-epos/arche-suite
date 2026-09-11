@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.0',date:'Sep 9, 2026',label:'Latest',
+    version:'4.34.1',date:'Sep 10, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Read tab Skip Prev/Next Verse arrows no longer start audio playback on their own. Tapping a verse now enlarges/focuses it without reading it aloud (as designed) \\u2014 but the skip arrows still unexpectedly kicked off playback if nothing was actively speaking. They now just move the enlarged verse, matching a direct verse tap. If TTS is already speaking, skip still continues playback into the next verse as before.',
+      'fix: Pilgrim Guide FAB could visually blend into same-colored backgrounds (e.g. the gold \\u201cStart a Study from this Passage\\u201d bar), making it hard to see. Added a persistent contrasting ring plus a stronger shadow so it stands out against any background, in both themes.'
+    ]},
+  {
+    version:'4.34.0',date:'Sep 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: new Appearance section in Settings \\u2014 Parchment (light) is now the default theme, with the original dark theme available as a toggle. Fixes a real readability complaint: bright text on the old near-black background caused a halation/blur effect for at least one tester; parchment uses the same gold/crimson/sepia palette, just inverted (dark ink on light paper).',
