@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.2',date:'Sep 10, 2026',label:'Latest',
+    version:'4.34.3',date:'Sep 11, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: Study Sync status messages and error toasts ("Pushing...", "Pulling...", "Pull failed", "Force pulled") now say Backing up / Restoring / Backup failed / Force restored — matching the Backup/Restore button labels from the FBI-2 rename. The buttons were renamed months ago but the status line underneath them was missed.',
+      'fix: Diagnostics panel test names renamed to plain language — Worker Reachability -> Server Connection, Groq AI -> AI Study Tools, Gist Pull -> Restore Check, Gist Diagnostic Push -> Backup Check, Gist Diagnostic Verify -> Backup Verification. Brings the full Diagnostics modal in line with the Settings quick-test labels, which already used plain language.'
+    ]},
+  {
+    version:'4.34.2',date:'Sep 10, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'feat: Scripture Finder result cards now open a small action menu (Open in Read / Start a Study) on tap instead of jumping straight to the Read tab. Start a Study uses the result\\u2019s already-verified text directly \\u2014 no detour through Read, no re-fetch.',

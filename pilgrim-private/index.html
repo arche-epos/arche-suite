@@ -991,7 +991,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="divider"></div>
     <div style="margin-bottom:22px" id="settings-sec-sync">
       <div class="sethead">Study Sync</div>
-      <div class="setsub">Studies sync automatically across all your devices after every Save. Use the buttons below to manually push or pull at any time.</div>
+      <div class="setsub">Studies sync automatically across all your devices after every Save. Use the buttons below to manually back up or restore at any time.</div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-sec" style="flex:1" onclick="syncFromGist()">&#8595; Restore</button>
         <button class="btn btn-primary" style="flex:1" onclick="syncToGist()">&#8593; Backup</button>
@@ -1639,7 +1639,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.2"></script>
+<script type="module" src="app.js?v=4.34.3"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

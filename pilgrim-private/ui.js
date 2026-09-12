@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.2';
+} from './utils.js?v=4.34.3';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.2';
+} from './storage.js?v=4.34.3';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.2';
+} from './tts.js?v=4.34.3';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.2';
+} from './sync.js?v=4.34.3';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.2';
+} from './studyTools.js?v=4.34.3';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3085,12 +3085,12 @@ async function runDiagnostics(){
   if(btn){btn.disabled=true;btn.textContent='Running...';}
   document.getElementById('diag-modal-status').textContent='Running tests\u2026';
   var tests=[
-    {id:'worker',name:'Worker Reachability'},
-    {id:'groq',name:'Groq AI'},
+    {id:'worker',name:'Server Connection'},
+    {id:'groq',name:'AI Study Tools'},
     {id:'esv',name:'ESV Bible API'},
-    {id:'gist_pull',name:'Gist Pull'},
-    {id:'gist_push',name:'Gist Diagnostic Push'},
-    {id:'gist_verify',name:'Gist Diagnostic Verify'},
+    {id:'gist_pull',name:'Restore Check'},
+    {id:'gist_push',name:'Backup Check'},
+    {id:'gist_verify',name:'Backup Verification'},
     {id:'tts',name:'Text-to-Speech'},
     {id:'network',name:'Network Status'}
   ];

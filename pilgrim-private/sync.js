@@ -13,9 +13,9 @@ import {
   sett, TAGS, setTags,
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent
-} from './utils.js?v=4.34.2';
+} from './utils.js?v=4.34.3';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.34.2';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.34.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -194,7 +194,7 @@ async function syncToGist(silent){
   if(silent&&(Date.now()-_lastPushTime)<300000)return; // Silent pushes throttled to once per 5 min
   _gistPushing=true;
   _lastPushTime=Date.now();
-  if(!silent)gistSetStatus('Pushing...','var(--txt3)');
+  if(!silent)gistSetStatus('Backing up...','var(--txt3)');
   try{
     // Fetch-before-push: read the current Gist, merge, THEN write — prevents last-writer-wins data loss across devices
     var mergedStudies=studies;
@@ -237,17 +237,17 @@ async function syncToGist(silent){
     setTags(mergedTags);
     persist();
     if(window.persistTags)_persistTags();
-    if(!silent){gistSetStatus('Pushed — '+new Date().toLocaleTimeString(),'var(--sagebright)');toast('Pushed ✓');}
+    if(!silent){gistSetStatus('Backed up — '+new Date().toLocaleTimeString(),'var(--sagebright)');toast('Backed up ✓');}
     trackEvent({sync:'push',syncOutcome:'ok'});
     reportStorageSnapshot();
   }catch(e){
     // Detect GitHub rate limit from multiple possible error string formats across primary and secondary limits
     var isRateLimit=e.message&&(e.message.indexOf('rate limit')!==-1||e.message.indexOf('429')!==-1||e.message.indexOf('secondary rate')!==-1||e.message.indexOf('rate_limit')!==-1);
     if(isRateLimit){_rateLimitUntil=Date.now()+15*60*1000;} // Back off silent auto-push for 15 minutes
-    var msg=isRateLimit?'GitHub rate limited — auto-push paused 15 min. Manual Push still works.':e.message;
+    var msg=isRateLimit?'GitHub rate limited — auto-backup paused 15 min. Manual Backup still works.':e.message;
     logError('Gist Push (Sync)',e);
     trackEvent({sync:'push',syncOutcome:'fail'});
-    if(!silent){gistSetStatus('Push failed: '+msg,'var(--crimsonbright)');toast(msg);}
+    if(!silent){gistSetStatus('Backup failed: '+msg,'var(--crimsonbright)');toast(msg);}
   }finally{_gistPushing=false;}
 }
 /**
@@ -257,7 +257,7 @@ async function syncToGist(silent){
 async function syncFromGist(){
   if(_gistPulling)return;
   _gistPulling=true;
-  gistSetStatus('Pulling...','var(--txt3)');
+  gistSetStatus('Restoring...','var(--txt3)');
   try{
     // Step 1 — get Gist metadata to obtain raw_url
     var res=await fetch(WORKER_URL+'/gist?cb='+Date.now());
@@ -321,14 +321,14 @@ async function syncFromGist(){
     var msg=added||updated?
       (added?added+' new':'')+( added&&updated?' + ':'')+( updated?updated+' updated':''):
       'Already up to date';
-    gistSetStatus('Pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
+    gistSetStatus('Restored — '+new Date().toLocaleTimeString(),'var(--sagebright)');
     toast('Sync complete — '+msg);
     trackEvent({sync:'pull',syncOutcome:'ok'});
     reportStorageSnapshot();
   }catch(e){
     logError('Gist Pull (Sync)',e);
     trackEvent({sync:'pull',syncOutcome:'fail'});
-    gistSetStatus('Pull failed: '+e.message,'var(--crimsonbright)');
+    gistSetStatus('Restore failed: '+e.message,'var(--crimsonbright)');
     toast('Sync failed: '+e.message);
   }finally{_gistPulling=false;}
 }
@@ -348,7 +348,7 @@ function confirmForcePull(){if(confirm('Force Restore will replace ALL local stu
 async function syncFromGistForce(){
   if(_gistPulling)return;
   _gistPulling=true;
-  gistSetStatus('Force pulling...','var(--txt3)');
+  gistSetStatus('Force restoring...','var(--txt3)');
   try{
     var res=await fetch(WORKER_URL+'/gist?cb='+Date.now());
     if(!res.ok)throw new Error('Sync '+res.status);
@@ -364,14 +364,14 @@ async function syncFromGistForce(){
     if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)_persistTags();}
     if(cur){var fc=studies.find(function(s){return s.id===cur.id;});if(fc){setCur(fc);if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}if(window.renderRefs)window.renderRefs();}}
     if(window.renderLib)window.renderLib();
-    gistSetStatus('Force pulled — '+new Date().toLocaleTimeString(),'var(--sagebright)');
+    gistSetStatus('Force restored — '+new Date().toLocaleTimeString(),'var(--sagebright)');
     toast('Force restore complete — local data replaced with backup');
     trackEvent({sync:'pull',syncOutcome:'ok'});
     reportStorageSnapshot();
   }catch(e){
     logError('Gist Force Pull (Sync)',e);
     trackEvent({sync:'pull',syncOutcome:'fail'});
-    gistSetStatus('Force pull failed: '+e.message,'var(--crimsonbright)');
+    gistSetStatus('Force restore failed: '+e.message,'var(--crimsonbright)');
   }finally{_gistPulling=false;}
 }
 
