@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.14',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.15',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Settings > Account's \u201cSigned in as ___\u201d line was showing the raw account id instead of the display name set in v4.34.14, on every login \u2014 startPilgrim() in app.js had its own older line writing ACTIVE_USER directly into that field, running right after and silently overwriting the correct value. Removed; setUserDisplay() (from v4.34.14) already handles this correctly on both the fresh-login and cached-session boot paths. Also dropped app.js's now-unused Utils import."
+    ]},
+  {
+    version:'4.34.14',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: identity/rename architecture rework \u2014 the userId a PIN resolves to (used for all localStorage namespacing and the Gist sync filename) is now permanently frozen and never touched by a rename again. Renaming a tester used to mean editing that same value directly in the Cloudflare dashboard, which orphaned local data and Gist sync for every renamed user (see pilgrim-pin-identity-bug.md). Renames now write to a separate, cosmetic-only display name field instead.",
