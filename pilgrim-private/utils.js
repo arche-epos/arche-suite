@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.12',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.13',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feat: Pilgrim Guide now answers generic \u201cwhat can you do\u201d / \u201cwho are you\u201d / \u201chelp\u201d-style messages with a fixed self-intro instead of routing them to the model \u2014 those messages didn't match any App Help topic or ask to find scripture/a word, so they were falling through to out-of-scope and getting brushed off. Matched client-side before the /groq call, so it's instant and costs nothing."
+    ]},
+  {
+    version:'4.34.12',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feat: added a live Preview to Settings > Appearance, below the Content Text Size control. Shows a sample line of scripture that updates instantly with both the selected Content Font and the current text size \u2014 previously the font tiles showed a fixed-size \"Aa\" that never reflected the size stepper, and the size control had no visual sample at all."

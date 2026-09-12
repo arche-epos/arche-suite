@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.12';
+} from './utils.js?v=4.34.13';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.12';
+} from './storage.js?v=4.34.13';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.12';
+} from './tts.js?v=4.34.13';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.12';
+} from './sync.js?v=4.34.13';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.12';
+} from './studyTools.js?v=4.34.13';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -529,6 +529,25 @@ async function _pgRunTurn(apiContent,display,sourceQuery){
   }
 }
 
+// ── Canned self-intro reply (added Sep 12 2026) ─────────────────────────────
+// Generic "what can you do" / greeting messages don't match any Quick
+// Reference entry and don't ask to locate scripture or a word, so the model
+// was triaging them to out_of_scope instead of answering. Intercepted here,
+// before the /groq call, for a fixed, reliable answer with zero API cost.
+// Exact-match list, not exhaustive by design — anything else still goes to
+// the model unchanged.
+var PG_CANNED_TRIGGERS=['what can you do','what do you do','who are you','what is this','help','hi','hello','hey'];
+var PG_CANNED_REPLY='I can help two ways — ask me how to do something in the app (like backing up your studies or changing your translation), or ask me to help track down a passage of scripture by topic or a partial quote you remember. Every reference I suggest gets checked against the real text before you see it — I never rely on my own memory of scripture.';
+/**
+ * Returns the canned self-intro reply if text matches a known greeting/
+ * help-request phrasing (case-insensitive, trailing punctuation stripped),
+ * else null.
+ */
+function _pgCannedReply(text){
+  var norm=text.trim().toLowerCase().replace(/[?!.]+$/,'');
+  return PG_CANNED_TRIGGERS.indexOf(norm)>=0 ? PG_CANNED_REPLY : null;
+}
+
 /**
  * Sends the current input as a user message. Thin wrapper around _pgRunTurn
  * where apiContent, display, and sourceQuery are all the same typed text.
@@ -538,6 +557,13 @@ function pilgrimGuideSend(){
   var text=(input.value||'').trim();
   if(!text)return;
   input.value='';
+  var canned=_pgCannedReply(text);
+  if(canned){
+    _pgMessages.push({role:'user',content:text,display:text});
+    _pgMessages.push({role:'assistant',content:canned});
+    _pgRenderMessages();
+    return;
+  }
   _pgRunTurn(text,text,text);
 }
 
