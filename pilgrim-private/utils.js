@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.7',date:'Sep 11, 2026',label:'Latest',
+    version:'4.34.8',date:'Sep 11, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "chore: removed the last two dead scrMode checks in studyTools.js — fetchScr()'s paste-mode shortcut (could never trigger since nothing sets scrMode to 'paste' anymore) and a matching fallback in openPasteModal()'s translation prefill. Also corrected fetchScr()'s doc comment, which still described the removed paste-mode delegation. No behavior change."
+    ]},
+  {
+    version:'4.34.7',date:'Sep 11, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "chore: removed setScrMode() and updateScrModeUI(), leftover from the Auto/Paste toggle removed in v4.34.6 — both were unreachable dead code with no buttons left to call them. Also simplified the auto-fetch-on-open check from online-and-not-paste-mode down to just online, since paste mode can no longer be set. No behavior change, no UI change — code cleanup only."

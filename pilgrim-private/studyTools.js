@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.7';
+} from './utils.js?v=4.34.8';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.7';
-import { syncToGist } from './sync.js?v=4.34.7';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.7';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.8';
+import { syncToGist } from './sync.js?v=4.34.8';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.8';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -76,8 +76,8 @@ export function setAiActiveTab(k){ aiActiveTab=k; }
 /**
  * Main entry point for loading scripture into the Field Notes panel.
  * Reads the f-ref and f-trans inputs, validates the reference, then fetches from
- * the appropriate API (ESV worker, bolls.life, or bible-api.com). Renders the result
- * or shows paste fallback on error. No-op in paste-mode (delegates to openPasteModal).
+ * the appropriate API (ESV worker, bolls.life, or bible-api.com). Renders the result,
+ * or opens the Try Again / Paste It In recovery popup on error.
  */
 async function fetchScr(){
   var ar=activeRef();
@@ -88,7 +88,6 @@ async function fetchScr(){
   if(!/\s\d/.test(ref))return;
   if(ar){ar.reference=ref;ar.translation=trans;}
   _updateBarRefLabel();
-  if(sett.scrMode==='paste'){openPasteModal();return;}
   var disp=document.getElementById('scrdisplay');
   disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
   if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal("You're offline \u2014 check your connection, try again, or paste the passage in yourself.");return;}
@@ -305,7 +304,7 @@ function openPasteModal(){
   if(hint)hint.textContent=ref||'';
   var transEl=document.getElementById('paste-trans');
   if(transEl){
-    var prefill=sett.lastPasteTrans||(sett.scrMode==='paste'&&ar&&ar.translation&&ar.translation!=='esv'?ar.translation.toUpperCase():'');
+    var prefill=sett.lastPasteTrans||'';
     transEl.value=prefill||'';
   }
   document.getElementById('paste-overlay').classList.add('on');
