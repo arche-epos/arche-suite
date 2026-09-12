@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.6';
+} from './utils.js?v=4.34.7';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.6';
+} from './storage.js?v=4.34.7';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.6';
+} from './tts.js?v=4.34.7';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.6';
+} from './sync.js?v=4.34.7';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.6';
+} from './studyTools.js?v=4.34.7';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -786,7 +786,6 @@ function populateField(){
   if(_qFN){if(cur.fieldNotes)_qFN.clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN.setText('');_qFNDirty=false;}
   renderStudyWords();
   renderTagPicker();
-  updateScrModeUI();
   renderFieldTiles();
   renderRefPills('f-ref-pills','field');
   updateBarRefLabel();
@@ -1583,7 +1582,7 @@ function confirmImportLink(){
   toast('Study imported: '+(s.title||ref0||'Untitled'));
 
   // Auto-fetch missing scripture for all refs (shared studies have scriptureText stripped)
-  if(online&&sett.scrMode!=='paste'){setTimeout(function(){fetchAllMissingScripture(s);},600);}
+  if(online){setTimeout(function(){fetchAllMissingScripture(s);},600);}
 }
 /**
  * Fetches scripture text for all refs in a study that are missing it.
@@ -1631,21 +1630,7 @@ function loadSett(){try{var s=JSON.parse(localStorage.getItem(SK_SETT));if(s)Obj
   // Apply defaults for any settings key absent from the stored object
   if(!sett.scrMode)sett.scrMode='auto';if(!sett.defaultTrans)sett.defaultTrans='esv';if(typeof sett.diagFeedback==='undefined')sett.diagFeedback=false;
   if(!sett.theme)sett.theme='light';if(!sett.fontFamily)sett.fontFamily='original';if(typeof sett.fontScale!=='number')sett.fontScale=1;
-  updateScrModeUI();updateDefaultTransUI();applyAppearance();}catch(e){}}
-/**
- * Sets the scripture fetch mode ('auto' or 'paste'), persists it, and updates the UI.
- * If switching to 'paste' with an open study, opens the paste modal.
- * If switching to 'auto', re-fetches scripture for the current study.
- * @param {string} mode - The scripture mode to set: 'auto' or 'paste'.
- */
-function setScrMode(mode){
-  sett.scrMode=mode;
-  localStorage.setItem(SK_SETT,JSON.stringify(sett));
-  updateScrModeUI();
-  // Side-effects: paste mode opens the paste modal; auto mode re-fetches scripture
-  if(mode==='paste'&&cur&&cur.reference){openPasteModal();}
-  else if(mode==='auto'&&cur&&cur.reference){fetchScr();}
-}
+  updateDefaultTransUI();applyAppearance();}catch(e){}}
 /**
  * Sets the default Bible translation, persists settings, and updates the translation UI.
  * @param {string} val - Translation abbreviation (e.g. 'esv', 'nasb', 'nkjv').
@@ -1666,23 +1651,6 @@ function updateDefaultTransUI(){
     var el=document.getElementById('trans-tile-'+t);
     if(el){if(t===def)el.classList.add('trans-default');else el.classList.remove('trans-default');}
   });
-}
-/**
- * Updates the visual state of the Auto / Paste scripture mode toggle buttons.
- * The active mode button gets the gold fill; the inactive button is unstyled.
- */
-function updateScrModeUI(){
-  var isAuto=sett.scrMode!=='paste';
-  var btnAuto=document.getElementById('scr-mode-auto'),btnPaste=document.getElementById('scr-mode-paste');
-  if(!btnAuto||!btnPaste)return;
-  // Active button: gold fill / dark text. Inactive: unstyled / muted text.
-  if(isAuto){
-    btnAuto.style.background='var(--gold)';btnAuto.style.color='var(--bg0)';btnAuto.style.fontWeight='600';
-    btnPaste.style.background='none';btnPaste.style.color='var(--txt3)';btnPaste.style.fontWeight='400';
-  } else {
-    btnPaste.style.background='var(--gold)';btnPaste.style.color='var(--bg0)';btnPaste.style.fontWeight='600';
-    btnAuto.style.background='none';btnAuto.style.color='var(--txt3)';btnAuto.style.fontWeight='400';
-  }
 }
 /** Persists the current sett object to localStorage and shows a confirmation toast. */
 function saveSettings(){localStorage.setItem(SK_SETT,JSON.stringify(sett));toast('Settings saved');}
@@ -3733,7 +3701,7 @@ export {
   copyLinkFromModal, promptCopyFallback, checkImportHash, confirmImportLink,
   fetchAllMissingScripture, clearAll, confirmClearAll,
   // S21 — Settings
-  loadSett, setScrMode, setDefaultTrans, updateDefaultTransUI, updateScrModeUI,
+  loadSett, setDefaultTrans, updateDefaultTransUI,
   applyAppearance, setTheme, setFontFamily, adjustFontScale, renderFontTiles,
   updateThemeUI, updateFontFamilyUI, updateFontScaleUI,
   saveSettings,
