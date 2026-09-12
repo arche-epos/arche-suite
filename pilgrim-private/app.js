@@ -5,26 +5,27 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.34.15';
+} from './utils.js?v=4.34.16';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.34.15';
+} from './storage.js?v=4.34.16';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.34.15';
+} from './sync.js?v=4.34.16';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.34.15';
+} from './tts.js?v=4.34.16';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Storage from './storage.js?v=4.34.15';
-import * as TTS from './tts.js?v=4.34.15';
-import * as Sync from './sync.js?v=4.34.15';
-import * as StudyTools from './studyTools.js?v=4.34.15';
-import * as UI from './ui.js?v=4.34.15';
+import * as Utils from './utils.js?v=4.34.16';
+import * as Storage from './storage.js?v=4.34.16';
+import * as TTS from './tts.js?v=4.34.16';
+import * as Sync from './sync.js?v=4.34.16';
+import * as StudyTools from './studyTools.js?v=4.34.16';
+import * as UI from './ui.js?v=4.34.16';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -171,6 +172,12 @@ function startPilgrim() {
   if (vEl && CHANGELOG && CHANGELOG[0]) vEl.textContent = 'v' + CHANGELOG[0].version;
   var libVEl = document.getElementById('lib-version-display');
   if (libVEl && CHANGELOG && CHANGELOG[0]) libVEl.textContent = 'v' + CHANGELOG[0].version;
+  var uEl = document.getElementById('settings-user-display');
+  if (uEl) {
+    // ACTIVE_USER is mutated by activateUser() in utils.js before startPilgrim runs.
+    // Read from the namespace import (live binding) to get the current value.
+    if (Utils.ACTIVE_USER) uEl.textContent = Utils.ACTIVE_USER;
+  }
   UI.checkForUpdate();
   UI.tourCleanupDemoData();
 }

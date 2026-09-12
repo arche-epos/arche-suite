@@ -496,10 +496,10 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.15',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.16',date:'Sep 12, 2026',label:'Latest',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      "fix: Settings > Account's \u201cSigned in as ___\u201d line was showing the raw account id instead of the display name set in v4.34.14, on every login \u2014 startPilgrim() in app.js had its own older line writing ACTIVE_USER directly into that field, running right after and silently overwriting the correct value. Removed; setUserDisplay() (from v4.34.14) already handles this correctly on both the fresh-login and cached-session boot paths. Also dropped app.js's now-unused Utils import."
+      "revert: v4.34.15's Settings > Account display-name fix broke the app entirely on load (white screen, no interactivity) \u2014 rolled back to v4.34.14's code while the root cause is investigated. The \u201cSigned in as\u201d field will show the raw account id again in the meantime, not the display name; that's the known, intentional side effect of this revert, not a new issue."
     ]},
   {
     version:'4.34.14',date:'Sep 12, 2026',label:'',
