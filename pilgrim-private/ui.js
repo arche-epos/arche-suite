@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.13';
+} from './utils.js?v=4.34.14';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.13';
+} from './storage.js?v=4.34.14';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.13';
+} from './tts.js?v=4.34.14';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.13';
+} from './sync.js?v=4.34.14';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.13';
+} from './studyTools.js?v=4.34.14';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3569,6 +3569,7 @@ function clearErrorLogUI(){
 function initPinGate(){
   var cached=localStorage.getItem('bsn_active_user');
   if(cached){
+    setUserDisplay(localStorage.getItem('bsn_active_display_name')||cached);
     activateUser(cached);
     window.startPilgrim();
   }else{
@@ -3598,6 +3599,13 @@ async function submitPin(){
       return;
     }
     localStorage.setItem('bsn_active_user',data.userId);
+    // displayName is cosmetic only — never used for storage/sync keying (that's
+    // userId, above). Cached alongside it so the cached-session boot path in
+    // initPinGate() can show it without an extra network round-trip. See
+    // pilgrim-pin-identity-bug.md for why these two are kept strictly separate.
+    var dn=data.displayName||data.userId;
+    localStorage.setItem('bsn_active_display_name',dn);
+    setUserDisplay(dn);
     activateUser(data.userId);
     var ov=document.getElementById('pin-gate-overlay');
     if(ov)ov.classList.remove('on');
@@ -3609,11 +3617,21 @@ async function submitPin(){
   }
 }
 /**
+ * Populates the Settings > Account "Signed in as ___" line. Was a dead,
+ * always-empty element before this fix (#settings-user-display existed in
+ * index.html but nothing ever wrote to it).
+ */
+function setUserDisplay(name){
+  var el=document.getElementById('settings-user-display');
+  if(el)el.textContent=name||'';
+}
+/**
  * Logs out the active user — clears the cached session flag and reloads the page so
  * initPinGate() shows the PIN gate fresh on next load.
  */
 function switchUser(){
   localStorage.removeItem('bsn_active_user');
+  localStorage.removeItem('bsn_active_display_name');
   location.reload();
 }
 

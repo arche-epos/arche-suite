@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.13',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.14',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: identity/rename architecture rework \u2014 the userId a PIN resolves to (used for all localStorage namespacing and the Gist sync filename) is now permanently frozen and never touched by a rename again. Renaming a tester used to mean editing that same value directly in the Cloudflare dashboard, which orphaned local data and Gist sync for every renamed user (see pilgrim-pin-identity-bug.md). Renames now write to a separate, cosmetic-only display name field instead.",
+      "feat: Settings > Account's \u201cSigned in as ___\u201d line is now actually populated \u2014 the element existed in index.html but nothing ever wrote to it before this fix."
+    ]},
+  {
+    version:'4.34.13',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feat: Pilgrim Guide now answers generic \u201cwhat can you do\u201d / \u201cwho are you\u201d / \u201chelp\u201d-style messages with a fixed self-intro instead of routing them to the model \u2014 those messages didn't match any App Help topic or ask to find scripture/a word, so they were falling through to out-of-scope and getting brushed off. Matched client-side before the /groq call, so it's instant and costs nothing."

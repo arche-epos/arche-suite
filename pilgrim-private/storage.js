@@ -14,7 +14,7 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.34.13';
+} from './utils.js?v=4.34.14';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
