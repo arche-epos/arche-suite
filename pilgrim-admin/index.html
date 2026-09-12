@@ -43,8 +43,6 @@ th.sorted::after{content:' ▾';color:var(--gold)}
 th.sorted.asc::after{content:' ▴'}
 tr.tester-row{cursor:pointer;transition:background .15s}
 tr.tester-row:hover{background:var(--bg2)}
-.rename-btn{background:none;border:none;cursor:pointer;opacity:.5;margin-left:6px;font-size:.9em;padding:2px 4px}
-.rename-btn:hover{opacity:1}
 tr.detail-row td{background:var(--bg2);padding:14px 16px}
 tr.detail-row{display:none}
 tr.detail-row.open{display:table-row}
@@ -143,6 +141,24 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <button class="btn btn-ghost" id="refreshBtn" title="Refresh">↻ Refresh</button>
         <button class="btn btn-ghost" id="logoutBtn">Log out</button>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Manage Testers</h2>
+      <div class="muted" style="margin-bottom:10px">Every account in PILGRIM_USERS, regardless of recent activity — this is the reliable place to rename someone. The Per-Tester Breakdown below only lists testers with usage data in the selected date range, so an inactive tester won't have a row there to click.</div>
+      <div class="table-wrap">
+      <table id="rosterTable">
+        <thead>
+          <tr>
+            <th>Display Name</th>
+            <th>PIN</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+      </div>
+      <div class="empty hidden" id="rosterEmpty">No testers found.</div>
     </div>
 
     <div class="card">
@@ -300,7 +316,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
       <div class="empty hidden" id="timingEmpty">No timing data recorded yet.</div>
     </div>
 
-    <footer>Arché · Pilgrim Admin v1.11.0 — no study content is ever logged here.</footer>
+    <footer>Arché · Pilgrim Admin v1.12.0 — no study content is ever logged here.</footer>
   </div>
 
 </div>
@@ -321,6 +337,7 @@ let timeseriesData = null;
 let storageData = null;
 let timingData = null;
 let DISPLAY_NAMES = {}; // userId -> display name, added Sep 12 2026 identity-fix session
+let TESTER_ROSTER = []; // [{userId,pin,displayName}] from /admin/testers — the full account list, independent of usage activity
 let sortKey = 'activity';
 let sortDir = 'desc';
 const DEVICE_LABELS = { mobile:'Mobile', tablet:'Tablet', desktop:'Desktop', other:'Unknown' };
@@ -469,8 +486,8 @@ async function loadData(){
   document.getElementById('rangeLabel8').textContent = `(${from} → ${to})`;
   document.getElementById('rangeLabel9').textContent = `(${from} → ${to})`;
   try {
-    let displaynamesData;
-    [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData, timingData, displaynamesData] = await Promise.all([
+    let testersData;
+    [usageData, ratelimitData, errorsData, diagnosticsData, timeseriesData, storageData, timingData, testersData] = await Promise.all([
       fetchAdmin('/admin/usage', { from, to }),
       fetchAdmin('/admin/ratelimits', { from, to }),
       fetchAdmin('/admin/errors', { from, to }),
@@ -478,9 +495,12 @@ async function loadData(){
       fetchAdmin('/admin/timeseries', { from, to }),
       fetchAdmin('/admin/storage', {}),
       fetchAdmin('/admin/timing', {}),
-      fetchAdmin('/admin/displaynames', {})
+      fetchAdmin('/admin/testers', {})
     ]);
-    DISPLAY_NAMES = displaynamesData.names || {};
+    TESTER_ROSTER = testersData.testers || [];
+    DISPLAY_NAMES = {};
+    TESTER_ROSTER.forEach(t => { DISPLAY_NAMES[t.userId] = t.displayName; });
+    renderTesterRoster();
   } catch (e) {
     if (e.message !== 'unauthorized') showToast('Failed to load data — check connection', 'err');
     throw e;
@@ -890,11 +910,7 @@ function renderTesterTable(){
     const tr = document.createElement('tr');
     tr.className = 'tester-row';
     const shownName = DISPLAY_NAMES[r.id] || r.id;
-    tr.innerHTML = `<td>${escapeHtml(shownName)}<button class="rename-btn" title="Rename tester" data-userid="${escapeHtml(r.id)}" data-current="${escapeHtml(shownName)}">✎</button></td><td>${r.daysActive}</td><td>${r.screens}</td><td>${r.tools}</td><td>${r.tokens.toLocaleString()}</td><td>${fmtDate(r.lastseen)}</td>`;
-    tr.querySelector('.rename-btn').addEventListener('click', (ev) => {
-      ev.stopPropagation(); // don't also toggle the detail row open/closed
-      renameTester(r.id, shownName);
-    });
+    tr.innerHTML = `<td>${escapeHtml(shownName)}</td><td>${r.daysActive}</td><td>${r.screens}</td><td>${r.tools}</td><td>${r.tokens.toLocaleString()}</td><td>${fmtDate(r.lastseen)}</td>`;
     const detail = document.createElement('tr');
     detail.className = 'detail-row';
     const screenEntries = Object.entries(r.raw.screens||{}).sort((a,b)=>b[1]-a[1]);
@@ -916,12 +932,38 @@ function renderTesterTable(){
   });
 }
 
+// Manage Testers roster — added Sep 12 2026 (second pass), replacing the
+// usage-table-only pencil icon. That approach silently failed for any tester
+// with no activity in the selected date range, since they never got a row in
+// Per-Tester Breakdown at all — not a click bug, just nothing there to click.
+// This roster comes straight from PILGRIM_USERS's pin: entries (see
+// /admin/testers), so every real account always has a row here.
+function renderTesterRoster(){
+  const body = document.getElementById('rosterBody');
+  body.innerHTML = '';
+  document.getElementById('rosterEmpty').classList.toggle('hidden', TESTER_ROSTER.length > 0);
+  TESTER_ROSTER.slice().sort((a,b) => a.displayName.localeCompare(b.displayName)).forEach(t => {
+    const tr = document.createElement('tr');
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-ghost';
+    btn.textContent = 'Rename';
+    btn.addEventListener('click', () => renameTester(t.userId, t.displayName));
+    const td1 = document.createElement('td'); td1.textContent = t.displayName;
+    const td2 = document.createElement('td'); td2.textContent = t.pin;
+    const td3 = document.createElement('td'); td3.appendChild(btn);
+    tr.append(td1, td2, td3);
+    body.appendChild(tr);
+  });
+}
+
 // Rename Tester — added Sep 12 2026 identity-fix session. Only ever writes
 // displayname:{userId} via the Worker (see /admin/set-displayname) — never
 // touches the pin:{4digit} mapping, so this can never orphan a tester's data
 // the way editing the KV value by hand in the Cloudflare dashboard used to
 // (see pilgrim-pin-identity-bug.md). This is now the only sanctioned way to
-// rename a tester.
+// rename a tester. Note: a tester's own device only picks up the new name on
+// their NEXT PIN login (Settings > Switch User, then re-enter PIN) — an
+// already-open session cached the old name at boot and has no live-refresh.
 async function renameTester(userId, currentName){
   const next = prompt(`Rename tester "${currentName}" to:`, currentName);
   if (next === null) return; // cancelled
@@ -930,8 +972,11 @@ async function renameTester(userId, currentName){
   try {
     await postAdmin('/admin/set-displayname', { userId, displayName: trimmed });
     DISPLAY_NAMES[userId] = trimmed;
+    const entry = TESTER_ROSTER.find(t => t.userId === userId);
+    if (entry) entry.displayName = trimmed;
+    renderTesterRoster();
     renderTesterTable();
-    showToast(`Renamed to "${trimmed}"`, 'ok');
+    showToast(`Renamed to "${trimmed}" — they'll see it next time they log in (Switch User + re-enter PIN)`, 'ok');
   } catch (e) {
     if (e.message !== 'unauthorized') showToast('Rename failed — check connection', 'err');
   }
