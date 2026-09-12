@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.11',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.12',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feat: added a live Preview to Settings > Appearance, below the Content Text Size control. Shows a sample line of scripture that updates instantly with both the selected Content Font and the current text size \u2014 previously the font tiles showed a fixed-size \"Aa\" that never reflected the size stepper, and the size control had no visual sample at all."
+    ]},
+  {
+    version:'4.34.11',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: consolidated the Notes-screen Camera/Gallery/Document buttons into a single \"Add Photo or Document\" button that opens a small picker — was three separate buttons in one row.",

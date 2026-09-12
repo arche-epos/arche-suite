@@ -200,6 +200,7 @@ input[type="range"]{accent-color:var(--gold)}
 .font-tile-label{font-family:'Crimson Pro',serif;font-size:10px;color:var(--txt4);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .font-tile-preview{font-size:16px;color:var(--txt2)}
 .font-tile.font-default .font-tile-preview{color:var(--gold)}
+.appearance-preview{font-family:var(--font-display);font-size:calc(17px * var(--content-scale));line-height:1.85;color:var(--txt1);padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)}
 .conndot{width:8px;height:8px;border-radius:50%;background:var(--sagebright);flex-shrink:0}
 .overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.75);display:none;align-items:flex-end;justify-content:center;z-index:500;padding-bottom:var(--safe-b);cursor:pointer}
 .res-popout{display:none;position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-top:2px solid var(--golddim);border-radius:var(--rl) var(--rl) 0 0;padding:16px 18px 24px;max-height:60%;overflow-y:auto;z-index:10;box-shadow:0 -8px 32px rgba(0,0,0,.6);}
@@ -998,6 +999,8 @@ input[type="range"]{accent-color:var(--gold)}
         <div id="font-scale-label" style="font-family:'EB Garamond',serif;font-size:16px;color:var(--gold);min-width:52px;text-align:center">100%</div>
         <button class="btn btn-sec btn-sm" onclick="adjustFontScale(1)" id="font-scale-plus" style="min-width:48px">A+</button>
       </div>
+      <div style="font-size:12px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;margin-top:18px">Preview</div>
+      <div class="appearance-preview">For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.</div>
     </div>
     <div style="margin-bottom:22px" id="settings-sec-tts">
       <div class="sethead">Listen / Text-to-Speech</div>
@@ -1664,7 +1667,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.11"></script>
+<script type="module" src="app.js?v=4.34.12"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
