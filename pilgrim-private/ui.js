@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.4';
+} from './utils.js?v=4.34.5';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.4';
+} from './storage.js?v=4.34.5';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.4';
+} from './tts.js?v=4.34.5';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.4';
+} from './sync.js?v=4.34.5';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.4';
+} from './studyTools.js?v=4.34.5';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2847,11 +2847,8 @@ var TOUR_A_STEPS=[
   {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here any time to start a new study.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
-  {screen:'study',before:function(){switchStudyTab('notes');},target:'#f-date',title:'Date',body:"Today's date is filled in automatically — you can change it any time."},
-  {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-teacher',title:'Teacher / Preacher',body:"Add who taught or preached this study. We've filled in an example name."},
-  {screen:'study',before:function(){switchStudyTab('notes');cur.series="How to Use Archē";populateField();},target:'#f-series',title:'Series',body:'Group related studies under a series name — handy for a sermon series or a class.'},
-  {screen:'study',before:function(){switchStudyTab('notes');cur.title='First-Time Study';populateField();},target:'#f-title',title:'Title',body:'Give your study a specific title.'},
-  {screen:'study',before:function(){switchStudyTab('notes');cur.tags=['study'];renderTagPicker();},target:'#f-tags-picker',title:'Tags',body:'Tag a study to filter and sort by it later in the Library. We selected "Study" as an example — tap any tag to toggle it.'},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-date,#f-teacher',title:'Date & Teacher',body:"Today's date fills in automatically. Add who taught or preached — we've filled in an example name."},
+  {screen:'study',before:function(){switchStudyTab('notes');cur.series="How to Use Archē";cur.title='First-Time Study';cur.tags=['study'];populateField();renderTagPicker();},target:'#f-series,#f-title,#f-tags-picker',title:'Series, Title & Tags',body:"Group related studies under a series, give this one a specific title, and tag it to filter and sort later — we filled in examples for all three."},
   {screen:'study',before:function(){switchStudyTab('notes');var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'.bp-open-btn',title:'Or Browse for It',body:'Prefer not to type? Tap this book icon to open the Reference Picker — browse by Testament, Book, Chapter, and Verse, then tap Load Scripture.'},
   {screen:'study',before:function(){switchStudyTab('notes');bpOpen();},target:'#bp-overlay',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
@@ -2863,12 +2860,7 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical',title:TOOL_LABELS.lexical,body:TOOL_DESCS.lexical},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-grammar',title:TOOL_LABELS.grammar,body:TOOL_DESCS.grammar},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-historical',title:TOOL_LABELS.historical,body:TOOL_DESCS.historical},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-cultural',title:TOOL_LABELS.cultural,body:TOOL_DESCS.cultural},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-crossrefs',title:TOOL_LABELS.crossrefs,body:TOOL_DESCS.crossrefs},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-geography',title:TOOL_LABELS.geography,body:TOOL_DESCS.geography},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical,#btn-grammar,#btn-historical,#btn-cultural,#btn-crossrefs,#btn-geography',title:'Six AI Research Tools',body:"Word Study (word meanings), Language & Structure (grammar), Historical Context, Cultural Context, Cross-References, and Places & Geography. Each button's subtitle explains what it covers — tap any one to run it."},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all six tools at once — four analyze this specific passage (Word Study, Language & Structure, Cross-References, and Places & Geography) and two study the entire book (Historical Context and Cultural Context).'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
