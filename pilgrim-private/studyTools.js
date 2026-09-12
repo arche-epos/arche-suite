@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.5';
+} from './utils.js?v=4.34.6';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.5';
-import { syncToGist } from './sync.js?v=4.34.5';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.5';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.6';
+import { syncToGist } from './sync.js?v=4.34.6';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.6';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -91,13 +91,22 @@ async function fetchScr(){
   if(sett.scrMode==='paste'){openPasteModal();return;}
   var disp=document.getElementById('scrdisplay');
   disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
-  if(!online){disp.innerHTML='<div style="text-align:center;padding:16px"><p style="color:var(--txt3);font-style:italic;font-size:13px;margin-bottom:12px">Offline - paste scripture manually</p><button class="btn btn-sec btn-sm" onclick="openPasteModal()">Paste Scripture</button></div>';return;}
+  if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal("You're offline \u2014 check your connection, try again, or paste the passage in yourself.");return;}
   try{
     var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
     if(!text)throw new Error('Empty response');
     if(ar)ar.scriptureText=text;
     renderScrText(text,trans);document.getElementById('scracts').style.display='flex';
-  }catch(e){logError('Load Scripture Passage',e);disp.innerHTML='<div style="padding:10px"><p style="color:var(--crimsonbright);font-size:13px;margin-bottom:10px">Could not load passage.</p><button class="btn btn-sec btn-sm" onclick="openPasteModal()">Paste Scripture</button></div>';}
+  }catch(e){logError('Load Scripture Passage',e);disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal('Could not load that passage \u2014 check the reference, try again, or paste it in yourself.');}
+}
+/**
+ * Opens the scripture-load-error popup with a given message, offering Try Again or Paste It In.
+ * Does not change the persisted scrMode setting \u2014 this is a one-time recovery choice, not a mode switch.
+ * @param {string} msg - The error message to display.
+ */
+function openScrErrorModal(msg){
+  var el=document.getElementById('scr-error-msg');if(el)el.textContent=msg;
+  var ov=document.getElementById('scr-error-overlay');if(ov)ov.classList.add('on');
 }
 /**
  * Fetches a passage from the ESV API via the arche-proxy Cloudflare Worker.
@@ -2012,7 +2021,7 @@ export {
   // S11 — Bible API
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
   getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
-  copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
+  copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,

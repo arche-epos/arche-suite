@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.5',date:'Sep 11, 2026',label:'Latest',
+    version:'4.34.6',date:'Sep 11, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "tune: Notes screen decluttered. The Version dropdown moved out of the crowded reference row and into the Scripture bar next to Hide, leaving just the book-picker icon and reference field up top. The always-visible Auto/Paste toggle is gone entirely — auto-load still runs by default, and a failed load now opens a popup with Try Again or Paste It In instead of the old inline error text. Picking Paste It In only applies to that one load; the next study still tries Auto first."
+    ]},
+  {
+    version:'4.34.5',date:'Sep 11, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "tune: Guided Tour (Tour A) trimmed from 35 steps to 27 — the five header-field steps (Date, Teacher, Series, Title, Tags) are now two steps covering the same fields in logical groups, and the six individual AI-tool steps are now one step introducing all six by name. No coverage lost, same fields and tools are still explained, just grouped instead of one-at-a-time."

@@ -704,25 +704,7 @@ input[type="range"]{accent-color:var(--gold)}
       <div id="f-ref-pills" class="ref-pills"></div>
       <div class="frow" style="align-items:flex-end">
         <div class="ig" style="flex:0 0 auto;margin-bottom:0"><label style="visibility:hidden">Pick</label><button class="bp-open-btn" onclick="bpOpen()" title="Pick book &amp; chapter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button></div>
-        <div class="ig" style="flex:2;margin-bottom:0"><label>Scripture Reference</label><input type="text" id="f-ref" placeholder="e.g. John 3:16-17" oninput="var ar=activeRef();if(ar){ar.reference=this.value;}renderRefPills('f-ref-pills','field');updateBarRefLabel();" onblur="fetchScr()"></div>
-        <div class="ig" style="flex:0 0 76px;margin-bottom:0"><label>Version</label>
-          <select id="f-trans" onchange="fetchScr()">
-            <option value="esv">ESV</option><option value="kjv">KJV</option>
-            <option value="asv">ASV</option><option value="web">WEB</option>
-            <option value="ylt">YLT</option><option value="darby">Darby</option>
-            <option value="nkjv">NKJV</option><option value="net">NET</option>
-            <option value="amp">AMP</option><option value="csb">CSB</option>
-            <option value="nlt">NLT</option><option value="msg">MSG</option>
-            <option value="nasb">NASB</option><option value="niv">NIV</option>
-          </select>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
-        <span style="font-size:10px;font-weight:500;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em">Scripture Input</span>
-        <div style="display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:2px;gap:2px">
-          <button id="scr-mode-auto" onclick="setScrMode('auto')" style="border:none;border-radius:50px;padding:5px 13px;font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;transition:all .2s;background:var(--gold);color:var(--bg0);font-weight:600">Auto</button>
-          <button id="scr-mode-paste" onclick="setScrMode('paste')" style="border:none;border-radius:50px;padding:5px 13px;font-family:'Crimson Pro',serif;font-size:12px;cursor:pointer;transition:all .2s;background:none;color:var(--txt3)">Paste</button>
-        </div>
+        <div class="ig" style="flex:1;margin-bottom:0"><label>Scripture Reference</label><input type="text" id="f-ref" placeholder="e.g. John 3:16-17" oninput="var ar=activeRef();if(ar){ar.reference=this.value;}renderRefPills('f-ref-pills','field');updateBarRefLabel();" onblur="fetchScr()"></div>
       </div>
       <div class="ig" style="margin-bottom:8px"><label>Series</label><input type="text" id="f-series" placeholder="Series name (optional)"></div>
       <div class="ig" style="margin-bottom:0"><label>Title</label><input type="text" id="f-title" placeholder="Study title"></div>
@@ -732,6 +714,15 @@ input[type="range"]{accent-color:var(--gold)}
   <div class="scrpanel-bar" id="scrpanel-bar" onclick="toggleScripture()">
     <span class="bar-ref" id="bar-ref-label">Scripture</span>
     <div style="display:flex;align-items:center;gap:8px">
+      <select id="f-trans" onclick="event.stopPropagation()" onchange="fetchScr()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:3px 6px;cursor:pointer">
+        <option value="esv">ESV</option><option value="kjv">KJV</option>
+        <option value="asv">ASV</option><option value="web">WEB</option>
+        <option value="ylt">YLT</option><option value="darby">Darby</option>
+        <option value="nkjv">NKJV</option><option value="net">NET</option>
+        <option value="amp">AMP</option><option value="csb">CSB</option>
+        <option value="nlt">NLT</option><option value="msg">MSG</option>
+        <option value="nasb">NASB</option><option value="niv">NIV</option>
+      </select>
       <span id="bar-scrchev" style="color:var(--txt3);font-size:14px">^</span>
       <span id="bar-scrchev-lbl" style="font-size:10px;color:var(--txt4)">HIDE</span>
     </div>
@@ -1392,6 +1383,18 @@ input[type="range"]{accent-color:var(--gold)}
   </div>
 </div>
 
+<!-- SCRIPTURE LOAD ERROR -->
+<div class="overlay" id="scr-error-overlay">
+  <div class="modal" style="text-align:center">
+    <div class="modal-title">Couldn't Load Passage</div>
+    <p id="scr-error-msg" style="font-size:13px;color:var(--txt3);margin-bottom:20px;line-height:1.5">Could not load passage.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeOverlay('scr-error-overlay');openPasteModal();">Paste It In</button>
+      <button class="btn btn-primary" style="flex:1" onclick="closeOverlay('scr-error-overlay');fetchScr();">Try Again</button>
+    </div>
+  </div>
+</div>
+
 <!-- ONBOARDING -->
 <div class="ob-overlay" id="ob-overlay">
   <div class="ob-card">
@@ -1639,7 +1642,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.5"></script>
+<script type="module" src="app.js?v=4.34.6"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
