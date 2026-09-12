@@ -2811,7 +2811,6 @@ function tourCleanupDemoData(){
 var TOUR_A_STEPS=[
   {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
   {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
-  {screen:'library',target:'#lib-sort',title:'Sorting Your Library',body:'Sort by Date, Modified, Reference, Teacher, or Series. Choosing Reference, Teacher, or Series reveals a sub-filter bar so you can narrow things down further.'},
   {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here any time to start a new study.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
@@ -2834,8 +2833,7 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#d-conclusions-editor',title:'My Conclusions',body:'This space is entirely yours — no AI involved. Record your own theological conclusions, insights, and application.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="openExportModal"]',title:'Export Study to PDF',body:'Export the whole study — scripture, notes, outline, resources, conclusions, and any AI tool results — to a shareable PDF.'},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="shareStudyLink"]',title:'Share Study Link',body:'You can also share a study as a link — useful for sending a single study to someone without exporting a file.'},
-  {screen:'stats',before:function(){tourSeedProgressData();},target:'#stats-grid',title:'Progress',body:"Here’s your full Progress view — current streak, total studies, words written, and AI tools run; your most-studied books as a bar chart; and your seven most recently opened studies. Everything seeded for this tour disappears the moment it ends."}
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="shareStudyLink"]',title:'Share Study Link',body:'You can also share a study as a link — useful for sending a single study to someone without exporting a file.'}
 ];
 
 // ── TOUR B — "SETTINGS WALKTHROUGH" ──────────────────────────────────────
