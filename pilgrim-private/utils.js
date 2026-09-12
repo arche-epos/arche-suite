@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.3',date:'Sep 11, 2026',label:'Latest',
+    version:'4.34.4',date:'Sep 11, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      'fix: 155 changelog entries from Aug 22 to Sep 10 (34 versions) were double-escaping their unicode punctuation — an em dash or curly quote was stored as a literal backslash followed by the text "u2014" instead of the actual character, so expanding those entries in Settings > Changelog showed garbled text like result\\u2019s instead of result’s. Replaced every double-escaped sequence with the real character. No functional code changed, display text only.'
+    ]},
+  {
+    version:'4.34.3',date:'Sep 11, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       'fix: Study Sync status messages and error toasts ("Pushing...", "Pulling...", "Pull failed", "Force pulled") now say Backing up / Restoring / Backup failed / Force restored — matching the Backup/Restore button labels from the FBI-2 rename. The buttons were renamed months ago but the status line underneath them was missed.',
@@ -506,98 +512,98 @@ var CHANGELOG=[
     version:'4.34.2',date:'Sep 10, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Scripture Finder result cards now open a small action menu (Open in Read / Start a Study) on tap instead of jumping straight to the Read tab. Start a Study uses the result\\u2019s already-verified text directly \\u2014 no detour through Read, no re-fetch.',
-      'fix: Scripture Finder\\u2019s result-card tap, Deeper Dive, and Search All Translations buttons were silently non-functional since the Sep 8 release \\u2014 the underlying functions were never added to ui.js\\u2019s module export list, so they never reached window for the onclick= handlers to find. All three now work.'
+      'feat: Scripture Finder result cards now open a small action menu (Open in Read / Start a Study) on tap instead of jumping straight to the Read tab. Start a Study uses the result’s already-verified text directly — no detour through Read, no re-fetch.',
+      'fix: Scripture Finder’s result-card tap, Deeper Dive, and Search All Translations buttons were silently non-functional since the Sep 8 release — the underlying functions were never added to ui.js’s module export list, so they never reached window for the onclick= handlers to find. All three now work.'
     ]},
   {
     version:'4.34.1',date:'Sep 10, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Read tab Skip Prev/Next Verse arrows no longer start audio playback on their own. Tapping a verse now enlarges/focuses it without reading it aloud (as designed) \\u2014 but the skip arrows still unexpectedly kicked off playback if nothing was actively speaking. They now just move the enlarged verse, matching a direct verse tap. If TTS is already speaking, skip still continues playback into the next verse as before.',
-      'fix: Pilgrim Guide FAB could visually blend into same-colored backgrounds (e.g. the gold \\u201cStart a Study from this Passage\\u201d bar), making it hard to see. Added a persistent contrasting ring plus a stronger shadow so it stands out against any background, in both themes.'
+      'fix: Read tab Skip Prev/Next Verse arrows no longer start audio playback on their own. Tapping a verse now enlarges/focuses it without reading it aloud (as designed) — but the skip arrows still unexpectedly kicked off playback if nothing was actively speaking. They now just move the enlarged verse, matching a direct verse tap. If TTS is already speaking, skip still continues playback into the next verse as before.',
+      'fix: Pilgrim Guide FAB could visually blend into same-colored backgrounds (e.g. the gold “Start a Study from this Passage” bar), making it hard to see. Added a persistent contrasting ring plus a stronger shadow so it stands out against any background, in both themes.'
     ]},
   {
     version:'4.34.0',date:'Sep 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: new Appearance section in Settings \\u2014 Parchment (light) is now the default theme, with the original dark theme available as a toggle. Fixes a real readability complaint: bright text on the old near-black background caused a halation/blur effect for at least one tester; parchment uses the same gold/crimson/sepia palette, just inverted (dark ink on light paper).',
-      'feat: content font picker \\u2014 11 font choices (6 serif, 4 sans-serif, 1 slab) apply to scripture text, Field Notes/Outline/Conclusions, AI Study Tools results, Lexicon lookups, and Word List cards. Menus, buttons, and headers keep the original EB Garamond/Crimson Pro pair regardless of choice.',
-      'feat: content text-size control (A\\u2212/A+ in Settings > Appearance, 9 steps from 85% to 130%) applies to the same reading surfaces as the font picker.',
-      'fix: the Field Notes header\\u2019s old \\u201cA+\\u201d button was a separate, non-persisted, two-state toggle that only affected Field Notes. It now uses the same persisted, app-wide text-size setting as everything else \\u2014 full control (both directions) lives in Settings > Appearance.'
+      'feat: new Appearance section in Settings — Parchment (light) is now the default theme, with the original dark theme available as a toggle. Fixes a real readability complaint: bright text on the old near-black background caused a halation/blur effect for at least one tester; parchment uses the same gold/crimson/sepia palette, just inverted (dark ink on light paper).',
+      'feat: content font picker — 11 font choices (6 serif, 4 sans-serif, 1 slab) apply to scripture text, Field Notes/Outline/Conclusions, AI Study Tools results, Lexicon lookups, and Word List cards. Menus, buttons, and headers keep the original EB Garamond/Crimson Pro pair regardless of choice.',
+      'feat: content text-size control (A−/A+ in Settings > Appearance, 9 steps from 85% to 130%) applies to the same reading surfaces as the font picker.',
+      'fix: the Field Notes header’s old “A+” button was a separate, non-persisted, two-state toggle that only affected Field Notes. It now uses the same persisted, app-wide text-size setting as everything else — full control (both directions) lives in Settings > Appearance.'
     ]},
   {
     version:'4.33.0',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Word Study mode is live in the Lexicon \\u2014 looking up a word with more than one meaningfully distinct original-language sense (e.g. \\u201clove\\u201d \\u2192 agap\\u0113/phile\\u014d/eros/storg\\u0113) now shows 3-5 tappable candidate senses instead of the AI silently picking one. Tap a sense to run the full lookup on that Strong\\u2019s number. Strong\\u2019s-number input and unambiguous words are unaffected \\u2014 same single-lookup behavior as before.',
-      'feat: sense picks are now tracked (word searched + Strong\\u2019s number chosen, no study content) to see whether testers re-pick the same sense for a word or it varies by passage.',
-      'fix: Word List and study word-list cards showed only the Greek/Hebrew word (e.g. \\u201c\\u03b8\\u03ac\\u03c1\\u03c3\\u03bf\\u03c2\\u201d), making saved words hard to identify at a glance. Cards now show \\u201cEnglish gloss \\u2014 original word (Strong\\u2019s#)\\u201d, e.g. \\u201cCourage \\u2014 \\u03b8\\u03ac\\u03c1\\u03c3\\u03bf\\u03c2 (G2294)\\u201d. Words saved before this update fall back to just the original word/Strong\\u2019s# until re-saved.'
+      'feat: Word Study mode is live in the Lexicon — looking up a word with more than one meaningfully distinct original-language sense (e.g. “love” → agapē/phileō/eros/storgē) now shows 3-5 tappable candidate senses instead of the AI silently picking one. Tap a sense to run the full lookup on that Strong’s number. Strong’s-number input and unambiguous words are unaffected — same single-lookup behavior as before.',
+      'feat: sense picks are now tracked (word searched + Strong’s number chosen, no study content) to see whether testers re-pick the same sense for a word or it varies by passage.',
+      'fix: Word List and study word-list cards showed only the Greek/Hebrew word (e.g. “θάρσος”), making saved words hard to identify at a glance. Cards now show “English gloss — original word (Strong’s#)”, e.g. “Courage — θάρσος (G2294)”. Words saved before this update fall back to just the original word/Strong’s# until re-saved.'
     ]},
   {
     version:'4.32.3',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Pilgrim Guide\\u2019s intro caption still described App Help only, from before Scripture Finder existed. Updated it to state both: app navigation help and verified-passage lookup.'
+      'fix: Pilgrim Guide’s intro caption still described App Help only, from before Scripture Finder existed. Updated it to state both: app navigation help and verified-passage lookup.'
     ]},
   {
     version:'4.32.2',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Scripture Finder was returning several overlapping/nested results for one passage (e.g. \\u201cLuke 15:11-32\\u201d + \\u201cLuke 15:11-26\\u201d + \\u201cLuke 15:27-32\\u201d for one prodigal-son query) instead of distinct answers. Tightened the candidate-quality guidance and added a client-side filter that drops any candidate whose verse range overlaps one already accepted \\u2014 holds regardless of what the model proposes.'
+      'fix: Scripture Finder was returning several overlapping/nested results for one passage (e.g. “Luke 15:11-32” + “Luke 15:11-26” + “Luke 15:27-32” for one prodigal-son query) instead of distinct answers. Tightened the candidate-quality guidance and added a client-side filter that drops any candidate whose verse range overlaps one already accepted — holds regardless of what the model proposes.'
     ]},
   {
     version:'4.32.1',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Scripture Finder was returning \\u201cNo response received\\u201d on every query \\u2014 gpt-oss-120b spent its entire token budget on internal reasoning before ever writing the reply, so content came back empty. Added reasoning_effort:\\u2019low\\u2019 and raised the token ceiling to give the model room to actually answer.'
+      'fix: Scripture Finder was returning “No response received” on every query — gpt-oss-120b spent its entire token budget on internal reasoning before ever writing the reply, so content came back empty. Added reasoning_effort:’low’ and raised the token ceiling to give the model room to actually answer.'
     ]},
   {
     version:'4.32.0',date:'Sep 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Scripture Finder mode is live in Pilgrim Guide \\u2014 ask to locate a passage by topic (\\u201cwhere was the flood of Noah\\u201d) or a partial/misremembered quote and it proposes candidate references, verifies each against real fetched text, and shows only what checks out (never AI-recalled scripture). Tap a result to open it in the Read tab. \\u201cDeeper Dive\\u201d asks for more candidates on the same request; \\u201cSearch All Translations\\u201d re-fetches the same verified references in 1-2 additional translations to compare wording. Word Study mode is still coming soon.'
+      'feat: Scripture Finder mode is live in Pilgrim Guide — ask to locate a passage by topic (“where was the flood of Noah”) or a partial/misremembered quote and it proposes candidate references, verifies each against real fetched text, and shows only what checks out (never AI-recalled scripture). Tap a result to open it in the Read tab. “Deeper Dive” asks for more candidates on the same request; “Search All Translations” re-fetches the same verified references in 1-2 additional translations to compare wording. Word Study mode is still coming soon.'
     ]},
   {
     version:'4.31.0',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Pilgrim Guide App Help mode is live \\u2014 tapping the FAB now opens a real chat instead of the \\u201ccoming soon\\u201d stub. Ask any \\u201chow do I...\\u201d question about the app and it answers from a maintained reference doc (never invents an answer beyond it). The same message also decides intent: if you ask to find a passage or word meaning instead, Pilgrim Guide currently replies that those modes (Scripture Finder, Word Study) are coming soon rather than guessing \\u2014 no scripture content is ever generated from memory. No chat history is saved between sessions.'
+      'feat: Pilgrim Guide App Help mode is live — tapping the FAB now opens a real chat instead of the “coming soon” stub. Ask any “how do I...” question about the app and it answers from a maintained reference doc (never invents an answer beyond it). The same message also decides intent: if you ask to find a passage or word meaning instead, Pilgrim Guide currently replies that those modes (Scripture Finder, Word Study) are coming soon rather than guessing — no scripture content is ever generated from memory. No chat history is saved between sessions.'
     ]},
   {
     version:'4.30.6',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: unified Pilgrim Guide entry point \\u2014 the Library-only \\u201c+\\u201d button is now a single FAB present on every screen. On Library it opens a small menu (New Study / Pilgrim Guide); everywhere else it launches Pilgrim Guide directly. Pilgrim Guide itself (App Help, Scripture Finder, Word Study modes) is not yet built \u2014 tapping it currently shows a \u201ccoming soon\u201d notice. See spec-pilgrim-assistant-v2.md.'
+      'feat: unified Pilgrim Guide entry point — the Library-only “+” button is now a single FAB present on every screen. On Library it opens a small menu (New Study / Pilgrim Guide); everywhere else it launches Pilgrim Guide directly. Pilgrim Guide itself (App Help, Scripture Finder, Word Study modes) is not yet built \u2014 tapping it currently shows a \u201ccoming soon\u201d notice. See spec-pilgrim-assistant-v2.md.'
     ]},
   {
     version:'4.30.5',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: internal module cross-imports (storage.js, sync.js, studyTools.js, ui.js, tts.js) were still referencing the stale ?v=4.30.0 cache-bust string while app.js and index.html had advanced to 4.30.4 across the last three releases \\u2014 different query strings resolve to separate ES module instances in the browser, meaning app.js\\u2019s boot-time state (storage, sync, utils) could diverge from the instances ui.js/studyTools.js actually run against. All cross-import references resynced to 4.30.5 in lockstep. No logic changes.'
+      'fix: internal module cross-imports (storage.js, sync.js, studyTools.js, ui.js, tts.js) were still referencing the stale ?v=4.30.0 cache-bust string while app.js and index.html had advanced to 4.30.4 across the last three releases — different query strings resolve to separate ES module instances in the browser, meaning app.js’s boot-time state (storage, sync, utils) could diverge from the instances ui.js/studyTools.js actually run against. All cross-import references resynced to 4.30.5 in lockstep. No logic changes.'
     ]},
   {
     version:'4.30.4',date:'Sep 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Lexicon lookup was capped at max_tokens:3000 \\u2014 tight for its own prompt, which can ask for up to 30 full-verse occurrences plus a scholarly entry, occasionally causing a truncated/malformed JSON response (\\u201cCould not parse lexicon data\\u201d). Raised to 16000 (matching the ceiling used for other AI tools during their right-sizing pass) as a temporary wide cap while server-side token tracking (see Admin) collects real usage data to set a permanent, right-sized limit.'
+      'fix: Lexicon lookup was capped at max_tokens:3000 — tight for its own prompt, which can ask for up to 30 full-verse occurrences plus a scholarly entry, occasionally causing a truncated/malformed JSON response (“Could not parse lexicon data”). Raised to 16000 (matching the ceiling used for other AI tools during their right-sizing pass) as a temporary wide cap while server-side token tracking (see Admin) collects real usage data to set a permanent, right-sized limit.'
     ]},
   {
     version:'4.30.3',date:'Sep 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: AI tool run duration is now tracked for admin visibility \\u2014 individual tool calls (Word Study, Grammar, etc.) time themselves server-side, and Snapshot now beacons its full-batch run time too. No content or study data is ever included, only timing.'
+      'feat: AI tool run duration is now tracked for admin visibility — individual tool calls (Word Study, Grammar, etc.) time themselves server-side, and Snapshot now beacons its full-batch run time too. No content or study data is ever included, only timing.'
     ]},
   {
     version:'4.30.2',date:'Sep 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: "Run Full Diagnostics" now enforces a 30-second cooldown after each run \\u2014 back-to-back runs were tripping Groq\\u2019s rate limit on the AI test (HTTP 429). The button shows a live "Wait Xs" countdown, and a toast explains the wait if you try again early.'
+      'fix: "Run Full Diagnostics" now enforces a 30-second cooldown after each run — back-to-back runs were tripping Groq’s rate limit on the AI test (HTTP 429). The button shows a live "Wait Xs" countdown, and a toast explains the wait if you try again early.'
     ]},
   {
     version:'4.30.1',date:'Sep 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: the 4 diagnostic /groq ping tests (Settings \\u2192 Test connectivity, Quick Test dots, Run Full Diagnostics) now send X-Tester-Id and an X-Tool-Name of "diag_ping" \\u2014 these pings were previously landing in pilgrim-admin\\u2019s "unknown" tester bucket with no way to attribute them; they\\u2019ll now show under the correct tester going forward, tagged separately from real AI Study Tools usage'
+      'fix: the 4 diagnostic /groq ping tests (Settings → Test connectivity, Quick Test dots, Run Full Diagnostics) now send X-Tester-Id and an X-Tool-Name of "diag_ping" — these pings were previously landing in pilgrim-admin’s "unknown" tester bucket with no way to attribute them; they’ll now show under the correct tester going forward, tagged separately from real AI Study Tools usage'
     ]},
   {
     version:'4.30.0',date:'Aug 30, 2026',label:'',
@@ -606,7 +612,7 @@ var CHANGELOG=[
       'feat: error and diagnostic beacons now tag which app version sent them, so a stale-cached-client issue can be told apart from a live-version bug.',
       'feat: Gist sync push/pull now reports success/failure to the admin dashboard — sync health was previously invisible.',
       'feat: a global error handler now catches anything not already wrapped in an explicit try/catch (plus unhandled promise rejections), closing a gap where uncaught exceptions were invisible to both the local error log and the admin dashboard.',
-      'feat: current on-device photo/document storage totals are now reported at app boot and after every sync — the admin dashboard\\u2019s Resource Storage card previously only showed cumulative uploads, not real current totals.',
+      'feat: current on-device photo/document storage totals are now reported at app boot and after every sync — the admin dashboard’s Resource Storage card previously only showed cumulative uploads, not real current totals.',
       'internal: broadened logError() coverage to two previously-silent catch blocks (loading studies from localStorage, and hitting the storage quota on save) and one in TTS settings load.'
     ]},
   {
@@ -648,27 +654,27 @@ var CHANGELOG=[
     version:'4.28.12',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: opening a study could silently wipe its Outline and Conclusions fields to empty and autosave over the real content \\u2014 openStudy() cleared both Quill editors before the real data loaded, but never reset their dirty flags, so navTo()\\u2019s save-before-nav could mistake the momentarily-empty editors for a real edit and persist the empty state. Dirty flags now reset immediately after clearing, matching the existing Field Notes pattern.'
+      'fix: opening a study could silently wipe its Outline and Conclusions fields to empty and autosave over the real content — openStudy() cleared both Quill editors before the real data loaded, but never reset their dirty flags, so navTo()’s save-before-nav could mistake the momentarily-empty editors for a real edit and persist the empty state. Dirty flags now reset immediately after clearing, matching the existing Field Notes pattern.'
     ]},
   {
     version:'4.28.11',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: AI Study Tools could get stuck in a repetition loop (a phrase repeating dozens of times before recovering) \\u2014 no frequency_penalty was set on any of the 5 Groq/DeepInfra calls (Word Study/Snapshot/Expand/Continue/Lexicon), and max_tokens was still at a temporary 16384 diagnostic value flagged in prior sessions, giving a loop far more room to run before being cut off. Added frequency_penalty:0.3 to all 5 calls and right-sized max_tokens to 6000 on the two calls that were still at 16384 (Word Study, Study Snapshot) \\u2014 real usage maxes ~4,300 tokens.'
+      'fix: AI Study Tools could get stuck in a repetition loop (a phrase repeating dozens of times before recovering) — no frequency_penalty was set on any of the 5 Groq/DeepInfra calls (Word Study/Snapshot/Expand/Continue/Lexicon), and max_tokens was still at a temporary 16384 diagnostic value flagged in prior sessions, giving a loop far more room to run before being cut off. Added frequency_penalty:0.3 to all 5 calls and right-sized max_tokens to 6000 on the two calls that were still at 16384 (Word Study, Study Snapshot) — real usage maxes ~4,300 tokens.'
     ]},
   {
     version:'4.28.10',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Scripture panel (Notes tab) TTS was out of sync with the Read tab \\u2014 stopping playback never cleared the last-spoken verse\\u2019s highlight, and the panel still used the old plain-highlight effect instead of the Read tab\\u2019s focus-enlarge effect. Both now unified.',
-      'tune: Scripture panel player buttons resized from ~26px to 44px touch targets, matching the Read tab\\u2019s player styling.',
-      'fix: Scripture panel\\u2019s player bar is now a sticky fixture pinned to the top of the panel instead of scrolling down with the passage text \\u2014 on tablet/desktop it could previously drift down toward the Notes section on long passages.'
+      'fix: Scripture panel (Notes tab) TTS was out of sync with the Read tab — stopping playback never cleared the last-spoken verse’s highlight, and the panel still used the old plain-highlight effect instead of the Read tab’s focus-enlarge effect. Both now unified.',
+      'tune: Scripture panel player buttons resized from ~26px to 44px touch targets, matching the Read tab’s player styling.',
+      'fix: Scripture panel’s player bar is now a sticky fixture pinned to the top of the panel instead of scrolling down with the passage text — on tablet/desktop it could previously drift down toward the Notes section on long passages.'
     ]},
   {
     version:'4.28.9',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feature: current app version now shown beside the \\u201cPilgrim\\u201d title on the Library tab \\u2014 visible on every screen size without opening Settings.'
+      'feature: current app version now shown beside the “Pilgrim” title on the Library tab — visible on every screen size without opening Settings.'
     ]},
   {
     version:'4.28.8',date:'Aug 25, 2026',label:'',
@@ -741,31 +747,31 @@ var CHANGELOG=[
     version:'4.27.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'tune: Renamed the \\u2018SUMMARY OF THE DATA PRESENTED\\u2019 section header to just \\u2018SUMMARY\\u2019 across Language & Structure, Historical Context, and Cultural Context \\u2014 the original phrasing read stiff and academic for a general reader.'
+      'tune: Renamed the ‘SUMMARY OF THE DATA PRESENTED’ section header to just ‘SUMMARY’ across Language & Structure, Historical Context, and Cultural Context — the original phrasing read stiff and academic for a general reader.'
     ]},
   {
     version:'4.27.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: \\u2018Go Deeper \\u2014 full scholarly detail\\u2019 button now available on all 6 AI Study Tools (previously Historical/Cultural only). Each tool pulls back exactly what its scaled-back default leaves out: Word Study adds additional words and disputed-term debate; Language & Structure adds the full conjunction/particle breakdown and disputed grammatical readings (Wallace/Moulton/BDF); Cross-References adds Linguistic Connections; Places & Geography adds locations beyond the first 6 and full contested-identification sourcing; Historical/Cultural unchanged from v4.26.1.'
+      'feat: ‘Go Deeper — full scholarly detail’ button now available on all 6 AI Study Tools (previously Historical/Cultural only). Each tool pulls back exactly what its scaled-back default leaves out: Word Study adds additional words and disputed-term debate; Language & Structure adds the full conjunction/particle breakdown and disputed grammatical readings (Wallace/Moulton/BDF); Cross-References adds Linguistic Connections; Places & Geography adds locations beyond the first 6 and full contested-identification sourcing; Historical/Cultural unchanged from v4.26.1.'
     ]},
   {
     version:'4.26.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'tune: Follow-up pass on the v4.26.0 audience scaling, based on first real test run. Historical Context restored more substance (Author Background and Archaeological Attestation sections back, each section given more room) after the first cut ran too thin \\u2014 full scholarly debate/named-scholar detail still reserved for Go Deeper. Language & Structure now opens with a Summary section. Cross-References restored Thematic Connections and Narrative/Prophetic Connections (Linguistic Connections stays out \\u2014 too technical for the general-readability goal). Places & Geography now leads with the Journey Summary (when the passage involves travel) before individual locations, instead of after.'
+      'tune: Follow-up pass on the v4.26.0 audience scaling, based on first real test run. Historical Context restored more substance (Author Background and Archaeological Attestation sections back, each section given more room) after the first cut ran too thin — full scholarly debate/named-scholar detail still reserved for Go Deeper. Language & Structure now opens with a Summary section. Cross-References restored Thematic Connections and Narrative/Prophetic Connections (Linguistic Connections stays out — too technical for the general-readability goal). Places & Geography now leads with the Journey Summary (when the passage involves travel) before individual locations, instead of after.'
     ]},
   {
     version:'4.26.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: AI Study Tools scaled back for general readability. Language & Structure and Cross-References now give a concise, plain-language overview (Cross-References narrowed to direct scriptural references only) instead of a full technical breakdown. Historical Context and Cultural Context now open with a plain-language \\u2018Summary of the Data Presented\\u2019 followed by a brief overview \\u2014 the existing Expand button (now labeled \\u2018Go Deeper \\u2014 full scholarly detail\\u2019) still pulls in named scholars, archaeological detail, and minority positions on demand. Word Study and Places & Geography are unchanged. Study Snapshot now runs the shorter default versions of all 6 tools, making the whole run both faster and more approachable \\u2014 individual deep dives remain available per tool.'
+      'feat: AI Study Tools scaled back for general readability. Language & Structure and Cross-References now give a concise, plain-language overview (Cross-References narrowed to direct scriptural references only) instead of a full technical breakdown. Historical Context and Cultural Context now open with a plain-language ‘Summary of the Data Presented’ followed by a brief overview — the existing Expand button (now labeled ‘Go Deeper — full scholarly detail’) still pulls in named scholars, archaeological detail, and minority positions on demand. Word Study and Places & Geography are unchanged. Study Snapshot now runs the shorter default versions of all 6 tools, making the whole run both faster and more approachable — individual deep dives remain available per tool.'
     ]},
   {
     version:'4.25.2',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Removed the GEOGRAPHIC SETTING subsection from Cultural Context \\u2014 it duplicated what the dedicated Places & Geography tool already covers in far more depth (ancient/modern names, map links, terrain, archaeological attestation, certainty rating). Cultural Context now stays focused on customs, social structures, economics, and religious/civic practices.'
+      'fix: Removed the GEOGRAPHIC SETTING subsection from Cultural Context — it duplicated what the dedicated Places & Geography tool already covers in far more depth (ancient/modern names, map links, terrain, archaeological attestation, certainty rating). Cultural Context now stays focused on customs, social structures, economics, and religious/civic practices.'
     ]},
   {
     version:'4.25.1',date:'Aug 25, 2026',label:'',
@@ -777,43 +783,43 @@ var CHANGELOG=[
     version:'4.25.0',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'perf: All 5 AI Study Tools calls (Word Study/Snapshot/Expand/Continue/Lexicon) switched from \\u2018openai/gpt-oss-120b\\u2019 to \\u2018openai/gpt-oss-120b-Turbo\\u2019 on DeepInfra \\u2014 higher raw generation throughput to resolve the remaining HTTP 524 timeouts on long-output tools (Grammar) that \\u2018Reasoning: low\\u2019 alone did not fix.'
+      'perf: All 5 AI Study Tools calls (Word Study/Snapshot/Expand/Continue/Lexicon) switched from ‘openai/gpt-oss-120b’ to ‘openai/gpt-oss-120b-Turbo’ on DeepInfra — higher raw generation throughput to resolve the remaining HTTP 524 timeouts on long-output tools (Grammar) that ‘Reasoning: low’ alone did not fix.'
     ]},
   {
     version:'4.24.4',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: AI Study Tools were timing out (HTTP 524) on longer outputs (Grammar, Cultural, Places & Geography) \\u2014 gpt-oss-120b defaults to \\u2018medium\\u2019 reasoning effort, generating an invisible chain-of-thought that pushed total response time past Cloudflare\\u2019s ~100s edge timeout. Added \\u2018Reasoning: low\\u2019 to all 5 AI Study Tools calls (Word Study/Snapshot/Expand/Continue/Lexicon) to skip that overhead. Also removed the leftover 5s-per-tool Snapshot delay (was pacing around Groq\\u2019s free-tier rate limit, not needed on DeepInfra\\u2019s paid tier) \\u2014 trimmed to a 500ms courtesy buffer.'
+      'fix: AI Study Tools were timing out (HTTP 524) on longer outputs (Grammar, Cultural, Places & Geography) — gpt-oss-120b defaults to ‘medium’ reasoning effort, generating an invisible chain-of-thought that pushed total response time past Cloudflare’s ~100s edge timeout. Added ‘Reasoning: low’ to all 5 AI Study Tools calls (Word Study/Snapshot/Expand/Continue/Lexicon) to skip that overhead. Also removed the leftover 5s-per-tool Snapshot delay (was pacing around Groq’s free-tier rate limit, not needed on DeepInfra’s paid tier) — trimmed to a 500ms courtesy buffer.'
     ]},
   {
     version:'4.24.3',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: New app-wide Error Log (Settings \\u2192 Error Log) \\u2014 records any caught error (network, save, sync, AI tools, OCR) with a timestamp and what was being attempted; keeps the last 50 on this device, Copy Log button included. The 20 most recent entries are now automatically attached to any Feedback submission for better diagnostic context.'
+      'feat: New app-wide Error Log (Settings → Error Log) — records any caught error (network, save, sync, AI tools, OCR) with a timestamp and what was being attempted; keeps the last 50 on this device, Copy Log button included. The 20 most recent entries are now automatically attached to any Feedback submission for better diagnostic context.'
     ]},
   {
     version:'4.24.2',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Study Snapshot progress modal now shows a live counting-up elapsed-time timer per tool row (starts on \\u2018Running\\u2019, freezes on \\u2018Done\\u2019/\\u2018Failed\\u2019/\\u2018Cancelled\\u2019) and the completion_tokens used, alongside the existing status \\u2014 part of the same temporary max_tokens right-sizing test as v4.24.1'
+      'feat: Study Snapshot progress modal now shows a live counting-up elapsed-time timer per tool row (starts on ‘Running’, freezes on ‘Done’/‘Failed’/‘Cancelled’) and the completion_tokens used, alongside the existing status — part of the same temporary max_tokens right-sizing test as v4.24.1'
     ]},
   {
     version:'4.24.1',date:'Aug 25, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'chore: AI Study Tools \\u2014 temporarily raised max_tokens from 2048 to 16384 for all 6 tools (runTool + runSnapshot) to measure real output size post-DeepInfra migration; added a temporary on-screen diagnostic (completion_tokens / finish_reason) to the AI panel display \\u2014 not saved to study data. Will be reverted to a right-sized cap once test data is collected.'
+      'chore: AI Study Tools — temporarily raised max_tokens from 2048 to 16384 for all 6 tools (runTool + runSnapshot) to measure real output size post-DeepInfra migration; added a temporary on-screen diagnostic (completion_tokens / finish_reason) to the AI panel display — not saved to study data. Will be reverted to a right-sized cap once test data is collected.'
     ]},
   {
     version:'4.24.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Scripture panel now uses the Read tab\\u2019s TTS mechanics \\u2014 verse-by-verse playback (no verse numbers spoken aloud), tap a verse number to jump playback to it, and a compact mini-player (Skip Prev/Next Verse, Play/Pause, Restart, Speed) in place of the old single Listen button'
+      'feat: Scripture panel now uses the Read tab’s TTS mechanics — verse-by-verse playback (no verse numbers spoken aloud), tap a verse number to jump playback to it, and a compact mini-player (Skip Prev/Next Verse, Play/Pause, Restart, Speed) in place of the old single Listen button'
     ]},
   {
     version:'4.23.2',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: corrected changelog dates for v4.20.2-4.23.1 — copy-paste error had them all dated Aug 18 (the prior session\\u2019s date) instead of the actual date those changes shipped'
+      'fix: corrected changelog dates for v4.20.2-4.23.1 — copy-paste error had them all dated Aug 18 (the prior session’s date) instead of the actual date those changes shipped'
     ]},
   {
     version:'4.23.1',date:'Aug 22, 2026',label:'',
@@ -837,14 +843,14 @@ var CHANGELOG=[
     version:'4.21.0',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'feat: Read tab range mode now shows a chapter divider when a passage range crosses a chapter or book boundary (e.g. "John 1:1-2:5") — a "Chapter 2" header appears between the text, or the new book\\u2019s name if the range crosses into a different book (e.g. "Acts 1")',
+      'feat: Read tab range mode now shows a chapter divider when a passage range crosses a chapter or book boundary (e.g. "John 1:1-2:5") — a "Chapter 2" header appears between the text, or the new book’s name if the range crosses into a different book (e.g. "Acts 1")',
       'fix: Read tab player bar buttons (Skip Prev/Next Verse, Play/Pause) sized up to larger, easier-to-hit touch targets (52-56px) for phone, tablet, and desktop; Voice picker fills the remaining row space'
     ]},
   {
     version:'4.20.2',date:'Aug 22, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      'fix: Read tab player bar is back to a single row — Skip Prev/Next Verse and Play/Pause now share the same fixed width as the Speed dropdown, and the Voice picker fills the remaining space instead of wrapping to its own row. Row scrolls horizontally as a fallback on very narrow phones if all five controls don\\u2019t fit'
+      'fix: Read tab player bar is back to a single row — Skip Prev/Next Verse and Play/Pause now share the same fixed width as the Speed dropdown, and the Voice picker fills the remaining space instead of wrapping to its own row. Row scrolls horizontally as a fallback on very narrow phones if all five controls don’t fit'
     ]},
   {
     version:'4.20.1',date:'Aug 18, 2026',label:'',
