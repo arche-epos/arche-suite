@@ -129,6 +129,8 @@ select option{background:var(--bg2);color:var(--txt1)}
 .notespanel{flex-shrink:0;display:flex;flex-direction:column;padding:13px 16px;padding-bottom:calc(80px + var(--safe-b))}
 .notespanel textarea{min-height:200px;background:var(--bg1);border-color:var(--border);font-size:15px;line-height:1.7;overflow-y:auto;-webkit-overflow-scrolling:touch;resize:vertical}
 .notespanel textarea::-webkit-scrollbar{display:none}
+.notes-split{display:flex;flex-direction:column}
+.notes-split-col{min-width:0}
 .frow{display:flex;gap:9px;margin-bottom:9px}.frow .ig{flex:1;margin-bottom:0}
 .scrtext{font-family:var(--font-display);font-size:calc(17px * var(--content-scale));line-height:1.85;color:var(--txt1)}
 .scrtext .vnum{font-size:calc(10px * var(--content-scale));color:var(--gold);font-weight:700;vertical-align:super;margin-right:2px}
@@ -427,6 +429,8 @@ input[type="range"]{accent-color:var(--gold)}
   .aitools{grid-template-columns:repeat(3,1fr)}
   .aitoolbtn[style*="grid-column:span 2"]{grid-column:span 1}
   .res-add-btns{grid-template-columns:repeat(3,1fr)}
+  .notes-split{flex-direction:row;gap:24px}
+  .notes-split-col{flex:1}
 }
 
 /* ── Desktop (901px+) ─────────────────────────────────────────── */
@@ -761,29 +765,25 @@ input[type="range"]{accent-color:var(--gold)}
       </div>
     </div>
     <div id="f-notes-editor"></div>
-    <div class="seclabel" style="margin-top:14px;margin-bottom:6px;">Photos &amp; Documents</div>
-    <div style="display:flex;gap:8px;margin-top:0">
-      <button class="btn btn-ghost btn-sm" onclick="resCapture('camera')" style="flex:1;font-size:12px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Camera
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="resCapture('gallery')" style="flex:1;font-size:12px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Gallery
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="resAddDocPrompt()" style="flex:1;font-size:12px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Document
-      </button>
-    </div>
-    <div id="field-res-tiles" style="margin-top:10px"></div>
-    <!-- Look Up Word always visible — independent of whether any words are saved -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:4px;">
-      <div class="seclabel" style="margin-bottom:0;">Saved Words</div>
-      <button id="field-lookupword-btn" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;min-height:28px;" onclick="openLexiconModalFor('study')">✦ Look Up Word</button>
-    </div>
-    <div class="study-words-section" id="study-words-section" style="display:none;">
-      <div id="study-word-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="notes-split" style="margin-top:14px">
+      <!-- Saved Words — independent of whether any words are saved -->
+      <div class="notes-split-col">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="seclabel" style="margin-bottom:0;">Saved Words</div>
+          <button id="field-lookupword-btn" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;min-height:28px;" onclick="openLexiconModalFor('study')">✦ Look Up Word</button>
+        </div>
+        <div class="study-words-section" id="study-words-section" style="display:none;">
+          <div id="study-word-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+      </div>
+      <div class="notes-split-col">
+        <div class="seclabel" style="margin-bottom:6px;">Photos &amp; Documents</div>
+        <button class="btn btn-ghost btn-sm" onclick="openAddResModal()" style="width:100%;font-size:12px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Photo or Document
+        </button>
+        <div id="field-res-tiles" style="margin-top:10px"></div>
+      </div>
     </div>
   </div>
 </div><!-- /#scr-field -->
@@ -1467,6 +1467,26 @@ input[type="range"]{accent-color:var(--gold)}
     </div>
   </div>
 </div>
+<div class="overlay" id="addres-overlay" onclick="if(event.target===this)closeOverlay('addres-overlay')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Add Photo or Document</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" style="justify-content:flex-start" onclick="closeOverlay('addres-overlay');resCapture('camera')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Camera
+      </button>
+      <button class="btn btn-ghost" style="justify-content:flex-start" onclick="closeOverlay('addres-overlay');resCapture('gallery')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Gallery
+      </button>
+      <button class="btn btn-ghost" style="justify-content:flex-start" onclick="closeOverlay('addres-overlay');resAddDocPrompt()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Document
+      </button>
+    </div>
+    <button class="btn btn-sec" style="width:100%;margin-top:12px" onclick="closeOverlay('addres-overlay')">Cancel</button>
+  </div>
+</div>
 <div class="overlay" id="rename-res-overlay" style="z-index:510">
   <div class="modal">
     <div class="modal-title">Rename Resource</div>
@@ -1644,7 +1664,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.8"></script>
+<script type="module" src="app.js?v=4.34.11"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

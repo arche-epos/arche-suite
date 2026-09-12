@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.8';
+} from './utils.js?v=4.34.11';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.8';
-import { syncToGist } from './sync.js?v=4.34.8';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.8';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.11';
+import { syncToGist } from './sync.js?v=4.34.11';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.11';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1789,6 +1789,11 @@ function resCapture(mode){if(!cur){toast('Open a study first');return;}var el=do
  */
 function resAddDocPrompt(){if(!cur){toast('Open a study first');return;}var el=document.getElementById('res-input-doc');el.value='';el.click();}
 /**
+ * Opens the Add Photo or Document picker modal (Camera / Gallery / Document).
+ * Replaces the old three-button row on the Notes screen with a single entry point.
+ */
+function openAddResModal(){if(!cur){toast('Open a study first');return;}document.getElementById('addres-overlay').classList.add('on');}
+/**
  * Handles a document file selected via the doc file input.
  * Uses mammoth.js for DOCX/DOC; FileReader text mode for TXT/MD.
  * Truncates at 30,000 characters to prevent oversized storage entries.
@@ -2040,7 +2045,7 @@ export {
   openLexiconModal, openLexiconModalFor, closeLexiconModal,
   runLexiconLookup, renderLexiconEntry, pickWordSense,
   // S16 — Resources & OCR
-  resCapture, resAddDocPrompt, resHandleDoc, resAddDocResource,
+  resCapture, resAddDocPrompt, openAddResModal, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText

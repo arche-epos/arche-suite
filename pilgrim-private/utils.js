@@ -496,7 +496,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.10',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.11',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: consolidated the Notes-screen Camera/Gallery/Document buttons into a single \"Add Photo or Document\" button that opens a small picker — was three separate buttons in one row.",
+      "tune: split the Notes screen into two columns on tablet/desktop (\u2265481px) — Saved Words on one side, Photos & Documents on the other. Stays stacked full-width on phone screens, where a side-by-side split would cramp the photo grid and word cards.",
+      "chore: corrected a missed cache-bust version bump from v4.34.9/v4.34.10 — every module import line across index.html, app.js, ui.js, studyTools.js, storage.js, sync.js, and tts.js was still pinned at v4.34.8, meaning browsers that cached the app around Sep 11 could have kept running v4.34.8 code past both of those releases. No content in those files changed beyond the version string itself except where separately noted above."
+    ]},
+  {
+    version:'4.34.10',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: FAB tooltip now reflects what a tap actually does on the current screen — \"New Study / Pilgrim Guide\" on Library (where it opens that choice menu), \"Pilgrim Guide\" everywhere else (where it opens Guide directly). Updated the guided-tour step covering the FAB to explain both behaviors instead of only the Library one. Behavior itself is unchanged — this was a documentation gap, not a bug.",

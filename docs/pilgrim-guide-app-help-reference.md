@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.30.6 (Sep 7, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -114,6 +114,7 @@ that avoids the excluded list.
 - Change the passage or translation for this study → Passage section, Notes tab
 - See saved word lookups tied to this specific study → Saved Words, Notes tab
 - Look up a word while in a study → "Look Up Word" button, Notes tab
+- Attach a photo or document to a study → "Add Photo or Document" button, Notes tab
 
 ### Study — Study Tools tab
 - Get Greek/Hebrew/English word meaning for the passage → **Word Study** AI tool
@@ -124,7 +125,6 @@ that avoids the excluded list.
 - Run all the study tools at once → **Study Snapshot** (runs Word Study,
   Language & Structure, Cross-References, and Places & Geography on the exact
   passage, plus Historical and Cultural Context at the whole-book level)
-- Attach a document or photo to a study → **Resources & Documents**
 - Outline a passage or book → **Passage/Book Outline**
 - Write my own takeaways (AI-free space) → **My Conclusions**
 
@@ -160,9 +160,9 @@ that avoids the excluded list.
 - Replay the app tutorial → **Settings > Guided Tours** ("Replay Study Tour" /
   "Replay Settings Tour")
 
-### Lexicon (word lookup — available from several places)
+### Look Up Word (word lookup — available from several places)
 - Look up a word or Strong's number (e.g. "logos", "G3056", "H1254") →
-  Lexicon modal, opened from Library > Words, Study > Notes, or globally.
+  "Look Up Word" button, opened from Library > Words, Study > Notes, or globally.
   Results can be saved to the Words list.
 
 ---
