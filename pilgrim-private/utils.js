@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.16',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.17',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: redone correctly this time \u2014 Settings > Account's \u201cSigned in as ___\u201d line was showing the raw account id instead of the display name, because startPilgrim() in app.js had a stale line writing ACTIVE_USER directly into that field after setUserDisplay() already set it correctly. Removed the stale block only. v4.34.15 tried this same fix but also deleted app.js's `import * as Utils` line, not realizing the window-bridging loop later in the file (`[Utils, Storage, TTS, Sync, StudyTools, UI].forEach(...)`) still referenced it directly \u2014 that threw a ReferenceError at module load, which silently broke the entire app (white screen, zero interactivity) since app.js never finished executing. The Utils import stays; only the stale override block is gone this time."
+    ]},
+  {
+    version:'4.34.16',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "revert: v4.34.15's Settings > Account display-name fix broke the app entirely on load (white screen, no interactivity) \u2014 rolled back to v4.34.14's code while the root cause is investigated. The \u201cSigned in as\u201d field will show the raw account id again in the meantime, not the display name; that's the known, intentional side effect of this revert, not a new issue."
