@@ -558,6 +558,8 @@ function navTo(id){
   document.getElementById('scr-'+id).classList.add('on');
   document.getElementById('nav-'+id).classList.add('on');
   _currentScreen=id; closeFabMenu(); // FAB is unified (Pilgrim Guide spec v2) — always visible, no per-screen hide
+  var _fabBtn=document.getElementById('main-fab'); // tooltip reflects what a tap actually does on this screen — menu (Library) vs. direct-to-Guide (everywhere else)
+  if(_fabBtn)_fabBtn.title=(id==='library')?'New Study / Pilgrim Guide':'Pilgrim Guide';
   if(id==='library')renderLib();
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
@@ -2811,7 +2813,7 @@ function tourCleanupDemoData(){
 var TOUR_A_STEPS=[
   {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
   {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
-  {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here any time to start a new study.'},
+  {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here on Library to choose New Study or Pilgrim Guide. On every other screen, this same button skips straight to Pilgrim Guide — the tooltip always tells you which one it\'ll do.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
   {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-date,#f-teacher',title:'Date & Teacher',body:"Today's date fills in automatically. Add who taught or preached — we've filled in an example name."},
