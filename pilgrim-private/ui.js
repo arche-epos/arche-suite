@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.20';
+} from './utils.js?v=4.34.21';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.20';
+} from './storage.js?v=4.34.21';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.20';
+} from './tts.js?v=4.34.21';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.20';
+} from './sync.js?v=4.34.21';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.20';
+} from './studyTools.js?v=4.34.21';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -104,27 +104,75 @@ function setQFNDirty(v){_qFNDirty=v;}
 function setQConclDirty(v){_qConclDirty=v;}
 /** Sets the Outline dirty flag. @param {boolean} v */
 function setQOutlineDirty(v){_qOutlineDirty=v;}
-var _qlToolbar=[
-  ['bold','italic','underline','strike'],
-  [{'header':[1,2,3,false]}],
-  [{'list':'ordered'},{'list':'bullet'}],
-  [{'indent':'-1'},{'indent':'+1'}],
-  ['blockquote'],
-  ['clean']
-];
 /**
  * Initializes all three Quill rich-text editors: Field Notes, Conclusions, and Outline.
  * No-ops if the Quill library has not loaded. Attaches a text-change listener on the
- * Field Notes editor to update the word count display on each keystroke.
+ * Field Notes editor to update the word count display on each keystroke. Each editor
+ * points at its own custom left-rail toolbar (built in index.html) instead of Quill's
+ * auto-generated one — see initCustomToolbar() for the pop-out wiring on top of it.
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:_qlToolbar}});
+  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:'#f-notes-toolbar'}});
   _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
-  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:_qlToolbar}});
+  initCustomToolbar(_qFN,'f-notes-toolbar');
+  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:'#d-conclusions-toolbar'}});
   _qConcl.on('text-change',function(){if(!_qConclDirty)trackEvent({field:'conclusions'});_qConclDirty=true;});
-  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:_qlToolbar}});
+  initCustomToolbar(_qConcl,'d-conclusions-toolbar');
+  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:'#d-outline-toolbar'}});
   _qOutline.on('text-change',function(){if(!_qOutlineDirty)trackEvent({field:'outline'});_qOutlineDirty=true;});
+  initCustomToolbar(_qOutline,'d-outline-toolbar');
+}
+
+/**
+ * Wires the pop-out behavior for a custom left-rail Quill toolbar built in
+ * index.html. Quill's own toolbar module already handles click-to-format and
+ * per-button .ql-active state for any element carrying its ql-* classes,
+ * regardless of DOM nesting or visibility — this only adds: opening/closing
+ * the Text style / Lists / Indent / More flyouts (one open at a time),
+ * closing on an in-flyout selection or an outside click, and toggling a
+ * trig-active highlight on each group's trigger icon when the cursor is
+ * currently inside a format that group controls.
+ * @param {Quill} quill - the editor instance this toolbar controls.
+ * @param {string} toolbarId - id of the toolbar's root .ql-rail element.
+ */
+function initCustomToolbar(quill,toolbarId){
+  var root=document.getElementById(toolbarId);
+  if(!root)return;
+  var triggers=root.querySelectorAll('[data-pop]');
+  function closeAll(){
+    root.querySelectorAll('.ql-flyout.open').forEach(function(f){f.classList.remove('open');});
+    triggers.forEach(function(t){t.classList.remove('trig-open');});
+  }
+  triggers.forEach(function(trig){
+    trig.addEventListener('click',function(e){
+      e.preventDefault();e.stopPropagation();
+      var group=trig.getAttribute('data-pop');
+      var fly=root.querySelector('.ql-flyout[data-pop-target="'+group+'"]');
+      if(!fly)return;
+      var wasOpen=fly.classList.contains('open');
+      closeAll();
+      if(!wasOpen){fly.classList.add('open');trig.classList.add('trig-open');}
+    });
+  });
+  root.querySelectorAll('.ql-flyout button').forEach(function(btn){
+    btn.addEventListener('click',function(){closeAll();});
+  });
+  quill.on('editor-change',function(){
+    var fmt=quill.getFormat();
+    triggers.forEach(function(trig){
+      var group=trig.getAttribute('data-pop');
+      var active=false;
+      if(group==='header')active=!!fmt.header;
+      else if(group==='list')active=!!fmt.list;
+      else if(group==='indent')active=!!fmt.indent;
+      else if(group==='more')active=!!(fmt.underline||fmt.strike);
+      trig.classList.toggle('trig-active',active);
+    });
+  });
+  document.addEventListener('click',function(e){
+    if(!root.contains(e.target))closeAll();
+  });
 }
 
 

@@ -490,8 +490,7 @@ input[type="range"]{accent-color:var(--gold)}
 }
 
 /* ── QUILL RICH TEXT EDITOR ───────────────────────────────────── */
-.ql-toolbar.ql-snow{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;padding:6px 8px;flex-wrap:wrap;}
-.ql-container.ql-snow{background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);font-family:var(--font-body);font-size:calc(15px * var(--content-scale));color:var(--txt1);}
+.ql-container.ql-snow{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-family:var(--font-body);font-size:calc(15px * var(--content-scale));color:var(--txt1);}
 .ql-editor{min-height:160px;padding:10px 12px;line-height:1.65;color:var(--txt1);}
 .ql-editor.ql-blank::before{color:var(--txt4);font-style:italic;font-family:var(--font-body);}
 .ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor li,.ql-editor blockquote{color:var(--txt1);}
@@ -500,15 +499,18 @@ input[type="range"]{accent-color:var(--gold)}
 .ql-editor h3{font-size:1.15em;font-weight:600;margin:4px 0 2px;}
 .ql-editor ul,.ql-editor ol{padding-left:1.5em;}
 .ql-editor blockquote{border-left:3px solid var(--gold);padding-left:10px;color:var(--txt2);font-style:italic;margin:4px 0;}
-.ql-snow .ql-stroke{stroke:var(--txt3);}
-.ql-snow .ql-fill{fill:var(--txt3);}
-.ql-snow .ql-picker{color:var(--txt2);}
-.ql-snow .ql-picker-options{background:var(--bg3);border:1px solid var(--border);}
-.ql-snow .ql-picker-item{color:var(--txt2);}
-.ql-toolbar.ql-snow .ql-formats button:hover .ql-stroke,.ql-toolbar.ql-snow .ql-formats button.ql-active .ql-stroke{stroke:var(--gold);}
-.ql-toolbar.ql-snow .ql-formats button:hover .ql-fill,.ql-toolbar.ql-snow .ql-formats button.ql-active .ql-fill{fill:var(--gold);}
-.ql-toolbar.ql-snow .ql-picker-label:hover,.ql-toolbar.ql-snow .ql-picker-label.ql-active{color:var(--gold);}
-.ql-toolbar.ql-snow .ql-picker-label:hover .ql-stroke,.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-stroke{stroke:var(--gold);}
+/* Custom left-rail toolbar (replaces Quill's auto-generated .ql-toolbar) —
+   plain text/glyph buttons carrying Quill's ql-* classes so its toolbar
+   module still handles click-to-format and .ql-active state automatically;
+   .ql-pop-wrap/.ql-flyout/data-pop are our own pop-out group UI on top of that. */
+.ql-editorwrap{display:flex;align-items:stretch;gap:6px;}
+.ql-editorwrap>div[id$="-editor"]{flex:1;min-width:0;}
+.ql-rail{flex:0 0 34px;display:flex;flex-direction:column;gap:5px;padding-top:2px;}
+.ql-rail-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;}
+.ql-rail-btn.ql-active,.ql-rail-btn.trig-active,.ql-rail-btn.trig-open{border-color:var(--gold);color:var(--gold);}
+.ql-pop-wrap{position:relative;}
+.ql-flyout{position:absolute;left:38px;top:0;display:none;flex-direction:row;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;z-index:5;}
+.ql-flyout.open{display:flex;}
 .lib-tab{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--txt4);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:color .2s,border-color .2s;}
 .lib-tab.on{color:var(--gold);border-bottom-color:var(--gold);}
 .word-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;position:relative;overflow:hidden;}
@@ -774,7 +776,45 @@ input[type="range"]{accent-color:var(--gold)}
         <button onclick="adjustFontScale(1)" id="notes-font-btn" title="Bigger text (full control in Settings > Appearance)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 7px;cursor:pointer;min-height:26px">A+</button>
       </div>
     </div>
-    <div id="f-notes-editor"></div>
+    <div class="ql-editorwrap">
+      <div class="ql-rail" id="f-notes-toolbar">
+        <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
+        <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+          <div class="ql-flyout" data-pop-target="header">
+            <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
+            <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
+            <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
+            <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
+          </div>
+        </div>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+          <div class="ql-flyout" data-pop-target="list">
+            <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
+            <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
+          </div>
+        </div>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+          <div class="ql-flyout" data-pop-target="indent">
+            <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
+            <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
+          </div>
+        </div>
+        <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+          <div class="ql-flyout" data-pop-target="more">
+            <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
+            <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
+            <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
+          </div>
+        </div>
+      </div>
+      <div id="f-notes-editor"></div>
+    </div>
     <div class="notes-split" style="margin-top:14px">
       <!-- Saved Words — independent of whether any words are saved -->
       <div class="notes-split-col">
@@ -945,7 +985,45 @@ input[type="range"]{accent-color:var(--gold)}
         <div class="fnotes-body-inner">
           <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button id="listen-outline-btn" onclick="ttsToggleField('outline')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-outline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-outline-label">Listen</span></button>
           <button id="tts-restart-outline" onclick="ttsRestart('outline')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button></div>
-          <div id="d-outline-editor" style="margin-bottom:2px;"></div>
+          <div class="ql-editorwrap">
+            <div class="ql-rail" id="d-outline-toolbar">
+              <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
+              <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+                <div class="ql-flyout" data-pop-target="header">
+                  <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
+                  <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
+                  <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
+                  <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
+                </div>
+              </div>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+                <div class="ql-flyout" data-pop-target="list">
+                  <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
+                  <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
+                </div>
+              </div>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+                <div class="ql-flyout" data-pop-target="indent">
+                  <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
+                  <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
+                </div>
+              </div>
+              <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+                <div class="ql-flyout" data-pop-target="more">
+                  <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
+                  <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
+                  <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
+                </div>
+              </div>
+            </div>
+            <div id="d-outline-editor" style="margin-bottom:2px;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -953,7 +1031,45 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="concl" style="margin-bottom:16px">
       <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button id="listen-concl-btn" onclick="ttsToggleField('concl')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-concl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-concl-label">Listen</span></button>
       <button id="tts-restart-concl" onclick="ttsRestart('concl')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button></div>
-      <div id="d-conclusions-editor"></div>
+      <div class="ql-editorwrap">
+        <div class="ql-rail" id="d-conclusions-toolbar">
+          <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
+          <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+            <div class="ql-flyout" data-pop-target="header">
+              <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
+              <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
+              <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
+              <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
+            </div>
+          </div>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+            <div class="ql-flyout" data-pop-target="list">
+              <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
+              <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
+            </div>
+          </div>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+            <div class="ql-flyout" data-pop-target="indent">
+              <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
+              <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
+            </div>
+          </div>
+          <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+            <div class="ql-flyout" data-pop-target="more">
+              <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
+              <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
+              <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
+            </div>
+          </div>
+        </div>
+        <div id="d-conclusions-editor"></div>
+      </div>
     </div>
     <div class="divider"></div>
     <button class="btn btn-primary btn-full" onclick="openExportModal()" style="margin-bottom:10px">
@@ -1676,7 +1792,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.20"></script>
+<script type="module" src="app.js?v=4.34.21"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.20',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.21',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: replaced the horizontal Quill toolbar above Notes, Conclusions, and Outline with a 7-icon vertical rail docked to the left edge of each editor (Bold, Italic, Text style, Lists, Indent, Blockquote, More) — down from 11 separate icons. Underline, Strikethrough, and Clear Formatting moved into the \u2018More\u2019 pop-out; Lists and Indent each pop out their 2 sub-choices, Text style pops out Normal/H1/H2/H3. Rail stays put on the left when the keyboard opens rather than floating above it. Built on a custom Quill toolbar container per editor (index.html) with a new initCustomToolbar() helper (ui.js) handling pop-out open/close and live active-state highlighting on the group icons; Quill's own toolbar module still owns click-to-format and per-button .ql-active state, unchanged from before. Colors use the existing --border/--txt3/--gold theme variables, so it matches both light and dark mode automatically."
+    ]},
+  {
+    version:'4.34.20',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: added an A\u2212 (shrink text) button next to the existing A+ button in the Notes tab's Observations & Notes header — previously that quick-access row could only grow the content font, and shrinking required going to Settings > Appearance. Both buttons now share the same disabled-at-the-ends behavior as the Settings A\u2212/A+ pair (updateFontScaleUI() extended to cover all four buttons)."
