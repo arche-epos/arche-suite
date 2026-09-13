@@ -511,23 +511,35 @@ input[type="range"]{accent-color:var(--gold)}
 .ql-toolbar.ql-snow .ql-formats button:hover .ql-fill,.ql-toolbar.ql-snow .ql-formats button.ql-active .ql-fill{fill:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover,.ql-toolbar.ql-snow .ql-picker-label.ql-active{color:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover .ql-stroke,.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-stroke{stroke:var(--gold);}
-/* Mobile (≤900px): custom left-rail toolbar — plain text/glyph buttons carrying
-   Quill's ql-* classes so its toolbar module still handles click-to-format and
-   .ql-active state automatically; .ql-pop-wrap/.ql-flyout/data-pop are our own
-   pop-out group UI on top of that. Hidden and inert above 900px — desktop
-   binds Quill to the original array toolbar above instead (see initEditors()). */
+/* Mobile (≤900px): custom floating left-rail toolbar — plain text/glyph
+   buttons carrying Quill's ql-* classes (listed FIRST in the class attribute
+   — Quill's toolbar.js picks the first class starting with "ql-" to
+   determine the format, so ql-rail-btn must come second) so its toolbar
+   module still handles click-to-format and .ql-active state automatically;
+   .ql-pop-wrap/.ql-flyout/data-pop are our own pop-out group UI on top of
+   that. Hidden and inert above 900px — desktop binds Quill to the original
+   array toolbar above instead (see initEditors()).
+   The three rail elements themselves live at the end of the document (near
+   .fab-wrap), NOT next to their editors — see the HTML comment there for
+   why (position:fixed inside an overflow:hidden ancestor loses touch
+   events on iOS Safari, and Outline's collapsible wrapper has overflow:
+   hidden permanently). Each is display:none until initCustomToolbar()
+   (ui.js) adds .showing on that editor's own focus, via Quill's
+   selection-change event — so exactly one floats at a time, positioned
+   near the top of the screen (clear of the on-screen keyboard, which only
+   ever eats the bottom) so it stays visible as you scroll or type. */
 .ql-editorwrap{display:block;}
-.ql-rail{display:none;}
 .ql-pop-wrap{position:relative;}
 .ql-flyout{position:absolute;left:38px;top:0;display:none;flex-direction:row;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;z-index:5;}
 .ql-flyout.open{display:flex;}
 .ql-rail-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;}
 .ql-rail-btn.ql-active,.ql-rail-btn.trig-active,.ql-rail-btn.trig-open{border-color:var(--gold);color:var(--gold);}
+.ql-rail{position:fixed;left:16px;top:calc(64px + var(--safe-t));z-index:58;display:none;flex-direction:column;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);}
+.ql-rail.showing{display:flex;}
 @media(max-width:900px){
-  .ql-editorwrap{display:flex;align-items:stretch;gap:6px;}
-  .ql-editorwrap>div[id$="-editor"]{flex:1;min-width:0;}
-  .ql-rail{display:flex;flex-direction:column;gap:5px;padding-top:2px;flex:0 0 34px;}
+  .ql-editorwrap>div[id$="-editor"]{min-width:0;}
   .ql-container.ql-snow{border-top:1px solid var(--border);border-radius:var(--r);}
+  .ql-editorwrap.rail-open .ql-editor{padding-left:50px;}
   /* Full tier (large/tall phones, height>=750): show every icon in one
      column, no pop-outs. Reuses the exact same trigger+flyout DOM as the
      compact-7 tier -- just hides the 4 triggers and forces their flyouts
@@ -806,42 +818,7 @@ input[type="range"]{accent-color:var(--gold)}
       </div>
     </div>
     <div class="ql-editorwrap">
-      <div class="ql-rail" id="f-notes-toolbar">
-        <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
-        <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
-        <div class="ql-pop-wrap">
-          <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
-          <div class="ql-flyout" data-pop-target="header">
-            <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
-            <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
-            <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
-            <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
-          </div>
-        </div>
-        <div class="ql-pop-wrap">
-          <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
-          <div class="ql-flyout" data-pop-target="list">
-            <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
-            <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
-          </div>
-        </div>
-        <div class="ql-pop-wrap">
-          <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
-          <div class="ql-flyout" data-pop-target="indent">
-            <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
-            <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
-          </div>
-        </div>
-        <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
-        <div class="ql-pop-wrap">
-          <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
-          <div class="ql-flyout" data-pop-target="more">
-            <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
-            <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
-            <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
-          </div>
-        </div>
-      </div>
+      
       <div id="f-notes-editor"></div>
     </div>
     <div class="notes-split" style="margin-top:14px">
@@ -1015,42 +992,7 @@ input[type="range"]{accent-color:var(--gold)}
           <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button id="listen-outline-btn" onclick="ttsToggleField('outline')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-outline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-outline-label">Listen</span></button>
           <button id="tts-restart-outline" onclick="ttsRestart('outline')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button></div>
           <div class="ql-editorwrap">
-            <div class="ql-rail" id="d-outline-toolbar">
-              <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
-              <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
-              <div class="ql-pop-wrap">
-                <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
-                <div class="ql-flyout" data-pop-target="header">
-                  <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
-                  <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
-                  <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
-                  <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
-                </div>
-              </div>
-              <div class="ql-pop-wrap">
-                <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
-                <div class="ql-flyout" data-pop-target="list">
-                  <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
-                  <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
-                </div>
-              </div>
-              <div class="ql-pop-wrap">
-                <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
-                <div class="ql-flyout" data-pop-target="indent">
-                  <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
-                  <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
-                </div>
-              </div>
-              <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
-              <div class="ql-pop-wrap">
-                <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
-                <div class="ql-flyout" data-pop-target="more">
-                  <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
-                  <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
-                  <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
-                </div>
-              </div>
-            </div>
+            
             <div id="d-outline-editor" style="margin-bottom:2px;"></div>
           </div>
         </div>
@@ -1061,42 +1003,7 @@ input[type="range"]{accent-color:var(--gold)}
       <div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button id="listen-concl-btn" onclick="ttsToggleField('concl')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-concl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-concl-label">Listen</span></button>
       <button id="tts-restart-concl" onclick="ttsRestart('concl')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button></div>
       <div class="ql-editorwrap">
-        <div class="ql-rail" id="d-conclusions-toolbar">
-          <button type="button" class="ql-rail-btn ql-bold" aria-label="Bold">B</button>
-          <button type="button" class="ql-rail-btn ql-italic" aria-label="Italic">I</button>
-          <div class="ql-pop-wrap">
-            <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
-            <div class="ql-flyout" data-pop-target="header">
-              <button type="button" class="ql-rail-btn ql-header" value="1" aria-label="Heading 1">H1</button>
-              <button type="button" class="ql-rail-btn ql-header" value="2" aria-label="Heading 2">H2</button>
-              <button type="button" class="ql-rail-btn ql-header" value="3" aria-label="Heading 3">H3</button>
-              <button type="button" class="ql-rail-btn ql-header" aria-label="Normal text">¶</button>
-            </div>
-          </div>
-          <div class="ql-pop-wrap">
-            <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
-            <div class="ql-flyout" data-pop-target="list">
-              <button type="button" class="ql-rail-btn ql-list" value="ordered" aria-label="Numbered list">1.</button>
-              <button type="button" class="ql-rail-btn ql-list" value="bullet" aria-label="Bullet list">•</button>
-            </div>
-          </div>
-          <div class="ql-pop-wrap">
-            <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
-            <div class="ql-flyout" data-pop-target="indent">
-              <button type="button" class="ql-rail-btn ql-indent" value="-1" aria-label="Decrease indent">⇤</button>
-              <button type="button" class="ql-rail-btn ql-indent" value="+1" aria-label="Increase indent">⇥</button>
-            </div>
-          </div>
-          <button type="button" class="ql-rail-btn ql-blockquote" aria-label="Blockquote">"</button>
-          <div class="ql-pop-wrap">
-            <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
-            <div class="ql-flyout" data-pop-target="more">
-              <button type="button" class="ql-rail-btn ql-underline" aria-label="Underline">U</button>
-              <button type="button" class="ql-rail-btn ql-strike" aria-label="Strikethrough">S</button>
-              <button type="button" class="ql-rail-btn ql-clean" aria-label="Clear formatting">Tx</button>
-            </div>
-          </div>
-        </div>
+        
         <div id="d-conclusions-editor"></div>
       </div>
     </div>
@@ -1806,6 +1713,124 @@ input[type="range"]{accent-color:var(--gold)}
     <button onclick="dismissUpdateBanner()">Skip</button>
   </div>
 </div>
+<!-- Floating format rails for Notes/Conclusions/Outline (mobile only).
+     Relocated here (out of each editor's scrolling ancestor tree) so
+     position:fixed works reliably -- see MKB: position:fixed elements
+     inside an overflow:hidden parent lose touch events on iOS Safari,
+     and Outline's collapsible .fnotes-body wrapper has overflow:hidden
+     permanently, which also rules out position:sticky for that editor.
+     Hidden by default; initCustomToolbar() (ui.js) toggles the .showing
+     class via each Quill instance's own selection-change event, so
+     exactly one rail is visible at a time, over whichever field has
+     focus. -->
+<div class="ql-rail" id="f-notes-toolbar">
+        <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
+        <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+          <div class="ql-flyout" data-pop-target="header">
+            <button type="button" class="ql-header ql-rail-btn" value="1" aria-label="Heading 1">H1</button>
+            <button type="button" class="ql-header ql-rail-btn" value="2" aria-label="Heading 2">H2</button>
+            <button type="button" class="ql-header ql-rail-btn" value="3" aria-label="Heading 3">H3</button>
+            <button type="button" class="ql-header ql-rail-btn" aria-label="Normal text">¶</button>
+          </div>
+        </div>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+          <div class="ql-flyout" data-pop-target="list">
+            <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
+            <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
+          </div>
+        </div>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+          <div class="ql-flyout" data-pop-target="indent">
+            <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
+            <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
+          </div>
+        </div>
+        <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
+        <div class="ql-pop-wrap">
+          <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+          <div class="ql-flyout" data-pop-target="more">
+            <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
+            <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
+            <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
+          </div>
+        </div>
+      </div>
+<div class="ql-rail" id="d-conclusions-toolbar">
+          <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
+          <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+            <div class="ql-flyout" data-pop-target="header">
+              <button type="button" class="ql-header ql-rail-btn" value="1" aria-label="Heading 1">H1</button>
+              <button type="button" class="ql-header ql-rail-btn" value="2" aria-label="Heading 2">H2</button>
+              <button type="button" class="ql-header ql-rail-btn" value="3" aria-label="Heading 3">H3</button>
+              <button type="button" class="ql-header ql-rail-btn" aria-label="Normal text">¶</button>
+            </div>
+          </div>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+            <div class="ql-flyout" data-pop-target="list">
+              <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
+              <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
+            </div>
+          </div>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+            <div class="ql-flyout" data-pop-target="indent">
+              <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
+              <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
+            </div>
+          </div>
+          <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
+          <div class="ql-pop-wrap">
+            <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+            <div class="ql-flyout" data-pop-target="more">
+              <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
+              <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
+              <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
+            </div>
+          </div>
+        </div>
+<div class="ql-rail" id="d-outline-toolbar">
+              <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
+              <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="header" aria-label="Text style">H</button>
+                <div class="ql-flyout" data-pop-target="header">
+                  <button type="button" class="ql-header ql-rail-btn" value="1" aria-label="Heading 1">H1</button>
+                  <button type="button" class="ql-header ql-rail-btn" value="2" aria-label="Heading 2">H2</button>
+                  <button type="button" class="ql-header ql-rail-btn" value="3" aria-label="Heading 3">H3</button>
+                  <button type="button" class="ql-header ql-rail-btn" aria-label="Normal text">¶</button>
+                </div>
+              </div>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="list" aria-label="Lists">≡</button>
+                <div class="ql-flyout" data-pop-target="list">
+                  <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
+                  <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
+                </div>
+              </div>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="indent" aria-label="Indent">⇥</button>
+                <div class="ql-flyout" data-pop-target="indent">
+                  <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
+                  <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
+                </div>
+              </div>
+              <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
+              <div class="ql-pop-wrap">
+                <button type="button" class="ql-rail-btn" data-pop="more" aria-label="More formatting">⋯</button>
+                <div class="ql-flyout" data-pop-target="more">
+                  <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
+                  <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
+                  <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
+                </div>
+              </div>
+            </div>
 <div class="fab-wrap">
   <div class="fab-menu" id="fab-menu">
     <button class="fab-menu-item" onclick="fabMenuNewStudy()">New Study</button>
@@ -1821,7 +1846,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.23"></script>
+<script type="module" src="app.js?v=4.34.25"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

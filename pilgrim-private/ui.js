@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.23';
+} from './utils.js?v=4.34.25';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.23';
+} from './storage.js?v=4.34.25';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.23';
+} from './tts.js?v=4.34.25';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.23';
+} from './sync.js?v=4.34.25';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.23';
+} from './studyTools.js?v=4.34.25';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -156,20 +156,31 @@ function initEditors(){
 }
 
 /**
- * Wires the pop-out behavior for a custom left-rail Quill toolbar built in
- * index.html. Quill's own toolbar module already handles click-to-format and
- * per-button .ql-active state for any element carrying its ql-* classes,
- * regardless of DOM nesting or visibility — this only adds: opening/closing
- * the Text style / Lists / Indent / More flyouts (one open at a time),
- * closing on an in-flyout selection or an outside click, and toggling a
- * trig-active highlight on each group's trigger icon when the cursor is
- * currently inside a format that group controls.
+ * Wires the pop-out behavior AND the floating-visibility behavior for a
+ * custom left-rail Quill toolbar built in index.html. Quill's own toolbar
+ * module already handles click-to-format and per-button .ql-active state
+ * for any element carrying its ql-* classes, regardless of DOM nesting or
+ * visibility — this adds: showing/hiding the whole rail on that editor's
+ * own focus (via Quill's selection-change event — fires a range on focus,
+ * null on blur — so exactly one rail floats at a time, over whichever
+ * field is actually being edited), toggling a left-padding class on that
+ * editor while its rail is showing so the floating rail never overlaps the
+ * text, opening/closing the Text style / Lists / Indent / More flyouts
+ * (one open at a time), closing on an in-flyout selection or an outside
+ * click, and toggling a trig-active highlight on each group's trigger icon
+ * when the cursor is currently inside a format that group controls.
  * @param {Quill} quill - the editor instance this toolbar controls.
- * @param {string} toolbarId - id of the toolbar's root .ql-rail element.
+ * @param {string} toolbarId - id of the toolbar's root .ql-rail element
+ *   (relocated to the end of the document, near .fab-wrap — see index.html).
  */
 function initCustomToolbar(quill,toolbarId){
   var root=document.getElementById(toolbarId);
   if(!root)return;
+  var wrap=quill.container.closest('.ql-editorwrap');
+  quill.on('selection-change',function(range){
+    root.classList.toggle('showing',!!range);
+    if(wrap)wrap.classList.toggle('rail-open',!!range);
+  });
   var triggers=root.querySelectorAll('[data-pop]');
   function closeAll(){
     root.querySelectorAll('.ql-flyout.open').forEach(function(f){f.classList.remove('open');});

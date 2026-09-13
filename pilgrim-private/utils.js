@@ -496,13 +496,19 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.23',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.25',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the v4.34.23 left-rail toolbar (Notes/Conclusions/Outline) had two device-tested-and-found bugs. (1) Every rail button was wired class=\"ql-rail-btn ql-bold\" -- Quill's toolbar module reads the FIRST class starting with \"ql-\" as the format, so it was reading \"rail-btn\" (not a real format) and silently never attaching a click listener to any button, on either toolbar tier. Reordered every button's classes (ql-bold ql-rail-btn, etc.) so Quill reads the real format. (2) The rail scrolled away with the page instead of staying visible while typing/scrolling with the keyboard open. Relocated all 3 rails out of their editors' scrolling/overflow-hidden ancestor tree entirely (to the end of the document, near .fab-wrap) and made them position:fixed, shown only on that editor's own focus via Quill's selection-change event -- so exactly one rail floats near the top of the screen at a time, over whichever field you're actually editing, with a matching left-padding added to that field's text so the rail never overlaps it. position:sticky was ruled out: Outline's collapsible section wrapper has overflow:hidden permanently, which breaks sticky outright, and the MKB already documents position:fixed-inside-overflow:hidden losing touch events on iOS Safari as the reason #scracts needed the same kind of restructuring earlier this session."
+    ]},
+  {
+    version:'4.34.23',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: added a third toolbar tier for the Notes/Conclusions/Outline left-rail (v4.34.21/.22) \u2014 large\/tall phones (\u2264900px wide, \u2265750px tall) now get every icon in one column with no pop-outs, instead of always falling back to the compact 7-icon rail. Reuses the exact same trigger+flyout markup as the compact tier; a new `.full` class (index.html) hides the 4 pop-out triggers and forces their flyouts to render inline instead of as absolute pop-outs \u2014 pure CSS, no changes needed to initCustomToolbar()'s click wiring since Quill already binds to every ql-* button in the rail regardless of visibility. initEditors() (ui.js) now checks window.innerHeight alongside the existing width check to pick the tier once at load, same one-time-at-construction pattern as the desktop\/mobile split."
     ]},
   {
-    version:'4.34.23',date:'Sep 13, 2026',label:'',
+    version:'4.34.22',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the v4.34.21 left-rail toolbar redesign had replaced the desktop toolbar too. Scoped it to mobile only (≤900px, the app's existing breakpoint) — initEditors() now picks the toolbar config once at load based on window width: ≤900px binds to the custom rail as before, >900px uses Quill's original array config, restoring the original horizontal auto-generated toolbar and its CSS byte-for-byte. Known limitation: the choice isn't re-evaluated on resize (Quill's toolbar binds at construction), so crossing 900px after load — e.g. resizing a desktop browser window — needs a page refresh to switch toolbars."
