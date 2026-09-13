@@ -1,0 +1,13 @@
+{
+  "name": "pilgrim-private-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smoke test suite for Pilgrim Private — see tests/README.md",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}
