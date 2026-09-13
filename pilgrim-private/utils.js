@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.21',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.22',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the v4.34.21 left-rail toolbar redesign had replaced the desktop toolbar too. Scoped it to mobile only (≤900px, the app's existing breakpoint) — initEditors() now picks the toolbar config once at load based on window width: ≤900px binds to the custom rail as before, >900px uses Quill's original array config, restoring the original horizontal auto-generated toolbar and its CSS byte-for-byte. Known limitation: the choice isn't re-evaluated on resize (Quill's toolbar binds at construction), so crossing 900px after load — e.g. resizing a desktop browser window — needs a page refresh to switch toolbars."
+    ]},
+  {
+    version:'4.34.21',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: replaced the horizontal Quill toolbar above Notes, Conclusions, and Outline with a 7-icon vertical rail docked to the left edge of each editor (Bold, Italic, Text style, Lists, Indent, Blockquote, More) — down from 11 separate icons. Underline, Strikethrough, and Clear Formatting moved into the \u2018More\u2019 pop-out; Lists and Indent each pop out their 2 sub-choices, Text style pops out Normal/H1/H2/H3. Rail stays put on the left when the keyboard opens rather than floating above it. Built on a custom Quill toolbar container per editor (index.html) with a new initCustomToolbar() helper (ui.js) handling pop-out open/close and live active-state highlighting on the group icons; Quill's own toolbar module still owns click-to-format and per-button .ql-active state, unchanged from before. Colors use the existing --border/--txt3/--gold theme variables, so it matches both light and dark mode automatically."

@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.21';
+} from './utils.js?v=4.34.22';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.21';
+} from './storage.js?v=4.34.22';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.21';
+} from './tts.js?v=4.34.22';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.21';
+} from './sync.js?v=4.34.22';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.21';
+} from './studyTools.js?v=4.34.22';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -104,24 +104,42 @@ function setQFNDirty(v){_qFNDirty=v;}
 function setQConclDirty(v){_qConclDirty=v;}
 /** Sets the Outline dirty flag. @param {boolean} v */
 function setQOutlineDirty(v){_qOutlineDirty=v;}
+/** Original Quill toolbar config, used verbatim on desktop (>900px) so that
+ *  layout is unchanged from before the mobile left-rail redesign. */
+var _qlToolbar=[
+  ['bold','italic','underline','strike'],
+  [{'header':[1,2,3,false]}],
+  [{'list':'ordered'},{'list':'bullet'}],
+  [{'indent':'-1'},{'indent':'+1'}],
+  ['blockquote'],
+  ['clean']
+];
 /**
  * Initializes all three Quill rich-text editors: Field Notes, Conclusions, and Outline.
  * No-ops if the Quill library has not loaded. Attaches a text-change listener on the
- * Field Notes editor to update the word count display on each keystroke. Each editor
- * points at its own custom left-rail toolbar (built in index.html) instead of Quill's
- * auto-generated one — see initCustomToolbar() for the pop-out wiring on top of it.
+ * Field Notes editor to update the word count display on each keystroke.
+ * Toolbar choice is decided once at load time by viewport width (matching the
+ * app's existing 900px mobile/desktop breakpoint): at ≤900px each editor binds
+ * to its custom left-rail toolbar built in index.html (see initCustomToolbar()
+ * for the pop-out wiring on top of it); above 900px each editor uses Quill's
+ * original array config, which auto-generates its own horizontal toolbar
+ * exactly as before this redesign. This choice is NOT re-evaluated on resize —
+ * Quill's toolbar binding is fixed at construction, so crossing the breakpoint
+ * after load (e.g. resizing a desktop browser window) requires a page refresh
+ * to pick up the other toolbar.
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:'#f-notes-toolbar'}});
+  var useRail=window.innerWidth<=900;
+  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:useRail?'#f-notes-toolbar':_qlToolbar}});
   _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
-  initCustomToolbar(_qFN,'f-notes-toolbar');
-  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:'#d-conclusions-toolbar'}});
+  if(useRail)initCustomToolbar(_qFN,'f-notes-toolbar');
+  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:useRail?'#d-conclusions-toolbar':_qlToolbar}});
   _qConcl.on('text-change',function(){if(!_qConclDirty)trackEvent({field:'conclusions'});_qConclDirty=true;});
-  initCustomToolbar(_qConcl,'d-conclusions-toolbar');
-  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:'#d-outline-toolbar'}});
+  if(useRail)initCustomToolbar(_qConcl,'d-conclusions-toolbar');
+  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:useRail?'#d-outline-toolbar':_qlToolbar}});
   _qOutline.on('text-change',function(){if(!_qOutlineDirty)trackEvent({field:'outline'});_qOutlineDirty=true;});
-  initCustomToolbar(_qOutline,'d-outline-toolbar');
+  if(useRail)initCustomToolbar(_qOutline,'d-outline-toolbar');
 }
 
 /**
