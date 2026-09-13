@@ -120,9 +120,9 @@ select option{background:var(--bg2);color:var(--txt1)}
 .hdrfields-summary{display:none;align-items:center;gap:10px;padding:8px 16px;cursor:pointer}
 .hdrfields-summary.show{display:flex}
 .hdr-pill{background:var(--bg3);border:1px solid var(--border);border-radius:50px;padding:3px 10px;font-size:12px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
-.scrpanel{background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;max-height:38vh;transition:max-height .3s ease}
+.scrpanel{background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;max-height:38vh;transition:max-height .3s ease;display:flex;flex-direction:column}
 .scrpanel.collapsed{max-height:0;border-bottom:none}
-.scrpanel-inner{padding:13px 16px;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
+.scrpanel-inner{padding:13px 16px;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
 .scrpanel-inner::-webkit-scrollbar{display:none}
 .scrpanel-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer;min-height:36px}
 .scrpanel-bar .bar-ref{font-size:15px;color:var(--gold);font-family:'EB Garamond',serif}
@@ -142,7 +142,8 @@ input[type="range"]{accent-color:var(--gold)}
 #read-player button:disabled{opacity:.35;cursor:default}
 #read-prev-chapter-btn:disabled,#read-next-chapter-btn:disabled{opacity:.35;cursor:default}
 #read-display .vnum{cursor:pointer}
-.scractions{display:flex;flex-wrap:wrap;gap:7px;row-gap:6px;margin:0 0 10px;position:sticky;top:0;z-index:2;background:var(--bg2);padding-bottom:8px}
+.scractions{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
+.scractions::-webkit-scrollbar{display:none}
 .fnref{background:var(--bg1);border:1px solid var(--border);border-left:3px solid var(--golddim);border-radius:var(--r);padding:12px 14px;margin-bottom:16px}
 .fnref p{font-size:14px;color:var(--txt2);line-height:1.7;white-space:pre-wrap;font-style:italic}
 .fnotes-collapsible{margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--bg2)}
@@ -410,6 +411,12 @@ input[type="range"]{accent-color:var(--gold)}
   #read-speed-sel{height:40px!important;width:42px!important;flex:0 0 42px!important;font-size:12px!important}
   #read-voice-wrap,#read-voice-wrap>div,#read-volume-wrap{height:40px!important}
   #read-voice-wrap>div{font-size:11px!important}
+  #scracts{gap:4px!important;padding:8px 12px 6px!important}
+  #scracts .btn-sm{padding:5px 9px!important;font-size:12px!important;min-height:32px!important}
+  #scr-skip-prev,#scr-skip-next,#scr-repeat-btn,#tts-restart-scr{height:34px!important;width:34px!important;flex:0 0 34px!important;font-size:15px!important}
+  #listen-scr-btn{height:34px!important;padding:0 8px!important;font-size:12px!important;gap:4px!important}
+  #listen-scr-icon{width:12px!important;height:12px!important}
+  #scr-speed-sel{height:34px!important;width:44px!important;flex:0 0 44px!important;font-size:11px!important;padding:0 2px!important}
 }
 @media(min-width:481px){
   html,body{overflow:auto}
@@ -734,24 +741,24 @@ input[type="range"]{accent-color:var(--gold)}
     </div>
   </div>
   <div class="scrpanel" id="scrpanel">
+    <div id="scracts" style="display:none" class="scractions">
+      <button class="btn btn-sm btn-ghost" onclick="copyScrip()">Copy</button>
+      <button class="btn btn-sm btn-ghost" onclick="openPasteModal()">Paste</button>
+      <button id="scr-skip-prev" onclick="scrSkipVerse(-1)" title="Previous verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏮</button>
+      <button id="listen-scr-btn" onclick="ttsToggleScr()" style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;padding:0 12px;cursor:pointer;height:44px;display:flex;align-items:center;gap:5px;flex-shrink:0"><svg id="listen-scr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-scr-label">Listen</span></button>
+      <button id="scr-skip-next" onclick="scrSkipVerse(1)" title="Next verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏭</button>
+      <button id="scr-repeat-btn" onclick="toggleTTSRepeat()" title="Repeat this reference" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">🔁</button>
+      <button id="tts-restart-scr" onclick="ttsRestart('scr')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;align-items:center;justify-content:center;font-size:18px">↺</button>
+      <select id="scr-speed-sel" onchange="setTTSRate(parseFloat(this.value))" title="Playback speed" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;padding:0 4px;height:44px;width:54px;flex:0 0 54px;cursor:pointer;text-align:center;text-align-last:center">
+        <option value="0.5">0.5×</option>
+        <option value="1">1×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+        <option value="2.5">2.5×</option>
+        <option value="3">3×</option>
+      </select>
+    </div>
     <div class="scrpanel-inner">
-      <div id="scracts" style="display:none" class="scractions">
-        <button class="btn btn-sm btn-ghost" onclick="copyScrip()">Copy</button>
-        <button class="btn btn-sm btn-ghost" onclick="openPasteModal()">Paste</button>
-        <button id="scr-skip-prev" onclick="scrSkipVerse(-1)" title="Previous verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏮</button>
-        <button id="listen-scr-btn" onclick="ttsToggleScr()" style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;padding:0 12px;cursor:pointer;height:44px;display:flex;align-items:center;gap:5px"><svg id="listen-scr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-scr-label">Listen</span></button>
-        <button id="scr-skip-next" onclick="scrSkipVerse(1)" title="Next verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏭</button>
-        <button id="scr-repeat-btn" onclick="toggleTTSRepeat()" title="Repeat this reference" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">🔁</button>
-        <button id="tts-restart-scr" onclick="ttsRestart('scr')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;align-items:center;justify-content:center;font-size:18px">↺</button>
-        <select id="scr-speed-sel" onchange="setTTSRate(parseFloat(this.value))" title="Playback speed" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;padding:0 4px;height:44px;width:54px;flex:0 0 54px;cursor:pointer;text-align:center;text-align-last:center">
-          <option value="0.5">0.5×</option>
-          <option value="1">1×</option>
-          <option value="1.5">1.5×</option>
-          <option value="2">2×</option>
-          <option value="2.5">2.5×</option>
-          <option value="3">3×</option>
-        </select>
-      </div>
       <div id="scrdisplay"><div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div></div>
     </div>
   </div>
@@ -1667,7 +1674,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.18"></script>
+<script type="module" src="app.js?v=4.34.19"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

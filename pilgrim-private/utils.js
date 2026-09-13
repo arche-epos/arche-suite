@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.18',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.19',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Notes tab Scripture Panel TTS toolbar (#scracts) — two issues. (1) Sized down Copy/Paste/Listen/skip/repeat/restart/speed controls at \u2264480px so the full row fits without wrapping to a second line on phone widths; added horizontal scroll as a fallback for the widest state (all 8 controls visible during playback). (2) The toolbar was a position:sticky child inside the scrolling .scrpanel-inner container, which is flaky in WebKit when the scroll parent is display:flex column \u2014 caused passage text to visibly scroll above the bar instead of staying pinned. Restructured so #scracts is a true fixed sibling above .scrpanel-inner (which now scrolls only the passage text underneath), removing the sticky hack entirely."
+    ]},
+  {
+    version:'4.34.18',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Guided Tour A — the Reference Picker and Word Lookup Result steps targeted the full-viewport overlay backdrop (#bp-overlay, #lexicon-overlay) instead of the modal card inside it, so the spotlight/bubble math treated the whole screen as the target and collapsed to the bottom-left corner instead of framing the actual card. Retargeted both steps onto the card itself (.bp-sheet, .modal). Also added a defensive guard in tourTargetRect() that discards any matched rect covering \\u226595% of the viewport in both dimensions, so a future overlay-wrapper selector mistake falls back to a centered step instead of mispositioning."
