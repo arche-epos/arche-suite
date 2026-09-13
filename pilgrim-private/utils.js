@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.19',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.20',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: added an A\u2212 (shrink text) button next to the existing A+ button in the Notes tab's Observations & Notes header — previously that quick-access row could only grow the content font, and shrinking required going to Settings > Appearance. Both buttons now share the same disabled-at-the-ends behavior as the Settings A\u2212/A+ pair (updateFontScaleUI() extended to cover all four buttons)."
+    ]},
+  {
+    version:'4.34.19',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Notes tab Scripture Panel TTS toolbar (#scracts) — two issues. (1) Sized down Copy/Paste/Listen/skip/repeat/restart/speed controls at \u2264480px so the full row fits without wrapping to a second line on phone widths; added horizontal scroll as a fallback for the widest state (all 8 controls visible during playback). (2) The toolbar was a position:sticky child inside the scrolling .scrpanel-inner container, which is flaky in WebKit when the scroll parent is display:flex column \u2014 caused passage text to visibly scroll above the bar instead of staying pinned. Restructured so #scracts is a true fixed sibling above .scrpanel-inner (which now scrolls only the passage text underneath), removing the sticky hack entirely."

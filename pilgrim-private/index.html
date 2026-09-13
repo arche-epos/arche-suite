@@ -141,6 +141,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 input[type="range"]{accent-color:var(--gold)}
 #read-player button:disabled{opacity:.35;cursor:default}
 #read-prev-chapter-btn:disabled,#read-next-chapter-btn:disabled{opacity:.35;cursor:default}
+#notes-font-btn:disabled,#notes-font-minus-btn:disabled{opacity:.35;cursor:default}
 #read-display .vnum{cursor:pointer}
 .scractions{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0}
 .scractions::-webkit-scrollbar{display:none}
@@ -769,6 +770,7 @@ input[type="range"]{accent-color:var(--gold)}
         <span id="notes-wc" style="font-size:11px;color:var(--txt4)">0 words</span>
         <button id="listen-fn-btn" onclick="ttsToggleField('fn')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-fn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-fn-label">Listen</span></button>
         <button id="tts-restart-fn" onclick="ttsRestart('fn')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button>
+        <button onclick="adjustFontScale(-1)" id="notes-font-minus-btn" title="Smaller text (full control in Settings > Appearance)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 7px;cursor:pointer;min-height:26px">A−</button>
         <button onclick="adjustFontScale(1)" id="notes-font-btn" title="Bigger text (full control in Settings > Appearance)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 7px;cursor:pointer;min-height:26px">A+</button>
       </div>
     </div>
@@ -1674,7 +1676,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.19"></script>
+<script type="module" src="app.js?v=4.34.20"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.19';
+} from './utils.js?v=4.34.20';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.19';
+} from './storage.js?v=4.34.20';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.19';
+} from './tts.js?v=4.34.20';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.19';
+} from './sync.js?v=4.34.20';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.19';
+} from './studyTools.js?v=4.34.20';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1779,12 +1779,15 @@ function updateFontFamilyUI(){
 function updateFontScaleUI(){
   var label=document.getElementById('font-scale-label');
   var minus=document.getElementById('font-scale-minus'),plus=document.getElementById('font-scale-plus');
+  var notesMinus=document.getElementById('notes-font-minus-btn'),notesPlus=document.getElementById('notes-font-btn');
   var steps=FONT_SCALE_STEPS;
   var cur=typeof sett.fontScale==='number'?sett.fontScale:1;
   var i=steps.reduce(function(best,v,idx){return Math.abs(v-cur)<Math.abs(steps[best]-cur)?idx:best;},0);
   if(label)label.textContent=Math.round(steps[i]*100)+'%';
   if(minus)minus.disabled=(i===0);
   if(plus)plus.disabled=(i===steps.length-1);
+  if(notesMinus)notesMinus.disabled=(i===0);
+  if(notesPlus)notesPlus.disabled=(i===steps.length-1);
 }
 
 // ── TRANSLATION SPECTRUM ─────────────────────────────────────────
