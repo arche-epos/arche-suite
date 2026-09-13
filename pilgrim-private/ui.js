@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.17';
+} from './utils.js?v=4.34.18';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.17';
+} from './storage.js?v=4.34.18';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.17';
+} from './tts.js?v=4.34.18';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.17';
+} from './sync.js?v=4.34.18';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.17';
+} from './studyTools.js?v=4.34.18';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2631,7 +2631,15 @@ function tourTargetRect(sel){
     right=Math.max(right,r.right);bottom=Math.max(bottom,r.bottom);
   });
   if(!found)return null;
-  return {top:top,left:left,width:right-left,height:bottom-top};
+  var rect={top:top,left:left,width:right-left,height:bottom-top};
+  // Defensive guard: a selector that resolves to a full-viewport wrapper (e.g. an
+  // overlay backdrop instead of the card inside it) produces a rect that covers
+  // ~the whole screen. Spotlighting/anchoring a bubble to that collapses the
+  // placement math to a screen corner instead of framing the actual control.
+  // Treat near-viewport-sized rects as "no usable target" so the step falls back
+  // to the centered/no-target presentation instead of mispositioning.
+  if(rect.width>=window.innerWidth*0.95&&rect.height>=window.innerHeight*0.95)return null;
+  return rect;
 }
 /**
  * Positions the spotlight cutout over a target rect using the box-shadow
@@ -2846,13 +2854,13 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');cur.series="How to Use Archē";cur.title='First-Time Study';cur.tags=['study'];populateField();renderTagPicker();},target:'#f-series,#f-title,#f-tags-picker',title:'Series, Title & Tags',body:"Group related studies under a series, give this one a specific title, and tag it to filter and sort later — we filled in examples for all three."},
   {screen:'study',before:function(){switchStudyTab('notes');var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'.bp-open-btn',title:'Or Browse for It',body:'Prefer not to type? Tap this book icon to open the Reference Picker — browse by Testament, Book, Chapter, and Verse, then tap Load Scripture.'},
-  {screen:'study',before:function(){switchStudyTab('notes');bpOpen();},target:'#bp-overlay',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
+  {screen:'study',before:function(){switchStudyTab('notes');bpOpen();},target:'#bp-overlay .bp-sheet',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
   {screen:'study',before:function(){switchStudyTab('notes');closeOverlay('bp-overlay');var r=makeRef('secondary');r.reference='Romans 8:28';cur.refs.push(r);switchRef(cur.refs.length-1);fetchScr();},target:'.ref-pill-add',title:'Add Another Passage',body:"Tap + Add Passage to study multiple passages in one study. We've added a second one — Romans 8:28 — to show how it works."},
   {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
   {screen:'study',before:function(){switchStudyTab('notes');if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
-  {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
+  {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay .modal',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical,#btn-grammar,#btn-historical,#btn-cultural,#btn-crossrefs,#btn-geography',title:'Six AI Research Tools',body:"Word Study (word meanings), Language & Structure (grammar), Historical Context, Cultural Context, Cross-References, and Places & Geography. Each button's subtitle explains what it covers — tap any one to run it."},

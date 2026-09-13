@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.17',date:'Sep 12, 2026',label:'Latest',
+    version:'4.34.18',date:'Sep 12, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Guided Tour A — the Reference Picker and Word Lookup Result steps targeted the full-viewport overlay backdrop (#bp-overlay, #lexicon-overlay) instead of the modal card inside it, so the spotlight/bubble math treated the whole screen as the target and collapsed to the bottom-left corner instead of framing the actual card. Retargeted both steps onto the card itself (.bp-sheet, .modal). Also added a defensive guard in tourTargetRect() that discards any matched rect covering \\u226595% of the viewport in both dimensions, so a future overlay-wrapper selector mistake falls back to a centered step instead of mispositioning."
+    ]},
+  {
+    version:'4.34.17',date:'Sep 12, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: redone correctly this time \u2014 Settings > Account's \u201cSigned in as ___\u201d line was showing the raw account id instead of the display name, because startPilgrim() in app.js had a stale line writing ACTIVE_USER directly into that field after setUserDisplay() already set it correctly. Removed the stale block only. v4.34.15 tried this same fix but also deleted app.js's `import * as Utils` line, not realizing the window-bridging loop later in the file (`[Utils, Storage, TTS, Sync, StudyTools, UI].forEach(...)`) still referenced it directly \u2014 that threw a ReferenceError at module load, which silently broke the entire app (white screen, zero interactivity) since app.js never finished executing. The Utils import stays; only the stale override block is gone this time."
