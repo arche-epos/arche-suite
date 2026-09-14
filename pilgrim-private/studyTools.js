@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.27';
+} from './utils.js?v=4.34.28';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.27';
-import { syncToGist } from './sync.js?v=4.34.27';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.27';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.28';
+import { syncToGist } from './sync.js?v=4.34.28';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.28';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -423,8 +423,11 @@ function populateDeep(){
   var wc=_notesPlain.trim()?_notesPlain.trim().split(/\s+/).length:0;
   var badge=document.getElementById('fnotes-wc-badge');
   if(badge)badge.textContent=wc?'('+wc+' words)':'';
-  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.clipboard.dangerouslyPasteHTML(_cd);else _qConcl.setText('');if(window.setQConclDirty)window.setQConclDirty(false);}
-  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.clipboard.dangerouslyPasteHTML(_od);else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
+  // setContents(clipboard.convert(html),'silent') instead of dangerouslyPasteHTML -- avoids the
+  // internal setSelection(0,SILENT) call that silently steals real DOM focus via Quill's
+  // Selection.setNativeRange() (v4.34.28 fix -- see matching comment in populateField(), ui.js).
+  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.setContents(_qConcl.clipboard.convert(_cd),'silent');else _qConcl.setText('');if(window.setQConclDirty)window.setQConclDirty(false);}
+  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.setContents(_qOutline.clipboard.convert(_od),'silent');else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
   setStudyScope((ar&&ar.deep&&ar.deep.studyScope)||'passage');
   updateScopeBtnLabel();

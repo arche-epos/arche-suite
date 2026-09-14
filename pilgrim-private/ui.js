@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.27';
+} from './utils.js?v=4.34.28';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.27';
+} from './storage.js?v=4.34.28';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.27';
+} from './tts.js?v=4.34.28';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.27';
+} from './sync.js?v=4.34.28';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.27';
+} from './studyTools.js?v=4.34.28';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -929,8 +929,13 @@ function populateField(){
   document.getElementById('f-ref').value=ar?ar.reference||'':'';
   document.getElementById('f-trans').value=ar?ar.translation||'esv':'esv';
   document.getElementById('f-title').value=cur.title||'';
-  // dangerouslyPasteHTML preserves formatting (bold, lists, headings); setText('') would strip it
-  if(_qFN){if(cur.fieldNotes)_qFN.clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN.setText('');_qFNDirty=false;}
+  // setContents(clipboard.convert(html),'silent') preserves formatting like dangerouslyPasteHTML did,
+  // but WITHOUT the internal setSelection(0,SILENT) call dangerouslyPasteHTML makes -- that call
+  // reaches Quill's Selection.setNativeRange(), which unconditionally does `if(!this.hasFocus())
+  // this.root.focus()` regardless of the SILENT source flag, silently stealing real DOM focus back
+  // onto this editor every time it repopulates (v4.34.28 fix -- root cause of the persistent
+  // focus-stuck bug from v4.34.25-27; confirmed against actual Quill 1.3.7 source, not guessed).
+  if(_qFN){if(cur.fieldNotes)_qFN.setContents(_qFN.clipboard.convert(cur.fieldNotes),'silent');else _qFN.setText('');_qFNDirty=false;}
   renderStudyWords();
   renderTagPicker();
   renderFieldTiles();

@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.27',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.28',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: v4.34.27's blur() calls in navTo()/switchStudyTab()/toggleOutline() didn't fully fix the focus-stuck bug -- Notes could still show a blinking cursor after switching away, and Outline/Conclusions sometimes couldn't be tapped into at all. Root cause found in Quill 1.3.7's own source: dangerouslyPasteHTML() (used by populateField() and populateDeep() to repopulate Notes/Conclusions/Outline on every tab switch) internally calls setSelection(0,SILENT), which reaches Selection.setNativeRange() -- and that method unconditionally runs `if(!this.hasFocus())this.root.focus()` regardless of the SILENT flag. So every repopulation silently stole real DOM focus straight back, undoing the v4.34.27 blur() in the same tick (Notes) or landing invisible, keyboard-less focus on Outline before any tap ever happened (Conclusions/Outline, populated in that order -- Outline processed last, so it ended up holding it). Fixed by switching all three population sites to setContents(clipboard.convert(html),'silent') instead -- same formatting preserved, but setContents never touches selection, so no more phantom focus() calls."
+    ]},
+  {
+    version:'4.34.27',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: after v4.34.26, on-device testing found typing anywhere in the app (the scripture reference field, Outline, Conclusions) could get captured by the Field Notes editor instead. Root cause: Notes/Study Tools/Read are CSS show/hide tabs, not real page navigation, and navTo()/switchStudyTab() never blurred the active field before switching -- a focused Quill editor could stay logically focused after its tab was hidden. Before the floating-rail change this was invisible (the rail was hidden along with its tab); now that the rail lives at document level, a stuck-focused Notes editor left its rail visibly floating over whatever tab you'd switched to, absorbing taps meant for other fields. Added an explicit blur() + rail-hide at the top of navTo(), switchStudyTab(), and the Outline accordion's toggleOutline() (same gap -- collapsing that section didn't blur its editor either)."
