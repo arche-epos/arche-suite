@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.25',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.26',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the v4.34.25 floating rail was anchored just below the topbar, but on-device testing found it landed too high to be useful with the keyboard open -- part of the column sat behind/above the visible typing area. Re-anchored the rail to the bottom-left of the screen instead (Android Chrome shrinks window.innerHeight when the on-screen keyboard opens, so bottom:0 naturally lands right above it), so it now sits right where you're typing rather than up near the header. Also added a max-height + overflow-y:auto safety net on the rail itself, so if the full 14-icon tier is ever taller than the space available above the keyboard on a given device, it becomes a controlled internal scroll instead of silently rendering off-screen."
+    ]},
+  {
+    version:'4.34.25',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the v4.34.23 left-rail toolbar (Notes/Conclusions/Outline) had two device-tested-and-found bugs. (1) Every rail button was wired class=\"ql-rail-btn ql-bold\" -- Quill's toolbar module reads the FIRST class starting with \"ql-\" as the format, so it was reading \"rail-btn\" (not a real format) and silently never attaching a click listener to any button, on either toolbar tier. Reordered every button's classes (ql-bold ql-rail-btn, etc.) so Quill reads the real format. (2) The rail scrolled away with the page instead of staying visible while typing/scrolling with the keyboard open. Relocated all 3 rails out of their editors' scrolling/overflow-hidden ancestor tree entirely (to the end of the document, near .fab-wrap) and made them position:fixed, shown only on that editor's own focus via Quill's selection-change event -- so exactly one rail floats near the top of the screen at a time, over whichever field you're actually editing, with a matching left-padding added to that field's text so the rail never overlaps it. position:sticky was ruled out: Outline's collapsible section wrapper has overflow:hidden permanently, which breaks sticky outright, and the MKB already documents position:fixed-inside-overflow:hidden losing touch events on iOS Safari as the reason #scracts needed the same kind of restructuring earlier this session."

@@ -525,16 +525,22 @@ input[type="range"]{accent-color:var(--gold)}
    events on iOS Safari, and Outline's collapsible wrapper has overflow:
    hidden permanently). Each is display:none until initCustomToolbar()
    (ui.js) adds .showing on that editor's own focus, via Quill's
-   selection-change event — so exactly one floats at a time, positioned
-   near the top of the screen (clear of the on-screen keyboard, which only
-   ever eats the bottom) so it stays visible as you scroll or type. */
+   selection-change event — so exactly one floats at a time, anchored to
+   the bottom-left of the screen (Android Chrome shrinks window.innerHeight
+   when the on-screen keyboard opens, so bottom:0 naturally lands right
+   above it) so it stays visible right where you're typing as you scroll.
+   max-height+overflow-y:auto is a safety net for the rare case (full
+   14-icon tier on a device near the 750px height cutoff, keyboard open)
+   where the column is taller than the space available above the
+   keyboard — it becomes a controlled internal scroll instead of silently
+   rendering off-screen. */
 .ql-editorwrap{display:block;}
 .ql-pop-wrap{position:relative;}
 .ql-flyout{position:absolute;left:38px;top:0;display:none;flex-direction:row;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px;z-index:5;}
 .ql-flyout.open{display:flex;}
 .ql-rail-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;}
 .ql-rail-btn.ql-active,.ql-rail-btn.trig-active,.ql-rail-btn.trig-open{border-color:var(--gold);color:var(--gold);}
-.ql-rail{position:fixed;left:16px;top:calc(64px + var(--safe-t));z-index:58;display:none;flex-direction:column;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);}
+.ql-rail{position:fixed;left:16px;bottom:calc(12px + var(--safe-b));z-index:58;display:none;flex-direction:column;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);max-height:calc(100vh - 24px - var(--safe-t) - var(--safe-b));overflow-y:auto;}
 .ql-rail.showing{display:flex;}
 @media(max-width:900px){
   .ql-editorwrap>div[id$="-editor"]{min-width:0;}
@@ -1846,7 +1852,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.25"></script>
+<script type="module" src="app.js?v=4.34.26"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
