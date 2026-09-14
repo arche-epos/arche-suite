@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.26',date:'Sep 13, 2026',label:'Latest',
+    version:'4.34.27',date:'Sep 13, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: after v4.34.26, on-device testing found typing anywhere in the app (the scripture reference field, Outline, Conclusions) could get captured by the Field Notes editor instead. Root cause: Notes/Study Tools/Read are CSS show/hide tabs, not real page navigation, and navTo()/switchStudyTab() never blurred the active field before switching -- a focused Quill editor could stay logically focused after its tab was hidden. Before the floating-rail change this was invisible (the rail was hidden along with its tab); now that the rail lives at document level, a stuck-focused Notes editor left its rail visibly floating over whatever tab you'd switched to, absorbing taps meant for other fields. Added an explicit blur() + rail-hide at the top of navTo(), switchStudyTab(), and the Outline accordion's toggleOutline() (same gap -- collapsing that section didn't blur its editor either)."
+    ]},
+  {
+    version:'4.34.26',date:'Sep 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the v4.34.25 floating rail was anchored just below the topbar, but on-device testing found it landed too high to be useful with the keyboard open -- part of the column sat behind/above the visible typing area. Re-anchored the rail to the bottom-left of the screen instead (Android Chrome shrinks window.innerHeight when the on-screen keyboard opens, so bottom:0 naturally lands right above it), so it now sits right where you're typing rather than up near the header. Also added a max-height + overflow-y:auto safety net on the rail itself, so if the full 14-icon tier is ever taller than the space available above the keyboard on a given device, it becomes a controlled internal scroll instead of silently rendering off-screen."

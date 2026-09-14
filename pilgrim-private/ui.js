@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.26';
+} from './utils.js?v=4.34.27';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.26';
+} from './storage.js?v=4.34.27';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.26';
+} from './tts.js?v=4.34.27';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.26';
+} from './sync.js?v=4.34.27';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.26';
+} from './studyTools.js?v=4.34.27';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -662,7 +662,30 @@ document.addEventListener('click',function(e){
   if(w && !w.contains(e.target))closeFabMenu();
 });
 
+/**
+ * Force-hides all three floating format rails and clears the matching
+ * rail-open padding on their editors. Called from navTo()/switchStudyTab()
+ * as a belt-and-suspenders alongside the explicit blur() there — blur()
+ * should already trigger Quill's selection-change (which normally handles
+ * this), but this guarantees a clean state on every screen switch even if
+ * that event doesn't fire synchronously in some mobile browser edge case.
+ */
+function hideAllRails(){
+  ['f-notes-toolbar','d-conclusions-toolbar','d-outline-toolbar'].forEach(function(id){
+    var rail=document.getElementById(id);
+    if(rail)rail.classList.remove('showing');
+  });
+  document.querySelectorAll('.ql-editorwrap.rail-open').forEach(function(w){w.classList.remove('rail-open');});
+}
 function navTo(id){
+  // Tabs are CSS show/hide, not real navigation, so a focused Quill editor
+  // (or plain input) from the previous screen can stay logically focused
+  // even though its tab is now hidden -- explicitly blur before switching,
+  // so its selection-change fires (hiding its floating rail) and the next
+  // tap on the new screen cleanly acquires focus instead of contending
+  // with a stuck-focused field somewhere off-screen.
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  hideAllRails();
   trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
   dismissTabHints();
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
@@ -687,6 +710,12 @@ function navTo(id){
  * @param {string} tab - 'notes' or 'tools'.
  */
 function switchStudyTab(tab){
+  // Same reasoning as navTo() -- Notes and Study Tools (Conclusions/Outline)
+  // are CSS show/hide, not real navigation, so blur explicitly before
+  // switching or a focused editor can stay stuck focused after its sub-tab
+  // is hidden.
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  hideAllRails();
   trackEvent({screen:'study.'+tab}); // usage tracking — sub-tab visit (spec-usage-tracking-admin-v2.md)
   var notesOn=tab==='notes';
   document.getElementById('scr-field').classList.toggle('on',notesOn);

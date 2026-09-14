@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.26';
+} from './utils.js?v=4.34.27';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.26';
-import { syncToGist } from './sync.js?v=4.34.26';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.26';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.27';
+import { syncToGist } from './sync.js?v=4.34.27';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.27';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -499,6 +499,12 @@ function toggleDeepScripture(){
  * Rotates the chevron icon to reflect open/closed state.
  */
 function toggleOutline(){
+  // Collapsing this accordion sets max-height:0/overflow:hidden on its body
+  // without blurring anything inside it -- if the Outline editor is
+  // currently focused, it can stay stuck focused (and its floating rail
+  // stuck visible) after the section visually collapses. Blur defensively
+  // either direction; harmless on open, since nothing inside is focused yet.
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   _outlineOpen=!_outlineOpen;
   var body=document.getElementById('outline-body');
   var chev=document.getElementById('outline-chev');
