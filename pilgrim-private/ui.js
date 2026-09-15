@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.30';
+} from './utils.js?v=4.34.31';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.30';
+} from './storage.js?v=4.34.31';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.30';
+} from './tts.js?v=4.34.31';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.30';
+} from './sync.js?v=4.34.31';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.30';
+} from './studyTools.js?v=4.34.31';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -669,6 +669,25 @@ function hideAllRails(){
   });
   document.querySelectorAll('.ql-editorwrap.rail-open').forEach(function(w){w.classList.remove('rail-open');});
 }
+/**
+ * Blurs whatever field currently has focus, deferred by one tick (v4.34.31).
+ * Calling blur() synchronously in the same tick as the rest of a tab switch's
+ * DOM work (hideAllRails, class toggles, populateField/populateDeep, etc.) was
+ * suspected of racing Android Chrome's IME/keyboard state machine -- after the
+ * v4.34.30 rebuild fixed the actual stuck-focus bug, on-device testing still
+ * intermittently found a field's caret blinking with no keyboard after a fast
+ * tab switch. Pushing the blur to a fresh macrotask via setTimeout(...,0) gives
+ * the browser a chance to settle the previous field's keyboard state before
+ * the next tap's focus event arrives, instead of both fighting for the same
+ * tick. Used by navTo(), switchStudyTab(), and toggleOutline() -- NOT by the
+ * guided-tour system's own blur() calls (tourRenderStep, the focusin safety
+ * net), which need to stay synchronous for the tour's own timing.
+ */
+function _deferBlur(){
+  setTimeout(function(){
+    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  },0);
+}
 function navTo(id){
   // Tabs are CSS show/hide, not real navigation, so a focused Quill editor
   // (or plain input) from the previous screen can stay logically focused
@@ -676,7 +695,7 @@ function navTo(id){
   // so its selection-change fires (hiding its floating rail) and the next
   // tap on the new screen cleanly acquires focus instead of contending
   // with a stuck-focused field somewhere off-screen.
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  _deferBlur();
   hideAllRails();
   trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
   dismissTabHints();
@@ -706,7 +725,7 @@ function switchStudyTab(tab){
   // are CSS show/hide, not real navigation, so blur explicitly before
   // switching or a focused editor can stay stuck focused after its sub-tab
   // is hidden.
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  _deferBlur();
   hideAllRails();
   trackEvent({screen:'study.'+tab}); // usage tracking — sub-tab visit (spec-usage-tracking-admin-v2.md)
   var notesOn=tab==='notes';

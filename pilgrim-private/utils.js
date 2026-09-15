@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.30',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.31',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature/fix: two changes after v4.34.30 live testing. (1) Rebuilt the mobile toolbar layout again -- from a vertical column pinned to the left edge to a horizontal keyboard-accessory bar spanning the width (per Boss's request), single scrollable row instead of a tall column; removed the now-unneeded left-padding hack on the text (the bar floats above the keyboard, doesn't overlap the side of the text anymore). (2) Testing also found typing worked but the keyboard sometimes didn't appear (cursor blinking, no keyboard) after a fast tab switch -- deferred the explicit blur() calls in navTo()/switchStudyTab()/toggleOutline() by one JS tick (setTimeout(...,0)) since calling blur() synchronously in the same tick as the rest of a tab switch's DOM work was suspected of racing Android Chrome's IME/keyboard state machine. This is a targeted, reasoned fix for an intermittent issue, not a confirmed root cause -- flagged for a real on-device retest."
+    ]},
+  {
+    version:'4.34.30',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: rebuilt the mobile floating toolbar for Notes/Conclusions/Outline from scratch after v4.34.29's revert. Two changes from the old (v4.34.21-28) design: (1) dropped the pop-out flyout groups entirely -- all 14 formatting icons (Bold/Italic/Underline/Strike/H1-H3/Normal/Numbered+Bullet list/Indent -+/Blockquote/Clear) are now always visible in one flat scrollable column, no trigger-and-flyout indirection, cutting the JS surface way down after that mechanism couldn't be fully debugged on Outline/Conclusions; (2) the rail now tracks the on-screen keyboard live via window.visualViewport's resize/scroll events instead of a one-time window.innerHeight check at load -- the old approach only worked if the browser actually shrank the layout viewport when the keyboard opened, which was inconsistent across Android Chrome configurations. Also added a defensive try/catch + logError() around the rail's own event handlers, so if anything here breaks it now writes full detail to Settings > Errors instead of failing silently."

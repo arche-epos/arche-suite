@@ -511,17 +511,22 @@ input[type="range"]{accent-color:var(--gold)}
 .ql-toolbar.ql-snow .ql-formats button:hover .ql-fill,.ql-toolbar.ql-snow .ql-formats button.ql-active .ql-fill{fill:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover,.ql-toolbar.ql-snow .ql-picker-label.ql-active{color:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover .ql-stroke,.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-stroke{stroke:var(--gold);}
-/* Mobile (≤900px): custom floating left-rail toolbar (v4.34.30 rebuild) —
-   plain text/glyph buttons carrying Quill's ql-* classes (listed FIRST in
-   the class attribute — Quill's toolbar.js picks the first class starting
-   with "ql-" to determine the format, so ql-rail-btn must come second) so
-   its toolbar module still handles click-to-format and .ql-active state
-   automatically. FLAT list, no pop-out groups — the v4.34.21-28 pop-out
-   mechanism (.ql-pop-wrap/.ql-flyout/data-pop, a per-rail document click
-   listener, and trig-active/trig-open group highlighting) is gone entirely;
-   every one of the 14 buttons is always visible and directly wired, cutting
-   the JS surface way down after that version couldn't be fully debugged on
-   Outline/Conclusions (session-handoff-sep14-2026-toolbar-focus-bug.md).
+/* Mobile (≤900px): custom floating toolbar (v4.34.31 — horizontal keyboard
+   accessory bar) — plain text/glyph buttons carrying Quill's ql-* classes
+   (listed FIRST in the class attribute — Quill's toolbar.js picks the first
+   class starting with "ql-" to determine the format, so ql-rail-btn must
+   come second) so its toolbar module still handles click-to-format and
+   .ql-active state automatically. Flat list, no pop-out groups (unchanged
+   from v4.34.30) — every one of the 14 buttons is always visible and
+   directly wired.
+   Layout changed from a vertical left-edge column (v4.34.30) to a
+   horizontal bar spanning the width, per Boss's request — a keyboard
+   accessory-bar look rather than a side rail. Buttons no longer wrap
+   (flex-shrink:0 on .ql-rail-btn) and the row scrolls horizontally
+   (overflow-x:auto) since all 14 don't fit one screen width at once.
+   The old .ql-editorwrap.rail-open padding-left:50px hack (made room for
+   the vertical rail overlapping the left edge of the text) is removed —
+   a bar floating above the keyboard doesn't overlap the text at all.
    Hidden and inert above 900px — desktop binds Quill to the original array
    toolbar above instead (see initEditors()).
    The three rail elements live at the end of the document (near .fab-wrap),
@@ -530,28 +535,21 @@ input[type="range"]{accent-color:var(--gold)}
    iOS Safari, and Outline's collapsible wrapper has overflow:hidden
    permanently). Each is display:none until initCustomToolbar() (ui.js) adds
    .showing on that editor's own focus, via Quill's selection-change event —
-   so exactly one floats at a time. Positioning is JS-driven via
-   window.visualViewport (see _railReposition() in ui.js), not a static CSS
-   bottom offset: the old bottom:0-and-hope-the-layout-viewport-shrinks
-   approach (v4.34.25/26) was inconsistent across Android Chrome
-   configurations, so the rail's `top` is now recalculated live against the
-   visual viewport's actual bottom edge on every resize/scroll while a rail
-   is open, tracking the keyboard directly instead of inferring it.
-   bottom:calc(12px + var(--safe-b)) below is the static fallback for
-   browsers without visualViewport support — JS overrides it with an inline
-   top/bottom:auto once available. max-height+overflow-y:auto is a safety
-   net for the rare case (all 14 icons, keyboard open, short screen) where
-   the column is taller than the space above the keyboard — controlled
-   internal scroll instead of silently rendering off-screen. */
+   so exactly one floats at a time. Vertical positioning is still JS-driven
+   via window.visualViewport (see _railReposition() in ui.js): the visual
+   viewport's own height+offsetTop is the browser's authoritative answer for
+   "what's actually visible right now," keyboard included, recalculated on
+   every resize/scroll while a rail is open. bottom:calc(12px + var(--safe-b))
+   below is the static fallback for browsers without visualViewport support —
+   JS overrides it with an inline top/bottom:auto once available. */
 .ql-editorwrap{display:block;}
 .ql-rail-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;}
 .ql-rail-btn.ql-active{border-color:var(--gold);color:var(--gold);}
-.ql-rail{position:fixed;left:16px;bottom:calc(12px + var(--safe-b));z-index:58;display:none;flex-direction:column;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);max-height:calc(100vh - 24px - var(--safe-t) - var(--safe-b));overflow-y:auto;}
+.ql-rail{position:fixed;left:8px;right:8px;bottom:calc(12px + var(--safe-b));z-index:58;display:none;flex-direction:row;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .ql-rail.showing{display:flex;}
 @media(max-width:900px){
   .ql-editorwrap>div[id$="-editor"]{min-width:0;}
   .ql-container.ql-snow{border-top:1px solid var(--border);border-radius:var(--r);}
-  .ql-editorwrap.rail-open .ql-editor{padding-left:50px;}
 }
 .lib-tab{flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;color:var(--txt4);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:color .2s,border-color .2s;}
 .lib-tab.on{color:var(--gold);border-bottom-color:var(--gold);}
@@ -1787,7 +1785,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.30"></script>
+<script type="module" src="app.js?v=4.34.31"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

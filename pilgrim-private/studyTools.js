@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.30';
+} from './utils.js?v=4.34.31';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.30';
-import { syncToGist } from './sync.js?v=4.34.30';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.30';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.31';
+import { syncToGist } from './sync.js?v=4.34.31';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.31';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -507,7 +507,12 @@ function toggleOutline(){
   // currently focused, it can stay stuck focused (and its floating rail
   // stuck visible) after the section visually collapses. Blur defensively
   // either direction; harmless on open, since nothing inside is focused yet.
-  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  // Deferred by one tick (v4.34.31, same reasoning as ui.js's _deferBlur()) --
+  // a synchronous blur() here was suspected of racing Android Chrome's
+  // IME/keyboard state machine on a fast open/close.
+  setTimeout(function(){
+    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  },0);
   _outlineOpen=!_outlineOpen;
   var body=document.getElementById('outline-body');
   var chev=document.getElementById('outline-chev');
