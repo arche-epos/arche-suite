@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.37',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.38',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "revert: pulling the mobile floating-rail toolbar entirely (v4.34.21-37). The most recent bug -- focus getting forced back to Notes from completely unrelated UI, including the Pilgrim Guide chat box -- is a level of cross-cutting interference that couldn't be reliably chased down through code review alone after seven straight patch attempts this session. initEditors() now forces useRail=false unconditionally: Notes, Conclusions, and Outline all use the classic horizontal Quill toolbar above the editor, on every screen size -- the exact config desktop has run this entire session without a single issue. Rail markup/CSS/JS remains in the codebase but is fully inert. Revisiting the floating rail properly will need live device DevTools rather than another round of guessing."
+    ]},
+  {
+    version:'4.34.37',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Outline/Conclusions would show their toolbar rail on tap but never bring up the keyboard or a cursor -- root cause was a bug in _deferBlur() (introduced v4.34.31) that re-read document.activeElement fresh inside its one-tick-deferred callback instead of capturing it at scheduling time. Tapping into Outline quickly after switching to Study Tools could genuinely focus it (rail shows correctly) and then, a moment later, the stale deferred blur -- meant for Notes, the field that was actually focused when the tab switch happened -- would re-read activeElement, find Outline now sitting there instead, and blur that. Notes never hit this since it's the tab you land on first, before any deferred blur is ever pending. Fixed in both _deferBlur() (ui.js) and toggleOutline()'s own inline version (studyTools.js) by capturing the element to blur immediately, not inside the timeout."

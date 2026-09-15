@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.37';
+} from './utils.js?v=4.34.38';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.37';
+} from './storage.js?v=4.34.38';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.37';
+} from './tts.js?v=4.34.38';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.37';
+} from './sync.js?v=4.34.38';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.37';
+} from './studyTools.js?v=4.34.38';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -133,7 +133,19 @@ var _qlToolbar=[
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  var useRail=window.innerWidth<=900;
+  // Reverted to the classic horizontal Quill toolbar for ALL screen sizes
+  // (v4.34.38). The mobile floating-rail system (v4.34.21-37) accumulated a
+  // long chain of hard-to-diagnose bugs -- most recently, focus getting
+  // forced back to Notes from completely unrelated UI (even the Pilgrim
+  // Guide chat box), which is a level of cross-cutting interference that
+  // static code review can't reliably chase down further. Reverting to
+  // useRail=false restores the exact toolbar config desktop has run this
+  // entire session without a single issue. If the floating rail is revisited,
+  // it should be with live device DevTools (chrome://inspect over USB), not
+  // another guess-and-ship cycle. See session-handoff-sep14-2026-toolbar-
+  // focus-bug.md and the chat history from Sep 14-15, 2026 for the full
+  // history of what was tried.
+  var useRail=false;
   _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:useRail?'#f-notes-toolbar':_qlToolbar}});
   _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
   if(useRail)initCustomToolbar(_qFN,'f-notes-toolbar');
