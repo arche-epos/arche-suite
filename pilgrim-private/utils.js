@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.33',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.34',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the Pilgrim Guide FAB (gold circular button) was overlapping the toolbar's last icon on-device -- the FAB's fixed bottom-right position and the rail's keyboard-tracked position started colliding once the rail grew to edge-to-edge width with bigger icons (v4.34.33). Now hides the FAB entirely while any rail is showing (i.e. while actively editing with the keyboard up), reclaiming that space and removing the overlap. Reappears as soon as you tap out of the field."
+    ]},
+  {
+    version:'4.34.33',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: tightened up the mobile toolbar's fit after live testing showed dead space around it. Rail now spans edge-to-edge (outer margin 8px -> 4px per side) and sits nearly flush against the keyboard (gap above keyboard 12px -> 4px, both the CSS fallback and the visualViewport-driven JS positioning). Icons sized up 32px -> 38px (font 13px -> 15px) for easier touch targets, with tighter internal padding/gaps (5px -> 4px) to keep all 11 fitting on one line at the larger size."

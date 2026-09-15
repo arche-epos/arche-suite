@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.33';
+} from './utils.js?v=4.34.34';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.33';
+} from './storage.js?v=4.34.34';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.33';
+} from './tts.js?v=4.34.34';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.33';
+} from './sync.js?v=4.34.34';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.33';
+} from './studyTools.js?v=4.34.34';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -171,6 +171,22 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize',_railReposition);
   window.visualViewport.addEventListener('scroll',_railReposition);
 }
+/**
+ * Hides the Pilgrim Guide FAB while a rail is showing (v4.34.34). The FAB's
+ * fixed position (bottom:68px) and the rail's own keyboard-tracked position
+ * ended up overlapping on-device once the rail grew to edge-to-edge width
+ * with bigger icons (v4.34.33) -- the FAB visually sat on top of the rail's
+ * last button. Hiding the FAB during active editing both fixes the overlap
+ * and reclaims that screen space; nobody's reaching for Pilgrim Guide
+ * mid-keystroke anyway. Driven off the same _activeRailRoot global used for
+ * keyboard-tracking, so it stays in sync automatically.
+ */
+function _updateFabVisibility(){
+  try{
+    var fab=document.querySelector('.fab-wrap');
+    if(fab)fab.classList.toggle('rail-active',!!_activeRailRoot);
+  }catch(e){logError('FAB visibility toggle',e);}
+}
 
 /**
  * Wires the floating-visibility + keyboard-tracking behavior for a custom
@@ -205,6 +221,7 @@ function initCustomToolbar(quill,toolbarId){
       if(wrap)wrap.classList.toggle('rail-open',!!range);
       if(range){_activeRailRoot=root;_railReposition();}
       else if(_activeRailRoot===root){_activeRailRoot=null;}
+      _updateFabVisibility();
     }catch(e){logError('Rail selection-change ('+toolbarId+')',e);}
   });
   _initHeaderCycleBtn(quill,root);
