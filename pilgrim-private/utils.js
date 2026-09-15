@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.38',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.39',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the AI Study Tools panel's action row (Listen/Copy/Share/Clear/close) could overflow off the right edge of the screen instead of wrapping, requiring a horizontal scroll to reach Clear and the close button -- a pre-existing layout bug, unrelated to any of this session's toolbar work. The row now always drops to its own line below the tool tabs (flex-basis:100%, right-aligned) instead of trying to fit alongside them, so it can no longer overflow regardless of how many tool tabs are showing."
+    ]},
+  {
+    version:'4.34.38',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "revert: pulling the mobile floating-rail toolbar entirely (v4.34.21-37). The most recent bug -- focus getting forced back to Notes from completely unrelated UI, including the Pilgrim Guide chat box -- is a level of cross-cutting interference that couldn't be reliably chased down through code review alone after seven straight patch attempts this session. initEditors() now forces useRail=false unconditionally: Notes, Conclusions, and Outline all use the classic horizontal Quill toolbar above the editor, on every screen size -- the exact config desktop has run this entire session without a single issue. Rail markup/CSS/JS remains in the codebase but is fully inert. Revisiting the floating rail properly will need live device DevTools rather than another round of guessing."

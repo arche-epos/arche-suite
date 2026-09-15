@@ -164,7 +164,7 @@ input[type="range"]{accent-color:var(--gold)}
 .aitoolbtn .rdot{width:6px;height:6px;border-radius:50%;background:var(--sagebright)}
 .aipanel{display:none;background:var(--bg2);border:1px solid var(--golddim);border-radius:var(--rl);padding:15px;margin-bottom:16px}
 .aipanel.on{display:block}
-.aipanelhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.aipanelhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;row-gap:8px}
 .aipaneltitle{font-family:'EB Garamond',serif;font-size:17px;color:var(--gold)}
 .closepanel{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:18px;line-height:1;min-width:32px;min-height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .aicontent{font-family:var(--font-body);font-size:calc(14px * var(--content-scale));line-height:1.75;color:var(--txt1);white-space:pre-wrap}
@@ -945,7 +945,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="aipanel" id="aipanel">
       <div class="aipanelhdr">
         <div id="aipanel-tabs" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;margin-right:8px"></div>
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;flex-basis:100%">
           <button class="btn btn-ghost btn-sm" id="listen-ai-btn" onclick="ttsToggleAI()" title="Listen" style="padding:5px 9px;font-size:12px"><svg id="listen-ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-ai-label">Listen</span></button>
           <button id="tts-restart-ai" onclick="ttsRestart('ai')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:3px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button>
           <button class="btn btn-ghost btn-sm" onclick="copyAIResult()" title="Copy result" style="padding:5px 9px;font-size:12px">
@@ -1776,7 +1776,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.38"></script>
+<script type="module" src="app.js?v=4.34.39"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
