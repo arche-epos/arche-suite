@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.29',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.30',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: rebuilt the mobile floating toolbar for Notes/Conclusions/Outline from scratch after v4.34.29's revert. Two changes from the old (v4.34.21-28) design: (1) dropped the pop-out flyout groups entirely -- all 14 formatting icons (Bold/Italic/Underline/Strike/H1-H3/Normal/Numbered+Bullet list/Indent -+/Blockquote/Clear) are now always visible in one flat scrollable column, no trigger-and-flyout indirection, cutting the JS surface way down after that mechanism couldn't be fully debugged on Outline/Conclusions; (2) the rail now tracks the on-screen keyboard live via window.visualViewport's resize/scroll events instead of a one-time window.innerHeight check at load -- the old approach only worked if the browser actually shrank the layout viewport when the keyboard opened, which was inconsistent across Android Chrome configurations. Also added a defensive try/catch + logError() around the rail's own event handlers, so if anything here breaks it now writes full detail to Settings > Errors instead of failing silently."
+    ]},
+  {
+    version:'4.34.29',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "revert: the mobile left-rail toolbar for Notes/Conclusions/Outline (introduced v4.34.21, refined through v4.34.28) is reverted. Live testing after v4.34.28 found Outline's accordion opens normally but its editor still refuses all input -- no keyboard, no cursor, tap ignored entirely -- a symptom neither the v4.34.27 blur() fix nor the v4.34.28 Quill-internal focus-steal fix resolved. Rather than continue live-debugging a mechanism two targeted root-cause fixes couldn't pin down, reverted to the classic horizontal Quill toolbar for all screen sizes (same config desktop has used the whole time, untouched by any of this and proven stable). initEditors() now forces useRail=false unconditionally; rail markup/CSS remains in the DOM but is fully inert."

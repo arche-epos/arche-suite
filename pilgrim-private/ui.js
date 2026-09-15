@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.29';
+} from './utils.js?v=4.34.30';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.29';
+} from './storage.js?v=4.34.30';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.29';
+} from './tts.js?v=4.34.30';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.29';
+} from './sync.js?v=4.34.30';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.29';
+} from './studyTools.js?v=4.34.30';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -118,41 +118,22 @@ var _qlToolbar=[
  * Initializes all three Quill rich-text editors: Field Notes, Conclusions, and Outline.
  * No-ops if the Quill library has not loaded. Attaches a text-change listener on the
  * Field Notes editor to update the word count display on each keystroke.
- * Toolbar choice is decided once at load time by a three-tier check (NOT
- * re-evaluated on resize — Quill's toolbar binding is fixed at construction,
- * so crossing a breakpoint after load requires a page refresh to pick up a
- * different toolbar):
- *   - width>900:                desktop — Quill's original array config,
- *     auto-generating its own horizontal toolbar exactly as before the
- *     mobile rail redesign.
- *   - width<=900, height>=750:  large/tall phone — the same left-rail markup
- *     as the tier below, but with the `full` class added so every icon
- *     (including the 4 that normally live in pop-outs) is visible in one
- *     column, no pop-outs. Pure CSS toggle — see `.ql-rail.full` in
- *     index.html; initCustomToolbar()'s pop-out wiring is still attached
- *     but never fires since its trigger buttons are hidden in this tier.
- *   - width<=900, height<750:   small/short phone — the compact 7-icon rail
- *     with pop-outs (see initCustomToolbar() for that wiring).
+ * Toolbar choice is decided once at load time by width (NOT re-evaluated on
+ * resize — Quill's toolbar binding is fixed at construction, so crossing the
+ * breakpoint after load needs a page refresh to pick up the other toolbar):
+ *   - width>900:  desktop — Quill's original array config (_qlToolbar),
+ *     auto-generating its own horizontal toolbar, untouched by any of the
+ *     mobile rail work below.
+ *   - width<=900: mobile — the flat 14-icon left-rail (see initCustomToolbar()).
+ *     v4.34.30 rebuild: this REPLACES the v4.34.21-28 rail, which had
+ *     pop-out flyout groups and a focus-stuck/dead-tap bug on
+ *     Outline/Conclusions that survived two root-cause attempts and was
+ *     reverted to the classic toolbar in v4.34.29 while a fresh design was
+ *     worked out. See session-handoff-sep14-2026-toolbar-focus-bug.md.
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  // Reverted to the classic horizontal Quill toolbar for ALL screen sizes (v4.34.29).
-  // The mobile left-rail redesign (v4.34.21-28) introduced a focus-stuck/dead-tap bug on
-  // Outline/Conclusions that survived two root-cause attempts (blur() calls in v4.34.27,
-  // Quill's internal dangerouslyPasteHTML focus-steal in v4.34.28) and was still reproducing
-  // live -- Outline's accordion opens fine but its editor won't accept any input. Reverting to
-  // useRail=false restores the exact toolbar config desktop has used the whole time (untouched
-  // by any of this), which is proven stable. Rail markup/CSS stays in the DOM but is now fully
-  // inert (display:none, never toggled -- initCustomToolbar() is simply never called). See
-  // session-handoff-sep14-2026-toolbar-focus-bug.md for the abandoned investigation.
-  var useRail=false;
-  var useFullRail=false;
-  if(useFullRail){
-    ['f-notes-toolbar','d-conclusions-toolbar','d-outline-toolbar'].forEach(function(id){
-      var el=document.getElementById(id);
-      if(el)el.classList.add('full');
-    });
-  }
+  var useRail=window.innerWidth<=900;
   _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:useRail?'#f-notes-toolbar':_qlToolbar}});
   _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
   if(useRail)initCustomToolbar(_qFN,'f-notes-toolbar');
@@ -164,20 +145,52 @@ function initEditors(){
   if(useRail)initCustomToolbar(_qOutline,'d-outline-toolbar');
 }
 
+// ── Floating rail: keyboard-tracking (v4.34.30) ─────────────────────────────
+// Only one rail is ever showing at a time (mutually exclusive via each
+// editor's own selection-change event), so a single global reference plus a
+// pair of app-wide visualViewport listeners is enough to keep whichever rail
+// is open tracking the keyboard live -- no per-rail listeners needed.
+// visualViewport (not window.innerHeight) is used deliberately: innerHeight
+// only reflects the keyboard if the browser actually shrinks the layout
+// viewport, which was inconsistent across Android Chrome configurations
+// (the direct cause of the v4.34.25/26 "rail lands too high" bug). The
+// visual viewport's own height+offsetTop is the browser's own authoritative
+// answer for "what's actually visible right now," keyboard included,
+// recalculated on every resize/scroll while a rail is open.
+var _activeRailRoot=null;
+function _railReposition(){
+  if(!_activeRailRoot||!window.visualViewport)return;
+  try{
+    var vv=window.visualViewport;
+    var top=vv.height+vv.offsetTop-_activeRailRoot.offsetHeight-12;
+    _activeRailRoot.style.bottom='auto';
+    _activeRailRoot.style.top=Math.max(8,top)+'px';
+  }catch(e){logError('Rail reposition',e);}
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',_railReposition);
+  window.visualViewport.addEventListener('scroll',_railReposition);
+}
+
 /**
- * Wires the pop-out behavior AND the floating-visibility behavior for a
- * custom left-rail Quill toolbar built in index.html. Quill's own toolbar
- * module already handles click-to-format and per-button .ql-active state
- * for any element carrying its ql-* classes, regardless of DOM nesting or
- * visibility — this adds: showing/hiding the whole rail on that editor's
- * own focus (via Quill's selection-change event — fires a range on focus,
- * null on blur — so exactly one rail floats at a time, over whichever
- * field is actually being edited), toggling a left-padding class on that
- * editor while its rail is showing so the floating rail never overlaps the
- * text, opening/closing the Text style / Lists / Indent / More flyouts
- * (one open at a time), closing on an in-flyout selection or an outside
- * click, and toggling a trig-active highlight on each group's trigger icon
- * when the cursor is currently inside a format that group controls.
+ * Wires the floating-visibility + keyboard-tracking behavior for a custom
+ * left-rail Quill toolbar built in index.html. Quill's own toolbar module
+ * already handles click-to-format and per-button .ql-active state for any
+ * element carrying its ql-* classes, regardless of DOM nesting or visibility
+ * -- this adds only: showing/hiding the whole rail on that editor's own
+ * focus (via Quill's selection-change event -- fires a range on focus, null
+ * on blur -- so exactly one rail floats at a time, over whichever field is
+ * actually being edited), toggling a left-padding class on that editor
+ * while its rail is showing so the floating rail never overlaps the text,
+ * and repositioning the rail against the live keyboard via _railReposition().
+ * No pop-out/flyout mechanism (removed in the v4.34.30 rebuild -- see
+ * initEditors() doc comment) -- every icon is a plain, always-visible,
+ * directly-wired button, cutting the JS surface down after the old
+ * mechanism couldn't be fully debugged on Outline/Conclusions. Wrapped in
+ * try/catch + logError so any failure here writes full detail (this is our
+ * own code, not cross-origin, so unlike Quill-internal errors it won't be
+ * reported as an opaque "Script error.") to the visible Settings > Errors
+ * log instead of failing silently.
  * @param {Quill} quill - the editor instance this toolbar controls.
  * @param {string} toolbarId - id of the toolbar's root .ql-rail element
  *   (relocated to the end of the document, near .fab-wrap — see index.html).
@@ -187,42 +200,12 @@ function initCustomToolbar(quill,toolbarId){
   if(!root)return;
   var wrap=quill.container.closest('.ql-editorwrap');
   quill.on('selection-change',function(range){
-    root.classList.toggle('showing',!!range);
-    if(wrap)wrap.classList.toggle('rail-open',!!range);
-  });
-  var triggers=root.querySelectorAll('[data-pop]');
-  function closeAll(){
-    root.querySelectorAll('.ql-flyout.open').forEach(function(f){f.classList.remove('open');});
-    triggers.forEach(function(t){t.classList.remove('trig-open');});
-  }
-  triggers.forEach(function(trig){
-    trig.addEventListener('click',function(e){
-      e.preventDefault();e.stopPropagation();
-      var group=trig.getAttribute('data-pop');
-      var fly=root.querySelector('.ql-flyout[data-pop-target="'+group+'"]');
-      if(!fly)return;
-      var wasOpen=fly.classList.contains('open');
-      closeAll();
-      if(!wasOpen){fly.classList.add('open');trig.classList.add('trig-open');}
-    });
-  });
-  root.querySelectorAll('.ql-flyout button').forEach(function(btn){
-    btn.addEventListener('click',function(){closeAll();});
-  });
-  quill.on('editor-change',function(){
-    var fmt=quill.getFormat();
-    triggers.forEach(function(trig){
-      var group=trig.getAttribute('data-pop');
-      var active=false;
-      if(group==='header')active=!!fmt.header;
-      else if(group==='list')active=!!fmt.list;
-      else if(group==='indent')active=!!fmt.indent;
-      else if(group==='more')active=!!(fmt.underline||fmt.strike);
-      trig.classList.toggle('trig-active',active);
-    });
-  });
-  document.addEventListener('click',function(e){
-    if(!root.contains(e.target))closeAll();
+    try{
+      root.classList.toggle('showing',!!range);
+      if(wrap)wrap.classList.toggle('rail-open',!!range);
+      if(range){_activeRailRoot=root;_railReposition();}
+      else if(_activeRailRoot===root){_activeRailRoot=null;}
+    }catch(e){logError('Rail selection-change ('+toolbarId+')',e);}
   });
 }
 
