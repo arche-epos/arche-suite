@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.35';
+} from './utils.js?v=4.34.36';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.35';
+} from './storage.js?v=4.34.36';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.35';
+} from './tts.js?v=4.34.36';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.35';
+} from './sync.js?v=4.34.36';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.35';
+} from './studyTools.js?v=4.34.36';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -184,30 +184,24 @@ if(window.visualViewport){
  * keyboard-tracking, so it stays in sync automatically.
  */
 /**
- * Repositions the Pilgrim Guide FAB above the toolbar rail while a rail is
- * showing, instead of hiding it (v4.34.35 -- v4.34.34 hid the FAB entirely
- * to fix an overlap with the rail's last icon, but Boss preferred it stay
- * visible, just moved up out of the way). Reads the rail's live top edge
- * (already kept current by _railReposition(), which calls this function
- * too) and places the FAB just above it, tracking the keyboard the same way
- * the rail does. Reverts to its normal CSS position (bottom:68px, unset
- * inline styles) the instant no rail is active, so every other screen is
- * unaffected.
+ * Hides the Pilgrim Guide FAB while a rail is showing (v4.34.36 — reverted
+ * from v4.34.35's reposition-above-rail attempt). Repositioning it dynamically
+ * above the rail seemed like a safe compromise, but on the Study Tools screen
+ * that placed the FAB at a height that landed directly on top of the
+ * Outline/Conclusions box itself -- not just the toolbar -- physically
+ * blocking taps there (Notes happened to sit in a spot on-screen where it
+ * didn't overlap, which is why only Notes kept working). A fixed-position
+ * floating element with a height computed from the keyboard alone can't
+ * reliably avoid overlapping arbitrary page content beneath it, so hiding it
+ * outright during active editing is the safe choice -- reappears the instant
+ * you tap out. See v4.34.34's original version of this function for the
+ * first attempt at this same fix.
  */
 function _updateFabVisibility(){
   try{
     var fab=document.querySelector('.fab-wrap');
-    if(!fab)return;
-    if(_activeRailRoot){
-      var railTop=_activeRailRoot.getBoundingClientRect().top;
-      var fabHeight=fab.offsetHeight||56;
-      fab.style.bottom='auto';
-      fab.style.top=Math.max(8,railTop-fabHeight-8)+'px';
-    }else{
-      fab.style.top='';
-      fab.style.bottom='';
-    }
-  }catch(e){logError('FAB position update',e);}
+    if(fab)fab.classList.toggle('rail-active',!!_activeRailRoot);
+  }catch(e){logError('FAB visibility toggle',e);}
 }
 
 /**

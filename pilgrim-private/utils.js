@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.35',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.36',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: reverted v4.34.35's FAB reposition attempt -- placing it above the rail put it at a height that, on the Study Tools screen, landed directly on top of the Outline/Conclusions box itself (not just the toolbar), physically blocking taps there. Notes happened to sit in a screen position the FAB didn't overlap, which is why only Notes kept working after that update. Back to hiding the FAB entirely while any field is being edited (its v4.34.34 behavior) -- a fixed-position floating element sized off the keyboard alone can't reliably avoid overlapping arbitrary content beneath it, so hiding it is the safe choice. Reappears the instant you tap out."
+    ]},
+  {
+    version:'4.34.35',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the toolbar rail showed the first time you focused a field, then silently never showed again for the rest of the session. Root cause found in Quill 1.3.7's own source: its Selection class gates ALL selectionchange handling behind an internal `mouseDown` flag, set true on a document mousedown and cleared on the matching mouseup (both synthesized from touch events on mobile) -- if that synthetic mouseup ever fails to fire cleanly after a touch, mouseDown gets stuck true and Quill silently stops emitting selection-change for good; no error, nothing throws. Fixed by switching the rail's show/hide entirely to native focus/blur events on the editor's own contenteditable element, bypassing Quill's internal event system altogether. Added a 50ms debounce on hide to absorb the transient blur-then-refocus every toolbar button click causes (Quill's own default behavior) without it flickering the rail.",
