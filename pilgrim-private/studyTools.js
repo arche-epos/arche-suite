@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.34.36';
+} from './utils.js?v=4.34.37';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.36';
-import { syncToGist } from './sync.js?v=4.34.36';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.36';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.34.37';
+import { syncToGist } from './sync.js?v=4.34.37';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.34.37';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -509,9 +509,14 @@ function toggleOutline(){
   // either direction; harmless on open, since nothing inside is focused yet.
   // Deferred by one tick (v4.34.31, same reasoning as ui.js's _deferBlur()) --
   // a synchronous blur() here was suspected of racing Android Chrome's
-  // IME/keyboard state machine on a fast open/close.
+  // IME/keyboard state machine on a fast open/close. Element captured NOW,
+  // at scheduling time, not re-read inside the callback (v4.34.37 fix) --
+  // see _deferBlur() in ui.js for why re-reading document.activeElement a
+  // tick later can blur whatever the user tapped into in the meantime
+  // instead of the field this was meant for.
+  var _elToBlur=document.activeElement;
   setTimeout(function(){
-    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    if(_elToBlur&&_elToBlur.blur)_elToBlur.blur();
   },0);
   _outlineOpen=!_outlineOpen;
   var body=document.getElementById('outline-body');

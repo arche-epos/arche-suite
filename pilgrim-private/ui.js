@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.36';
+} from './utils.js?v=4.34.37';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.36';
+} from './storage.js?v=4.34.37';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.36';
+} from './tts.js?v=4.34.37';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.36';
+} from './sync.js?v=4.34.37';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.36';
+} from './studyTools.js?v=4.34.37';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -781,8 +781,22 @@ function hideAllRails(){
  * net), which need to stay synchronous for the tour's own timing.
  */
 function _deferBlur(){
+  // Captures the element to blur NOW, at scheduling time -- not inside the
+  // timeout callback (v4.34.37 fix). The original version re-read
+  // document.activeElement fresh when the callback fired, one tick later.
+  // If the user tapped into a new field (e.g. Outline, right after
+  // switchStudyTab('tools')) before that tick elapsed, the stale callback
+  // would blur the NEW field instead of the old one it was meant for --
+  // Outline would genuinely gain focus (its rail would show) and then get
+  // yanked away a moment later, right as the keyboard would have appeared.
+  // That's exactly why it looked like "the toolbar shows but no keyboard,
+  // no cursor" specifically on Outline/Conclusions (which need an extra
+  // switchStudyTab('tools') hop, the only path that schedules this) and
+  // never on Notes (the tab you land on first, before any deferred blur is
+  // ever pending).
+  var el=document.activeElement;
   setTimeout(function(){
-    if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+    if(el&&el.blur)el.blur();
   },0);
 }
 function navTo(id){
