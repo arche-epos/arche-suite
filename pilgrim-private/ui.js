@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.34';
+} from './utils.js?v=4.34.35';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.34';
+} from './storage.js?v=4.34.35';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.34';
+} from './tts.js?v=4.34.35';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.34';
+} from './sync.js?v=4.34.35';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.34';
+} from './studyTools.js?v=4.34.35';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -163,9 +163,11 @@ function _railReposition(){
   try{
     var vv=window.visualViewport;
     var top=vv.height+vv.offsetTop-_activeRailRoot.offsetHeight-4;
+    top=Math.max(8,top);
     _activeRailRoot.style.bottom='auto';
-    _activeRailRoot.style.top=Math.max(8,top)+'px';
+    _activeRailRoot.style.top=top+'px';
   }catch(e){logError('Rail reposition',e);}
+  _updateFabVisibility();
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize',_railReposition);
@@ -181,11 +183,31 @@ if(window.visualViewport){
  * mid-keystroke anyway. Driven off the same _activeRailRoot global used for
  * keyboard-tracking, so it stays in sync automatically.
  */
+/**
+ * Repositions the Pilgrim Guide FAB above the toolbar rail while a rail is
+ * showing, instead of hiding it (v4.34.35 -- v4.34.34 hid the FAB entirely
+ * to fix an overlap with the rail's last icon, but Boss preferred it stay
+ * visible, just moved up out of the way). Reads the rail's live top edge
+ * (already kept current by _railReposition(), which calls this function
+ * too) and places the FAB just above it, tracking the keyboard the same way
+ * the rail does. Reverts to its normal CSS position (bottom:68px, unset
+ * inline styles) the instant no rail is active, so every other screen is
+ * unaffected.
+ */
 function _updateFabVisibility(){
   try{
     var fab=document.querySelector('.fab-wrap');
-    if(fab)fab.classList.toggle('rail-active',!!_activeRailRoot);
-  }catch(e){logError('FAB visibility toggle',e);}
+    if(!fab)return;
+    if(_activeRailRoot){
+      var railTop=_activeRailRoot.getBoundingClientRect().top;
+      var fabHeight=fab.offsetHeight||56;
+      fab.style.bottom='auto';
+      fab.style.top=Math.max(8,railTop-fabHeight-8)+'px';
+    }else{
+      fab.style.top='';
+      fab.style.bottom='';
+    }
+  }catch(e){logError('FAB position update',e);}
 }
 
 /**
@@ -215,15 +237,44 @@ function initCustomToolbar(quill,toolbarId){
   var root=document.getElementById(toolbarId);
   if(!root)return;
   var wrap=quill.container.closest('.ql-editorwrap');
-  quill.on('selection-change',function(range){
+  var hideTimer=null;
+  // Native focus/blur on quill.root (v4.34.35), NOT Quill's own selection-change
+  // event -- Quill's Selection class gates ALL selectionchange handling behind a
+  // `mouseDown` flag (set true on document 'mousedown', cleared on 'mouseup';
+  // these are synthesized from touch events on mobile). If that synthetic
+  // mouseup ever fails to fire cleanly after a touch -- plausible on Android
+  // when the touch's own handling changes the DOM underneath it -- mouseDown
+  // gets stuck true and Quill silently stops emitting selection-change for the
+  // rest of the session: no error, nothing throws, it just silently never
+  // fires again. That matches "the rail shows the first time, never again"
+  // exactly. Native focus/blur on the actual contenteditable element bypasses
+  // Quill's internal event system entirely, so this bug can't affect it.
+  // hideTimer debounces the hide by 50ms: Quill's own toolbar buttons (Bold,
+  // etc.) momentarily blur the editor on mousedown (default browser behavior)
+  // then call quill.focus() to restore it right after their click handler
+  // runs -- without debouncing, that transient blur would hide the rail and
+  // immediately reshow it on every single button tap. 50ms comfortably
+  // absorbs that round-trip while staying imperceptible for a real tap-out.
+  function showRail(){
     try{
-      root.classList.toggle('showing',!!range);
-      if(wrap)wrap.classList.toggle('rail-open',!!range);
-      if(range){_activeRailRoot=root;_railReposition();}
-      else if(_activeRailRoot===root){_activeRailRoot=null;}
-      _updateFabVisibility();
-    }catch(e){logError('Rail selection-change ('+toolbarId+')',e);}
-  });
+      if(hideTimer){clearTimeout(hideTimer);hideTimer=null;}
+      root.classList.add('showing');
+      if(wrap)wrap.classList.add('rail-open');
+      _activeRailRoot=root;
+      _railReposition();
+    }catch(e){logError('Rail show ('+toolbarId+')',e);}
+  }
+  function hideRail(){
+    hideTimer=setTimeout(function(){
+      try{
+        root.classList.remove('showing');
+        if(wrap)wrap.classList.remove('rail-open');
+        if(_activeRailRoot===root){_activeRailRoot=null;_updateFabVisibility();}
+      }catch(e){logError('Rail hide ('+toolbarId+')',e);}
+    },50);
+  }
+  quill.root.addEventListener('focus',showRail);
+  quill.root.addEventListener('blur',hideRail);
   _initHeaderCycleBtn(quill,root);
 }
 

@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.34',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.35',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the toolbar rail showed the first time you focused a field, then silently never showed again for the rest of the session. Root cause found in Quill 1.3.7's own source: its Selection class gates ALL selectionchange handling behind an internal `mouseDown` flag, set true on a document mousedown and cleared on the matching mouseup (both synthesized from touch events on mobile) -- if that synthetic mouseup ever fails to fire cleanly after a touch, mouseDown gets stuck true and Quill silently stops emitting selection-change for good; no error, nothing throws. Fixed by switching the rail's show/hide entirely to native focus/blur events on the editor's own contenteditable element, bypassing Quill's internal event system altogether. Added a 50ms debounce on hide to absorb the transient blur-then-refocus every toolbar button click causes (Quill's own default behavior) without it flickering the rail.",
+      "feature: the Pilgrim Guide FAB (hidden entirely in v4.34.34 to stop it overlapping the toolbar) now instead repositions itself just above the rail while typing, and returns to its normal spot the instant you tap out -- stays visible throughout instead of disappearing."
+    ]},
+  {
+    version:'4.34.34',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the Pilgrim Guide FAB (gold circular button) was overlapping the toolbar's last icon on-device -- the FAB's fixed bottom-right position and the rail's keyboard-tracked position started colliding once the rail grew to edge-to-edge width with bigger icons (v4.34.33). Now hides the FAB entirely while any rail is showing (i.e. while actively editing with the keyboard up), reclaiming that space and removing the overlap. Reappears as soon as you tap out of the field."
