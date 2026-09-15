@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.31';
+} from './utils.js?v=4.34.32';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.31';
+} from './storage.js?v=4.34.32';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.31';
+} from './tts.js?v=4.34.32';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.31';
+} from './sync.js?v=4.34.32';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.31';
+} from './studyTools.js?v=4.34.32';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -206,6 +206,41 @@ function initCustomToolbar(quill,toolbarId){
       if(range){_activeRailRoot=root;_railReposition();}
       else if(_activeRailRoot===root){_activeRailRoot=null;}
     }catch(e){logError('Rail selection-change ('+toolbarId+')',e);}
+  });
+  _initHeaderCycleBtn(quill,root);
+}
+
+/**
+ * Wires the single "H" heading-cycle button (v4.34.32) that replaced the
+ * separate H1/H2/H3/Normal buttons removed the same version. Not a plain
+ * ql-header button -- it carries no ql-* class, so Quill's toolbar module
+ * ignores it entirely (that module only auto-wires elements whose first
+ * ql-* class names a format) -- instead each click here directly advances
+ * through a fixed cycle (H1 -> H2 -> H3 -> Normal -> H1...) via
+ * quill.format('header', ...), and a gold highlight (reusing the existing
+ * .ql-active rule) reflects whether the cursor is currently in any heading,
+ * via Quill's own editor-change event. Wrapped in try/catch + logError so a
+ * failure here writes full detail to Settings > Errors rather than the
+ * button silently doing nothing.
+ * @param {Quill} quill - the editor instance this button controls.
+ * @param {HTMLElement} root - the rail's root .ql-rail element.
+ */
+function _initHeaderCycleBtn(quill,root){
+  var btn=root.querySelector('.rail-header-cycle');
+  if(!btn)return;
+  var LEVELS=[1,2,3,false];
+  btn.addEventListener('click',function(e){
+    e.preventDefault();e.stopPropagation();
+    try{
+      var cur=quill.getFormat().header;
+      if(cur!==1&&cur!==2&&cur!==3)cur=false;
+      var next=LEVELS[(LEVELS.indexOf(cur)+1)%LEVELS.length];
+      quill.format('header',next);
+    }catch(err){logError('Header cycle click',err);}
+  });
+  quill.on('editor-change',function(){
+    try{btn.classList.toggle('ql-active',!!quill.getFormat().header);}
+    catch(err){logError('Header cycle active-state',err);}
   });
 }
 

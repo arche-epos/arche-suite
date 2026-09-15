@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.31',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.32',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: cut the mobile toolbar from 14 icons to 11 so it fits on one line without scrolling. Replaced the four separate H1/H2/H3/Normal-text buttons with a single \"H\" button that cycles through all four states on repeat taps (H1 -> H2 -> H3 -> Normal -> H1...), highlighting gold whenever the cursor sits in any heading. Net -3 buttons -- Bold, Italic, Underline, and Strikethrough all stay."
+    ]},
+  {
+    version:'4.34.31',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature/fix: two changes after v4.34.30 live testing. (1) Rebuilt the mobile toolbar layout again -- from a vertical column pinned to the left edge to a horizontal keyboard-accessory bar spanning the width (per Boss's request), single scrollable row instead of a tall column; removed the now-unneeded left-padding hack on the text (the bar floats above the keyboard, doesn't overlap the side of the text anymore). (2) Testing also found typing worked but the keyboard sometimes didn't appear (cursor blinking, no keyboard) after a fast tab switch -- deferred the explicit blur() calls in navTo()/switchStudyTab()/toggleOutline() by one JS tick (setTimeout(...,0)) since calling blur() synchronously in the same tick as the rest of a tab switch's DOM work was suspected of racing Android Chrome's IME/keyboard state machine. This is a targeted, reasoned fix for an intermittent issue, not a confirmed root cause -- flagged for a real on-device retest."
