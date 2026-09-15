@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.32';
+} from './utils.js?v=4.34.33';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.32';
+} from './storage.js?v=4.34.33';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.32';
+} from './tts.js?v=4.34.33';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.32';
+} from './sync.js?v=4.34.33';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.32';
+} from './studyTools.js?v=4.34.33';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -162,7 +162,7 @@ function _railReposition(){
   if(!_activeRailRoot||!window.visualViewport)return;
   try{
     var vv=window.visualViewport;
-    var top=vv.height+vv.offsetTop-_activeRailRoot.offsetHeight-12;
+    var top=vv.height+vv.offsetTop-_activeRailRoot.offsetHeight-4;
     _activeRailRoot.style.bottom='auto';
     _activeRailRoot.style.top=Math.max(8,top)+'px';
   }catch(e){logError('Rail reposition',e);}

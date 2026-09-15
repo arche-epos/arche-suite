@@ -543,9 +543,9 @@ input[type="range"]{accent-color:var(--gold)}
    below is the static fallback for browsers without visualViewport support —
    JS overrides it with an inline top/bottom:auto once available. */
 .ql-editorwrap{display:block;}
-.ql-rail-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;}
+.ql-rail-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:15px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;}
 .ql-rail-btn.ql-active{border-color:var(--gold);color:var(--gold);}
-.ql-rail{position:fixed;left:8px;right:8px;bottom:calc(12px + var(--safe-b));z-index:58;display:none;flex-direction:row;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.ql-rail{position:fixed;left:4px;right:4px;bottom:calc(4px + var(--safe-b));z-index:58;display:none;flex-direction:row;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .ql-rail.showing{display:flex;}
 @media(max-width:900px){
   .ql-editorwrap>div[id$="-editor"]{min-width:0;}
@@ -1776,7 +1776,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.32"></script>
+<script type="module" src="app.js?v=4.34.33"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
