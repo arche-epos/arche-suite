@@ -29,24 +29,24 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.28';
+} from './utils.js?v=4.34.29';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.28';
+} from './storage.js?v=4.34.29';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.28';
+} from './tts.js?v=4.34.29';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.28';
+} from './sync.js?v=4.34.29';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +66,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.28';
+} from './studyTools.js?v=4.34.29';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -136,8 +136,17 @@ var _qlToolbar=[
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  var useRail=window.innerWidth<=900;
-  var useFullRail=useRail&&window.innerHeight>=750;
+  // Reverted to the classic horizontal Quill toolbar for ALL screen sizes (v4.34.29).
+  // The mobile left-rail redesign (v4.34.21-28) introduced a focus-stuck/dead-tap bug on
+  // Outline/Conclusions that survived two root-cause attempts (blur() calls in v4.34.27,
+  // Quill's internal dangerouslyPasteHTML focus-steal in v4.34.28) and was still reproducing
+  // live -- Outline's accordion opens fine but its editor won't accept any input. Reverting to
+  // useRail=false restores the exact toolbar config desktop has used the whole time (untouched
+  // by any of this), which is proven stable. Rail markup/CSS stays in the DOM but is now fully
+  // inert (display:none, never toggled -- initCustomToolbar() is simply never called). See
+  // session-handoff-sep14-2026-toolbar-focus-bug.md for the abandoned investigation.
+  var useRail=false;
+  var useFullRail=false;
   if(useFullRail){
     ['f-notes-toolbar','d-conclusions-toolbar','d-outline-toolbar'].forEach(function(id){
       var el=document.getElementById(id);

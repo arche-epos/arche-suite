@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.28',date:'Sep 14, 2026',label:'Latest',
+    version:'4.34.29',date:'Sep 14, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "revert: the mobile left-rail toolbar for Notes/Conclusions/Outline (introduced v4.34.21, refined through v4.34.28) is reverted. Live testing after v4.34.28 found Outline's accordion opens normally but its editor still refuses all input -- no keyboard, no cursor, tap ignored entirely -- a symptom neither the v4.34.27 blur() fix nor the v4.34.28 Quill-internal focus-steal fix resolved. Rather than continue live-debugging a mechanism two targeted root-cause fixes couldn't pin down, reverted to the classic horizontal Quill toolbar for all screen sizes (same config desktop has used the whole time, untouched by any of this and proven stable). initEditors() now forces useRail=false unconditionally; rail markup/CSS remains in the DOM but is fully inert."
+    ]},
+  {
+    version:'4.34.28',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: v4.34.27's blur() calls in navTo()/switchStudyTab()/toggleOutline() didn't fully fix the focus-stuck bug -- Notes could still show a blinking cursor after switching away, and Outline/Conclusions sometimes couldn't be tapped into at all. Root cause found in Quill 1.3.7's own source: dangerouslyPasteHTML() (used by populateField() and populateDeep() to repopulate Notes/Conclusions/Outline on every tab switch) internally calls setSelection(0,SILENT), which reaches Selection.setNativeRange() -- and that method unconditionally runs `if(!this.hasFocus())this.root.focus()` regardless of the SILENT flag. So every repopulation silently stole real DOM focus straight back, undoing the v4.34.27 blur() in the same tick (Notes) or landing invisible, keyboard-less focus on Outline before any tap ever happened (Conclusions/Outline, populated in that order -- Outline processed last, so it ended up holding it). Fixed by switching all three population sites to setContents(clipboard.convert(html),'silent') instead -- same formatting preserved, but setContents never touches selection, so no more phantom focus() calls."
