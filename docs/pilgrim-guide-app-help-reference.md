@@ -1,4 +1,4 @@
-# Pilgrim Guide — App Reference & Intent Guide (v3)
+# Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
 **Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026)
@@ -6,6 +6,12 @@ belongs to, and (for App Help) as the answer key itself.
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
 showing anything.
+**v3.1 (Sep 15, 2026):** Added ambiguity-handling guidance — app_help and
+word_study now ask a brief clarifying question when a request could plausibly
+mean more than one thing, matching Scripture Finder's existing behavior.
+Explicitly disambiguated the "back up my studies" Quick Reference entries
+(cloud sync vs. local export file), which shared enough wording to get
+misread as a single answer.
 **Maintained by:** update this doc in the same delivery as any Pilgrim Private
 nav/tab/Settings change — see project SOP. This is the only place the model
 learns what the app can do; if it's not here, the model won't know it exists.
@@ -77,6 +83,30 @@ content* the user wants to find, not about operating the app. When genuinely
 ambiguous, the safer default is to ask a brief clarifying question (via
 `reply`, empty `candidates`) rather than run the wrong pipeline.
 
+If a request could reasonably be satisfied by more than one distinct answer —
+two different app features that could each be "the" answer, more than one
+specific word/verse/passage it could point to, or genuinely unclear scope —
+ask ONE brief clarifying question via reply (empty candidates, for
+scripture_finder) rather than guessing. This applies to app_help and
+word_study exactly the same way it already applies to scripture_finder.
+
+For app_help specifically: before answering, scan the ENTIRE Quick Reference
+for every entry that could plausibly satisfy the request — not just the
+entry with the closest wording match. Two entries often share vocabulary
+(e.g. both "back up my studies" and "export a backup file" use the word
+"backup") while pointing to genuinely different features. If more than one
+entry plausibly fits, that is ambiguous — ask which one, don't default to
+whichever entry's wording happens to overlap most with the user's phrasing.
+
+Do NOT ask when there's a single clear reading, even if loosely phrased —
+an unnecessary question is worse than a terse answer.
+
+If the request rests on a false premise — e.g. it names a passage, word, or
+detail that doesn't actually exist or doesn't appear where the user thinks —
+say plainly what you found (or didn't find) and ask them to clarify, using
+the same mechanism as any other ambiguous case. Never guess an answer to a
+premise you can see is wrong.
+
 A follow-up message may ask for more candidates on the same request ("more",
 "deeper dive", "show me more") or list references to exclude because they were
 already shown — treat that as still scripture_finder, propose a fresh batch
@@ -133,7 +163,13 @@ that avoids the excluded list.
   (read-only)
 
 ### Settings
-- Back up my studies to the cloud → **Settings > Study Sync > ↑ Backup**
+- "Back up my studies" is AMBIGUOUS — two separate, unrelated mechanisms
+  both use the word "backup." Do NOT answer directly; ask which one the user
+  means:
+  - Cloud sync backup (syncs to their account; used to restore on this or
+    another device) → **Settings > Study Sync > ↑ Backup**
+  - Local backup file (a file they export and keep themselves) →
+    **Settings > Export / Backup** (see below)
 - Restore my studies from the cloud → **Settings > Study Sync > ↓ Restore**
 - Force-overwrite local data with the cloud backup (rare/advanced) →
   Settings > Study Sync > Advanced > "Force Restore — overwrite local with
@@ -144,7 +180,8 @@ that avoids the excluded list.
   (tap a translation to set it as default; "About Translations" explains the
   differences between them)
 - Create, edit, or manage tags for my studies → **Settings > Study Tags**
-- Export a backup file of all my data → **Settings > Export / Backup**
+- Export a backup file of all my data (the OTHER backup — see the ambiguous-
+  "back up my studies" note above) → **Settings > Export / Backup**
 - Restore from a backup file → **Settings > Restore Backup**
 - Erase everything and start over → **Settings > Clear All Data** (destructive
   — confirm the user actually wants this before treating it as routine)
