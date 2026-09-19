@@ -14,7 +14,8 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.34.39';
+} from './utils.js?v=4.35.0';
+import { mediaDeleteStudy, trRefresh } from './media.js?v=4.35.0';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -173,6 +174,7 @@ export function openStudy(id) {
   if (window.setQConclDirty) window.setQConclDirty(false);
   if (_cbs.trackOpen) _cbs.trackOpen(cur);
   if (_cbs.populateField) _cbs.populateField();
+  trRefresh(); // show/hide the Transcript section for this study (media.js)
   if (_cbs.navTo) _cbs.navTo('study');
 }
 
@@ -218,6 +220,7 @@ export function deleteStudy() {
   if (!id) return;
   // Tombstone for Gist merge conflict resolution — lives in sync.js
   if (_cbs.markDeleted) _cbs.markDeleted(id);
+  mediaDeleteStudy(id); // cascade: transcript, recording, meta (media.js) — never blocks the delete
   setStudies(studies.filter(function(s) { return s.id !== id; }));
   persist();
   if (cur && cur.id === id) setCur(null);

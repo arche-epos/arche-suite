@@ -29,24 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.34.39';
+} from './utils.js?v=4.35.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.34.39';
+} from './storage.js?v=4.35.0';
+
+import {
+  mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
+} from './media.js?v=4.35.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.34.39';
+} from './tts.js?v=4.35.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.34.39';
+} from './sync.js?v=4.35.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,7 +70,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.34.39';
+} from './studyTools.js?v=4.35.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1706,7 +1710,13 @@ function importDataFromFile(input){
         localStorage.setItem(SK_STREAK,JSON.stringify(winner));
       }
       renderLib();
-      toast('Imported '+imported.length+' studies ('+(added)+' new)');
+      // Transcripts: added only to studies that have none locally; never overwritten. Old backups have no key.
+      var trP=(!Array.isArray(payload)&&payload.transcripts&&typeof payload.transcripts==='object')
+        ?mediaImportTranscripts(payload.transcripts,studies.map(function(s){return s.id;})):Promise.resolve(0);
+      trP.then(function(n){
+        toast('Imported '+imported.length+' studies ('+(added)+' new)'+(n?' + '+n+' transcript'+(n===1?'':'s'):''));
+        if(cur)trRefresh();
+      });
     }catch(err){logError('Import Studies',err);toast('Import failed: '+err.message);}
   };
   reader.readAsText(file);
@@ -1899,7 +1909,7 @@ async function fetchAllMissingScripture(s){
 /** Opens the clear-all confirmation overlay. */
 function clearAll(){document.getElementById('clearall-overlay').classList.add('on');}
 /** Confirms clear-all: wipes the studies array, clears cur, persists, and re-renders. */
-function confirmClearAll(){setStudies([]);setCur(null);persist();renderLib();closeOverlay('clearall-overlay');toast('All data cleared');}
+function confirmClearAll(){setStudies([]);setCur(null);persist();mediaClearAll();renderLib();closeOverlay('clearall-overlay');toast('All data cleared');}
 
 // ════════════════════════════════════════════════════════
 
@@ -2631,7 +2641,7 @@ function toggleExportSelectAll(){
  * Reads checked studies from the export modal and downloads (or shares) them as a JSON backup.
  * Uses the Web Share API on capable devices; falls back to anchor download.
  */
-function confirmExport(){
+async function confirmExport(){
   var cbs=document.querySelectorAll('.export-study-cb');
   var selected=[];
   cbs.forEach(function(c){if(c.checked)selected.push(studies[parseInt(c.dataset.idx)]);});
@@ -2639,6 +2649,8 @@ function confirmExport(){
   var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
   var isAll=selected.length===studies.length;
   var payload={studies:selected,tags:TAGS,deletedTags:DELETED_TAGS,streak:streak};
+  var trs=await mediaExportTranscripts(selected.map(function(s){return s.id;}));
+  if(Object.keys(trs).length)payload.transcripts=trs;
   var fname=isAll?'arche-pilgrim-backup.json':'arche-pilgrim-backup-'+selected.length+'-studies.json';
   var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
@@ -2660,7 +2672,11 @@ function confirmExport(){
  */
 async function exportData(){
   var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-  var json=JSON.stringify({studies:studies,tags:TAGS,deletedTags:DELETED_TAGS,streak:streak},null,2);
+  var payload={studies:studies,tags:TAGS,deletedTags:DELETED_TAGS,streak:streak};
+  // Transcript text rides along in the backup (audio never does). Key only present when there is one.
+  var trs=await mediaExportTranscripts(studies.map(function(s){return s.id;}));
+  if(Object.keys(trs).length)payload.transcripts=trs;
+  var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
   var fname='arche-pilgrim-backup.json';
   var file=new File([blob],fname,{type:'application/json'});
