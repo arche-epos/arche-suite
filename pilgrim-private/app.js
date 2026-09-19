@@ -5,27 +5,30 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.34.39';
+} from './utils.js?v=4.35.0';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.34.39';
+} from './storage.js?v=4.35.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.34.39';
+} from './sync.js?v=4.35.0';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.34.39';
+} from './tts.js?v=4.35.0';
+
+import { mediaInit } from './media.js?v=4.35.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.34.39';
-import * as Storage from './storage.js?v=4.34.39';
-import * as TTS from './tts.js?v=4.34.39';
-import * as Sync from './sync.js?v=4.34.39';
-import * as StudyTools from './studyTools.js?v=4.34.39';
-import * as UI from './ui.js?v=4.34.39';
+import * as Utils from './utils.js?v=4.35.0';
+import * as Storage from './storage.js?v=4.35.0';
+import * as TTS from './tts.js?v=4.35.0';
+import * as Sync from './sync.js?v=4.35.0';
+import * as StudyTools from './studyTools.js?v=4.35.0';
+import * as UI from './ui.js?v=4.35.0';
+import * as Media from './media.js?v=4.35.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -99,7 +102,7 @@ setInterval(autoSave, 30000);
 
 // ── Expose functions on window.* for inline onclick= HTML handlers ───────────
 // Each module's exports assigned to window so onclick="navTo(...)" etc. work.
-[Utils, Storage, TTS, Sync, StudyTools, UI].forEach(function(mod) {
+[Utils, Storage, TTS, Sync, StudyTools, UI, Media].forEach(function(mod) {
   Object.keys(mod).forEach(function(name) {
     if (typeof mod[name] === 'function' && window[name] === undefined) {
       window[name] = mod[name];
@@ -145,6 +148,7 @@ setInterval(autoSave, 30000);
 function startPilgrim() {
   // Data layer — load persisted state into memory
   loadStudies();
+  mediaInit(); // per-user IndexedDB for transcripts/recordings — async, never blocks boot
   reportStorageSnapshot(); // current on-device resource totals — added Aug 30 2026
   UI.loadTags();
   UI.loadDeletedTags();

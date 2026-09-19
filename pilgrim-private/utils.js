@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.34.39',date:'Sep 14, 2026',label:'Latest',
+    version:'4.35.0',date:'Sep 19, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feat: class Transcripts. The Add Photo or Document modal is now \u201cAdd Files to Study\u201d and has a new Transcript button that opens the file picker for TXT, DOCX, PDF, VTT or SRT files. A study with a transcript gets a collapsed Transcript section on the Notes tab (loads only when opened) with search, Copy, Download .txt, Replace and Delete. VTT/SRT captions display as clean paragraphs with no timestamps or cue numbers, but the cue start times are stored for a future tap-to-jump feature. Transcripts are NOT cut off at 30,000 characters like Documents are. PDFs use a reader that only downloads the first time you upload a PDF; scanned PDFs (no selectable text) are rejected with a message. Uploading to a study that already has a transcript asks before replacing it.",
+      "new: media.js -- transcripts live in a per-user IndexedDB (pilgrimMedia_<user>), not localStorage and not on the study record, so the study data model, Gist sync payload and PDF export are unchanged. Transcript text is included in the JSON backup (new optional `transcripts` key); restoring adds a transcript only to a study that has none and never overwrites; backups made before this version restore exactly as before. Deleting a study, or Clear All Data, also deletes its transcript. Nothing here is sent to cloud sync."
+    ]},
+  {
+    version:'4.34.39',date:'Sep 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the AI Study Tools panel's action row (Listen/Copy/Share/Clear/close) could overflow off the right edge of the screen instead of wrapping, requiring a horizontal scroll to reach Clear and the close button -- a pre-existing layout bug, unrelated to any of this session's toolbar work. The row now always drops to its own line below the tool tabs (flex-basis:100%, right-aligned) instead of trying to fit alongside them, so it can no longer overflow regardless of how many tool tabs are showing."

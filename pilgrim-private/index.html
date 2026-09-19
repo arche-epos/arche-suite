@@ -840,6 +840,25 @@ input[type="range"]{accent-color:var(--gold)}
         <div id="field-res-tiles" style="margin-top:10px"></div>
       </div>
     </div>
+    <!-- Transcript (media.js) — hidden until this study has one -->
+    <div id="transcript-section" style="display:none;margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="trToggle()" style="width:100%;justify-content:space-between;font-size:13px">
+        <span style="text-transform:uppercase;letter-spacing:.12em;font-weight:600;color:var(--txt3)">Transcript</span>
+        <svg id="tr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="transition:transform .15s"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="tr-body" style="display:none;margin-top:8px">
+        <input type="text" id="tr-search" placeholder="Search transcript..." autocomplete="off" spellcheck="false" oninput="trSearch()">
+        <div id="tr-info" style="font-size:12px;color:var(--txt3);margin:6px 0 8px"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <button class="btn btn-ghost btn-sm" onclick="trCopy()">Copy</button>
+          <button class="btn btn-ghost btn-sm" onclick="trDownload()">Download .txt</button>
+          <button class="btn btn-ghost btn-sm" onclick="trReplace()">Replace</button>
+          <button class="btn btn-ghost btn-sm" onclick="trDelete()">Delete</button>
+        </div>
+        <div id="tr-text" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;font-family:'Crimson Pro',serif;font-size:15px;line-height:1.6;color:var(--txt1);padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)"></div>
+        <div style="font-size:11px;color:var(--txt4);margin-top:6px">Stored on this device only. Included in your JSON backup; not in cloud sync.</div>
+      </div>
+    </div>
   </div>
 </div><!-- /#scr-field -->
 
@@ -937,6 +956,7 @@ input[type="range"]{accent-color:var(--gold)}
     <input type="file" id="res-input-camera" accept="image/*" capture="environment" style="display:none" onchange="resHandleFile(this)">
     <input type="file" id="res-input-gallery" accept="image/*" multiple style="display:none" onchange="resHandleFile(this)">
     <input type="file" id="res-input-doc" accept=".txt,.md,.docx,.doc" style="display:none" onchange="resHandleDoc(this)">
+    <input type="file" id="res-input-transcript" accept=".txt,.docx,.pdf,.vtt,.srt" style="display:none" onchange="trHandleFile(this)">
     <div id="res-status" class="res-status"></div>
     <div id="res-list"></div>
     </div><!-- /deep-col-left -->
@@ -1313,7 +1333,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="overlay" id="del-overlay">
   <div class="modal">
     <div class="modal-title">Delete this study?</div>
-    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">Cannot be undone. All notes, AI results, resources and conclusions will be permanently removed.</p>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">Cannot be undone. All notes, AI results, resources, conclusions and any transcript will be permanently removed.</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('del-overlay')">Cancel</button>
       <button class="btn btn-danger" style="flex:1" onclick="deleteStudy()">Delete</button>
@@ -1532,7 +1552,7 @@ input[type="range"]{accent-color:var(--gold)}
 </div>
 <div class="overlay" id="addres-overlay" onclick="if(event.target===this)closeOverlay('addres-overlay')">
   <div class="modal" style="max-width:400px">
-    <div class="modal-title">Add Photo or Document</div>
+    <div class="modal-title">Add Files to Study</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-ghost" style="justify-content:flex-start" onclick="closeOverlay('addres-overlay');resCapture('camera')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1546,8 +1566,22 @@ input[type="range"]{accent-color:var(--gold)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Document
       </button>
+      <button class="btn btn-ghost" style="justify-content:flex-start" onclick="trPickTranscript()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+        Transcript
+      </button>
     </div>
     <button class="btn btn-sec" style="width:100%;margin-top:12px" onclick="closeOverlay('addres-overlay')">Cancel</button>
+  </div>
+</div>
+<div class="overlay" id="tr-confirm-overlay" style="z-index:510">
+  <div class="modal">
+    <div class="modal-title" id="tr-confirm-title"></div>
+    <p id="tr-confirm-msg" style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5"></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-sec" style="flex:1" onclick="trConfirmCancel()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="tr-confirm-ok" onclick="trConfirmOk()">OK</button>
+    </div>
   </div>
 </div>
 <div class="overlay" id="rename-res-overlay" style="z-index:510">
@@ -1776,7 +1810,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.34.39"></script>
+<script type="module" src="app.js?v=4.35.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
