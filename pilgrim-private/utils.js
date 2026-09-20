@@ -496,7 +496,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.35.0',date:'Sep 19, 2026',label:'Latest',
+    version:'4.35.1',date:'Sep 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the Look Up Word button was hidden underneath the Notes editor on every device (phone and Chromebook). It now lives in the Observations & Notes header row, always visible. The Notes/Saved Words section also now stacks above the editor and the editor wrapper contains its own height (flow-root), so it can no longer be covered.",
+      "fix: Word lookup sometimes failed on the first try (\"Unexpected end of JSON input\") when the AI returned an empty or cut-off response. Lookup now checks for an empty response and retries once automatically on empty, unreadable, or server-error (5xx) responses.",
+      "fix: text pasted into the lookup box with surrounding quotation marks or spaces (e.g. \u201cDoulos\u201d copied from notes) is now cleaned before searching."
+    ]},
+  {
+    version:'4.35.0',date:'Sep 19, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feat: class Transcripts. The Add Photo or Document modal is now \u201cAdd Files to Study\u201d and has a new Transcript button that opens the file picker for TXT, DOCX, PDF, VTT or SRT files. A study with a transcript gets a collapsed Transcript section on the Notes tab (loads only when opened) with search, Copy, Download .txt, Replace and Delete. VTT/SRT captions display as clean paragraphs with no timestamps or cue numbers, but the cue start times are stored for a future tap-to-jump feature. Transcripts are NOT cut off at 30,000 characters like Documents are. PDFs use a reader that only downloads the first time you upload a PDF; scanned PDFs (no selectable text) are rejected with a message. Uploading to a study that already has a transcript asks before replacing it.",

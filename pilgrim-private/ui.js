@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.35.0';
+} from './utils.js?v=4.35.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.35.0';
+} from './storage.js?v=4.35.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.35.0';
+} from './media.js?v=4.35.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.35.0';
+} from './tts.js?v=4.35.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.35.0';
+} from './sync.js?v=4.35.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,7 +70,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.35.0';
+} from './studyTools.js?v=4.35.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3136,7 +3136,7 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
   {screen:'study',before:function(){switchStudyTab('notes');if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
-  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word (top of the Notes card) to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and scholarly notes. Save to this study or your Words library.'},
   {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay .modal',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},

@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.35.0';
+} from './utils.js?v=4.35.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.35.0';
-import { syncToGist } from './sync.js?v=4.35.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.35.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.35.1';
+import { syncToGist } from './sync.js?v=4.35.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.35.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1573,7 +1573,8 @@ async function runLexiconLookup(){
   var res=document.getElementById('lexicon-result');
   var btn=document.getElementById('lexicon-btn');
   var bar=document.getElementById('lex-save-bar');
-  var query=(inp?inp.value.trim():'');if(!query)return;
+  var query=(inp?inp.value:'').replace(/^[\s"'\u201c\u201d\u2018\u2019]+|[\s"'\u201c\u201d\u2018\u2019]+$/g,'').replace(/\s+/g,' ');if(!query)return;
+  if(inp)inp.value=query;
   bar.style.display='none';
   if(/^[GH]\d+$/i.test(query)){await _lexFullLookup(query,btn,res,bar);return;}
   btn.disabled=true;btn.textContent='Checking\u2026';
@@ -1691,15 +1692,23 @@ async function _lexFullLookup(query,btn,res,bar){
   bar.style.display='none';
   var prompt='You are a biblical lexicographer with deep knowledge of Greek NT and Hebrew OT.\nThe user has looked up: "'+query+'"\n\nIf the input is a Strong\'s number (G#### or H####), use that number. If it is an English word, transliteration, or original language word, identify the most likely Strong\'s number.\n\nReturn ONLY a valid JSON object — absolutely no markdown fences, no backticks, no preamble, no text before or after the JSON. Use this exact structure:\n\n{"strongsNumber":"G#### or H####","testament":"NT or OT","originalWord":"word in original script","transliteration":"romanized form","pronunciation":"phonetic e.g. log\'-os","partOfSpeech":"e.g. masculine noun","gender":"masculine/feminine/neuter or null","rootWord":"etymology e.g. from λέγω (G3004) or null","tdntReference":"vol:page,entry or null","primaryDefinition":"concise primary definition","usageOutline":["I. main usage","   A. sub-usage","   B. sub-usage","II. second main usage"],"kjvCount":0,"kjvTranslations":[{"word":"translation","count":0}],"strongsDefinition":"full Strong\'s Concordance definition text","scholarlyEntry":"150-200 word summary of Thayer\'s Greek Lexicon (NT) or Brown-Driver-Briggs (OT) in their scholarly style","occurrences":[{"ref":"Book Ch:v","text":"full verse text (KJV) showing the word in context"}]}\n\nFor occurrences: list ALL known occurrences up to 30. For very common words (100+ occurrences), list the 25 most theologically significant. Always include the full verse text, never just the reference.';
   try{
+    // v4.35.1 — up to 2 attempts: the model occasionally returns an empty/truncated body
+    // (logged as "Unexpected end of JSON input"); a second call almost always succeeds.
+    var lex=null;
+    for(var _try=0;_try<2&&!lex;_try++){
+    try{
     var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'lexicon'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:16000,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],frequency_penalty:0.3})});
     var d=await r.json();
-    if(!r.ok){res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status)+'</p>';return;}
+    if(!r.ok){if(r.status>=500&&_try===0)continue;res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status)+'</p>';return;}
     var raw=d.choices[0].message.content;
+    if(!raw||!raw.trim())throw new SyntaxError('Empty AI response');
     var clean=raw.replace(/```json|```/g,'').trim();
     // Defensively extract JSON — AI occasionally wraps output in prose or residual markdown
     var firstBrace=clean.indexOf('{'),lastBrace=clean.lastIndexOf('}');
     if(firstBrace>-1&&lastBrace>-1)clean=clean.slice(firstBrace,lastBrace+1);
-    var lex=JSON.parse(clean);
+    lex=JSON.parse(clean);
+    }catch(_e){if(_try===1)throw _e;}
+    }
     var html=renderLexiconEntry(lex,query);
     res.innerHTML=html;
     _lexLastResult={query:lex.originalWord||lex.transliteration||query,englishGloss:lex.primaryDefinition||'',strongsNumber:lex.strongsNumber||'',html:html,reference:(activeRef()&&activeRef().reference)||''};
