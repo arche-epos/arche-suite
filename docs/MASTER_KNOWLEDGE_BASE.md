@@ -3,13 +3,14 @@
 ### Projects: Arché Study Tools (Pilgrim + Scribe) · Waypoint · DPS Daily Planner
 *Consolidated: April 23, 2026 — synthesized from all handoff docs, known-issues files, and Worker v2.0 spec through Waypoint v2.1.5*
 
-**Doc Version: v3.7.10** | *Last updated: September 16, 2026*
+**Doc Version: v3.7.11** | *Last updated: September 20, 2026*
 
 > **Versioning scheme:** Filename (`v3`) only changes on full structural overhaul. Internal version follows semver: Minor bump (3.1→3.2) = new sections or major SOP changes; Patch bump (3.x.0→3.x.1) = corrections or small additions. Update the changelog below on every edit.
 
 ### Document Changelog
 | Version | Date | Summary |
 |---|---|---|
+| v3.7.11 | Sep 20, 2026 | **Documentation audit Pass B.** Added `SESSION-BOOT.md` as P0 Step 0 (with preflight). Corrected P0 filename (`MASTER_KNOWLEDGE_BASE_v3-*.md` — the version in the filename changes; git copy is `docs/MASTER_KNOWLEDGE_BASE.md`). P0 Step 2 now uses `git clone` / `git ls-remote` (web_fetch only opens URLs already seen in chat). P0 Step 1 no longer says to pull `recent_chats` at start (matches ways-of-working, Sep 12). Added capability matrix + Gizmo-Proxy scope finding (Sep 17: dev PAT 403s outside `arche-epos/arche-suite`) to P5. P1: Pilgrim Private v4.35.1 and DPS v32.48.0 verified live Sep 20. **Security:** proxy secret was found in plaintext in the PUBLIC repo copy of this file — git copy now redacts both PAT and proxy secret; secret must be rotated (history retains the old value). |
 | v3.7.10 | Sep 16, 2026 | **Corrected a stale "not built" claim.** Two Sep 15, 2026 session-handoffs (`session-handoff-sep15-2026-pilgrim-guide-part1.md`/`...-SHIPPED.md`) stated the Word Study "stub" (Lexicon disambiguation: cheap classify call → 3-5 candidate senses → full lookup by Strong's number) was "still fully unbuilt." It had actually shipped a week earlier — commit `5cead4f0`, **v4.33.0, Sep 8, 2026** ("Word Study mode live — Lexicon disambiguation picker, sense-pick tracking"). Confirmed live in `pilgrim-private/studyTools.js` this session: `_lexClassify()`, `_lexRenderSensePicker()`, `pickWordSense()`, `_lexFullLookup()` all present, matching the originally-scoped design exactly. **Do not re-scope or rebuild this flow.** The only genuinely-outstanding Word Study item is wiring it into **Pilgrim Guide chat** (Part 2/AI Tools mode, `spec-pilgrim-guide-conversational-v1.md`) — the hardcoded `ui.js` build-status note gating chat-triggered word_study is real and still accurate, confirmed live Sep 16, 2026. Live app version as of this check: v4.34.31+ (P1 registry row below still shows v4.30.3 — needs its own re-baseline pass, not done here, out of scope for this correction). |
 | v3.7.9 | Sep 12, 2026 | Added **XP-22** (Removing an "Unused" Namespace Import Can Break a Window-Bridging Loop) — Pilgrim Private v4.34.15 removed `app.js`'s `import * as Utils` line as part of a display-name fix, correctly finding it unused at the import site, but missed that the window-bridging loop later in the same file (`[Utils, Storage, TTS, Sync, StudyTools, UI].forEach(...)`) still referenced `Utils` directly — a `ReferenceError` at module-evaluation time that silently broke the entire app (white screen, zero interactivity) since `app.js` never finished executing. Reverted to v4.34.14 (v4.34.16), then redone correctly in v4.34.17 by keeping the import and removing only the actually-dead code. |
 | v3.7.8 | Sep 12, 2026 | **Rotated session/dev PAT** — `github-proxy-worker2.0` (expired Sep 16, 2026) replaced with `GitHub-Proxy 9/12/26 - Dev Work` (expires **Dec 31, 2026**), confirmed live via `rate_limit` + repo-access GET same session. New token additionally grants **Issues (R/W)** and **Pages (R/W)** beyond the prior Contents-only scope — Issues stays unused by Claude (Issue management routes through the separate `github-proxy` Worker's own production token, not this one); Pages is untested but may finally allow API-driven Pages administration, which previously failed even with Contents R/W (see U12 note, June 19 2026 finding). Also dropped the stale token codename from the U12 cross-reference so that line doesn't need editing on every future rotation. |
@@ -56,22 +57,30 @@ This knowledge base covers three projects in one Claude chat. Use this section t
 
 **Execute these steps in order at the start of every new chat. Do not skip steps. Do not write any code until step 4 is complete.**
 
+### Step 0 — Read `SESSION-BOOT.md` and run its preflight
+- `SESSION-BOOT.md` (Project Knowledge) wins over any older doc that says Claude cannot push or cannot see a repo. Run the preflight in its section 2 and state the result in one line before anything else. Never say "I can't deploy / can't see X" without running it.
+- Do NOT read every Project Knowledge file. Read order: SESSION-BOOT → latest handoff → this MKB (P0–P5 + Part for the active app) → the spec for the active feature only.
+
 ### Step 1 — Read Context Docs
 - Read the most recent dated `session-handoff-*.md` in Project Knowledge (always latest date — never a fixed filename)
-- Read this document (`MASTER_KNOWLEDGE_BASE_v3.md`) — at minimum P0–P5 and the relevant project Part
-- Use `recent_chats` to pull the last 3–5 conversations and scan for any context, decisions, or carry-overs that may not have made it into the handoff doc
+- Read this document (`MASTER_KNOWLEDGE_BASE_v3-*.md` — the version in the filename changes) — at minimum P0–P5 and the relevant project Part
+- Skip `recent_chats` / `conversation_search` at session start — the handoff carries continuity. Fall back to them only if the handoff is missing, stale, or unclear
 
 ### Step 2 — Check Application Files on GitHub
-Fetch the live HTML file for each active app and extract the deployed version number:
+Clone and read the deployed version number (public repos; no token needed for reads):
+```
+git clone --depth 1 https://github.com/arche-epos/arche-suite.git
+git clone --depth 1 https://github.com/jcaldwelldmp/Daily-Planner.git
+```
+| App | File in clone | Where the version lives |
+|---|---|---|
+| Pilgrim Private | `pilgrim-private/index.html` | `app.js?v=X.Y.Z` cache-buster (also CHANGELOG) |
+| Pilgrim Public | `pilgrim-public/index.html` | `version:` constant |
+| Codex | `codex/index.html` | `VERSION` constant |
+| Scribe | `scribe/index.html` | `version:` constant |
+| DPS | `Daily-Planner/DPS.html` | `DPS_VERSION` constant |
 
-| App | Raw URL |
-|---|---|
-| Pilgrim Private | `https://raw.githubusercontent.com/arche-epos/arche-suite/main/pilgrim-private/index.html` |
-| Pilgrim Public | `https://raw.githubusercontent.com/arche-epos/arche-suite/main/pilgrim-public/index.html` |
-| Codex | `https://raw.githubusercontent.com/arche-epos/arche-suite/main/codex/index.html` |
-| Scribe | `https://raw.githubusercontent.com/arche-epos/arche-suite/main/scribe/index.html` |
-
-> ⚠️ For brand-new/just-pushed files use `codeload.github.com` tarballs or `git ls-remote` — not raw.githubusercontent.com (CDN can be stale). For existing deployed files, raw fetch is reliable.
+> ⚠️ `web_fetch` only opens URLs already seen in the chat — that is not "can't see". `raw.githubusercontent.com` CDN can be stale right after a push; use `git clone`, `git ls-remote`, or the Contents API (`Accept: application/vnd.github.v3.raw`) instead.
 
 ### Step 3 — Check Issues on GitHub
 Fetch open issues directly via the GitHub API using the PAT from P5 credentials:
@@ -80,6 +89,7 @@ GET https://api.github.com/repos/arche-epos/arche-suite/issues?state=open
 Authorization: Bearer <GITHUB_PAT>
 Accept: application/vnd.github+json
 ```
+(The repo is public, so this GET also works unauthenticated. Issue writes go through the `github-proxy` Worker, not the dev PAT.)
 
 ### Step 4 — Present Consolidated Report
 Deliver one report before any work begins:
@@ -94,7 +104,7 @@ Deliver one report before any work begins:
 - **Current session handoff:** Project Knowledge only — one file at a time
 - **At session start:** move previous handoff to `docs/handoffs/` on GitHub, then delete from PK
 - **Full archive + index:** `docs/handoffs/README.md` on `arche-epos/arche-suite` main
-- **PAT redaction:** Strip any live PAT strings before pushing a handoff to GitHub (secret scanning will block the push)
+- **Credential redaction:** `arche-suite` is a PUBLIC repo. Before pushing ANY doc, strip live PAT strings (secret scanning will block them) AND the proxy secret (scanning will NOT catch it — this leaked once, found Sep 20, 2026). Grep the outgoing file for both before every push.
 - **Bridge check gate:** Run `node tests/bridge-check.js` from `pilgrim-private/` before every `dev → main` merge
 - **Manual backup discipline:** At meaningful milestones (major merges, structural migrations, large multi-file sessions, before/after risky Git Data API operations), Claude proactively reminds Boss — one brief line with a concrete method (`git clone` or GitHub's ZIP download) — to take a manual hard backup of the repo onto his own computer/Drive, independent of GitHub. A Claude-side tree/blob mistake could corrupt repo content before anyone notices. Standing habit, not a one-time task.
 
@@ -128,13 +138,13 @@ Boss runs Sonnet by default with a limited Fable credit budget. Claude manages t
 
 | Project | Repo | Live URL | Stack | Current Version |
 |---|---|---|---|---|
-| Arché Study Tools (Pilgrim Private) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-private/` | Vanilla JS | **v4.30.3 -- LIVE ON MAIN, confirmed Sep 4, 2026 via direct fetch.** Since v4.29.0 (Aug 30): tester-tagging fix on diagnostic pings (v4.30.1), 30s cooldown on Run Full Diagnostics (v4.30.2), and **AI Tool Run Timing** (v4.30.3) -- per-tool last-5-runs + running average, individual tools timed server-side in the Worker, Snapshot timed client-side as its own full-batch entry. Manual round-trip test of Diagnostics & Error Log (flagged Aug 30) still unconfirmed -- carry forward. Bridge-check baseline clean. PIN auth + per-user namespacing confirmed fully live. Playwright test scaffolding (`pilgrim-private/tests/`) still NOT started -- remains the declared top-priority workstream. |
+| Arché Study Tools (Pilgrim Private) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-private/` | Vanilla JS | **v4.35.1 — live on `main`, verified Sep 20, 2026 via git clone (commit `c92e31f`).** Version history: CHANGELOG in the app + session handoffs. |
 | Arché Study Tools (pilgrim-admin) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-admin/` | Vanilla JS | **v1.6.0 -- LIVE, confirmed Sep 4, 2026.** Boss-only analytics dashboard for Pilgrim Private. Since v1.2.0: mobile table-scroll fix (v1.3.2), full JSON export system incl. global "Export All" (v1.4.0), refresh/export toast feedback + timestamped export filenames (v1.5.0), and **AI Tool Run Timing card** (v1.6.0) -- per-tool last-5-runs + running average, includes Snapshot's full-batch entry. **Was completely absent from the local backup system (`sync-config.json`) despite being live since Aug 30 -- added Sep 4, 2026.** Cards: health/rate-limits, ranked usage, per-tester breakdown, Errors, Diagnostic Runs, AI Tool Run Timing. No row cap/pagination. |
 | Arché Study Tools (Pilgrim Public) | same repo | `archestudytools.com/` -> redirects to `/pilgrim-public/` | Vanilla JS | v4.1.1 -- **confirmed live Sep 4, 2026** (direct fetch, no drift; still unported from the Aug 2026 Pilgrim Private work, see Issue #15) |
 | Arché Study Tools (Scribe) | same repo | `archestudytools.com/scribe/` | Vanilla JS | v2.1 -- **confirmed live Sep 4, 2026** (direct fetch, no drift since April) |
 | Arché Study Tools (Codex Arête) | same repo | `archestudytools.com/codex/` | Vanilla JS | **v3.6.4 -- confirmed live Sep 4, 2026 via direct fetch.** This row was showing v3.3.2 (July 14) while `CODEX_HANDOFF_MASTER.md` separately claimed v3.6.3 -- the two docs disagreed with each other and both were wrong. Whether the old `CODEX_VERSION`-frozen-at-3.3.0 dashboard bug is still live is unconfirmed now that the constant correctly reads 3.6.4 -- spot-check next Codex session, not urgent. |
 | Waypoint | `Gizmo5332/Waypoint` | `gizmo5332.github.io/Waypoint/` | React 18 CDN | v2.6.0 — confirmed via uploaded live HTML, July 14, 2026. Adds PIN security upgrade (6→8 digit), Worker v2.0 KV rate limiting, onboarding flow. `waypoint-reference.md` still shows v2.2.1/May 20 — **doc is significantly stale, needs regeneration.** |
-| DPS Daily Planner | `jcaldwelldmp/Daily-Planner` | `jcaldwelldmp.github.io/Daily-Planner/` | React 18 CDN | **v32.28.2 -- confirmed live Sep 4, 2026 via direct fetch.** This row was still showing v32.9.2 (July 14); `DPS_HANDOFF_MASTER.md` separately said v32.22.0. Live has moved 6+ minor versions past even that: new Mock Call Bank feature (import parser + role-separated scenario views + pathway viewer, v32.24.0-32.26.0), Seating Chart print export (v32.27.0-.1), agent-roster supervisor-dropdown safeguard (v32.28.0), two pre-hire panel fixes (v32.28.1-.2). **`DPS_HANDOFF_MASTER.md` and both modularization-prep specs (`dps-multi-file-split-spec-v2.md`, `dps-dependency-graph-v2.md`) need a full re-baseline against this -- not done in this pass, flagged as its own dedicated-session item.** |
+| DPS Daily Planner | `jcaldwelldmp/Daily-Planner` | `jcaldwelldmp.github.io/Daily-Planner/` | React 18 CDN | **v32.48.0 — live on `main`, verified Sep 20, 2026 via git clone.** File is `DPS.html` (capital letters); `index.html` is a redirect stub. |
 | DPS Supervisors | same repo, `supervisors.html` | `jcaldwelldmp.github.io/Daily-Planner/supervisors.html` | React 18 CDN | sup-v4.5.1 — code fix shipped July 14, 2026: `SUP_VERSION` constant was frozen at 4.4.0, one behind its own changelog's top entry (4.5.0); resolved prior sup-v3.3/sup-v4.2.1 numbering conflict along the way. **Open:** embedded `DPS_VERSION='v32.8.1'` constant is unused dead code, internally consistent with its own local changelog copy, but stale vs. confirmed DPS main v32.9.2 — needs live `dps.html` to fix correctly, not actioned. |
 
 **Repo note:** `Gizmo5332/JC-Study-Tool` (the old Arché repo) was retired June 18, 2026 —
@@ -281,7 +291,7 @@ POST /label    { owner, repo, name, color, description? }
 |---|---|---|---|---|
 | `github-proxy-2026-07-19` | **Not logged here — lives only in Cloudflare** | ⚠️ **No expiration date set** | Cloudflare (`github-proxy` → `GITHUB_PAT` secret only) | **Deployed production token.** Powers `github-proxy`'s `/commit`, `/issue`, `/label` endpoints — repo deploys + the feedback pipeline. |
 | `GitHub-Proxy 9/12/26 - Dev Work` | `[REDACTED — see Project Knowledge unredacted copy]` | **Dec 31, 2026** | MKB + used directly via `bash_tool` | **Session/dev token.** Claude's direct `api.github.com` calls during dev work (Git Data API blob/tree/commit/ref flow). Confirmed working Sep 12, 2026. Scope: repo `arche-epos/arche-suite` only — Contents (R/W), Issues (R/W, unused by Claude, see below), Pages (R/W, untested), Metadata (Read, auto). |
-| Proxy secret | `5ib7{YDkc{Q05%B8Q2uP<h'sPRX5==ic` | None | MKB + Keeper | Auth header (`X-Proxy-Auth`) for browser-initiated `github-proxy` calls |
+| Proxy secret | `[REDACTED — see Project Knowledge unredacted copy]` | None | MKB + Keeper | Auth header (`X-Proxy-Auth`) for browser-initiated `github-proxy` calls. ⚠️ **EXPOSED (found Sep 20, 2026): sat in plaintext in the public repo copy of this file (git history keeps it). Rotate in Cloudflare (`github-proxy`) + Keeper, then update this row.** |
 
 > ⚠️ **PAT rotation reminder (session token):** `GitHub-Proxy 9/12/26 - Dev Work` expires Dec 31, 2026. Generate a new fine-grained PAT, update this table, and give the new value at the start of the session it's needed.
 >
@@ -296,6 +306,17 @@ POST /label    { owner, repo, name, color, description? }
 | Discord | `enarchelogos` (Arché server) |
 | Civitai | `En_Arche_Logos` / `jessecaldwell07@gmail.com` |
 | GitHub (Arché) | `arche-epos` |
+
+### Capability matrix (verified Sep 20, 2026 — mirrors `SESSION-BOOT.md`)
+
+| Need | Can Claude? | How |
+|---|---|---|
+| Read `arche-epos/arche-suite` | YES | `git clone` in bash_tool |
+| **Push to `arche-epos/arche-suite`** | **YES** | Dev PAT (row above) + Git Data API flow below. Proven Sep 12–20, 2026 |
+| Read public repos (`Gizmo5332/*`, `jcaldwelldmp/Daily-Planner`) | YES | `git clone` in bash (github.com is allowlisted). Do not rely on web_fetch |
+| Push to `Gizmo5332/*` or `jcaldwelldmp/*` | NO with the dev PAT | Dev PAT scope is `arche-epos/arche-suite` only — **403 confirmed Sep 17, 2026**. Boss deploys via file picker, or pastes a per-repo PAT at session start (e.g. "Gizmo-Proxy" for `Gizmo5332/brew-log`; value stored nowhere, never stored by Claude) |
+| Read a Cloudflare Worker's live code | YES | Cloudflare MCP `workers_get_worker_code` |
+| Deploy a Cloudflare Worker | NO | Boss pastes into the dashboard |
 
 ### Git Data API Deployment Patterns (Claude-side deploys)
 

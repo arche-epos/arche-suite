@@ -25,6 +25,13 @@ Full content preserved where recoverable; summary stubs otherwise.
 | session-handoff-june22a-2026.md | Jun 22 SA | Pilgrim v4.13.0, PAT fix, Issues updated | Partial |
 | session-handoff-june25-2026.md | Jun 25 | Mentor v0.3.0, Pilgrim ES Modules QA | **Full** |
 | session-handoff-july20-2026.md | Jul 20 | PAT resolution, OCR provider research, Gemini backup spec | **Full** |
+| session-handoff-sep12-2026-finishing-pass-items-1-3.md | Sep 12 | Finishing pass items 1–3 closed | **Full** |
+| session-handoff-sep13-2026-toolbar-redesign.md | Sep 13 | Notes toolbar redesign (scripture panel TTS + Quill rail) | **Full** |
+| session-handoff-sep14-2026-toolbar-focus-bug.md | Sep 14 | Toolbar follow-on + focus bug | **Full** |
+| session-handoff-sep15-2026-pilgrim-guide-part1.md | Sep 15 | Pilgrim Guide conversational spec Part 1 (superseded by -SHIPPED) | **Full** |
+| session-handoff-sep15-2026-pilgrim-guide-part1-SHIPPED.md | Sep 15 | Pilgrim Guide Part 1 (ambiguity handling) shipped | **Full** |
+| session-handoff-sep17-2026-brew-log-v2.md | Sep 17 | Brew Log v2.0.0 shipped | **Full** |
+| session-handoff-sep19-2026-transcript-recording-spec.md | Sep 19 | Transcript + Recording spec locked (push-path claim corrected Sep 20) | **Full** |
 
 ---
 **Going forward:** Current handoff stays in Project Knowledge.

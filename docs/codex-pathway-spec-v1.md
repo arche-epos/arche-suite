@@ -1,6 +1,6 @@
 # Codex Arête — Full Pathway Curriculum Spec
 **Version:** 1.0 | **Date:** June 13, 2026
-**Status:** Approved concept — curriculum build pending
+**Status:** Curriculum built and live (built out in the May 31, 2026 session; live app confirmed v3.3.2 as of July 14, 2026 audit). This spec is the design doc the build followed — treat as historical/reference, not a pending-work tracker.
 
 ---
 
@@ -154,4 +154,4 @@ To keep the curriculum focused, these are explicitly out of scope (at least for 
 ---
 
 *Codex Arête Pathway Spec v1 — June 13, 2026*
-*Approved by Jesse Caldwell — build pending*
+*Approved by Jesse Caldwell — build complete, live in production*
