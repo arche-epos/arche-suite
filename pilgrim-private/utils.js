@@ -496,7 +496,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.35.3',date:'Sep 20, 2026',label:'Latest',
+    version:'4.35.4',date:'Sep 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the Observations & Notes header is now balanced on phones: two tidy rows with large 44px buttons (Look Up Word and Listen on top; saved-words note and A\u2212 / A+ below), instead of small buttons scattered across three lines.",
+      "fix: the Look Up Word button is larger and easier to click on Chromebook and desktop."
+    ]},
+  {
+    version:'4.35.3',date:'Sep 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the Notes editor box no longer hangs over the Saved Words and Photos & Documents headings. The editor was drawn one toolbar-height taller than the space reserved for it (found by measuring the layout in a real browser); it now sizes to its content. Same fix applies to the Conclusions and Outline editors."

@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.35.3';
+} from './utils.js?v=4.35.4';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.35.3';
+} from './storage.js?v=4.35.4';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.35.3';
+} from './media.js?v=4.35.4';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.35.3';
+} from './tts.js?v=4.35.4';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.35.3';
+} from './sync.js?v=4.35.4';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,7 +70,7 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.35.3';
+} from './studyTools.js?v=4.35.4';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3939,7 +3939,7 @@ function switchUser(){
  */
 function updateWordCount(){
   var el=document.getElementById('notes-wc');if(!el)return;
-  // Counter shows saved (in-study) words for the current study, not notes word count (v4.35.3)
+  // Counter shows saved (in-study) words for the current study, not notes word count (v4.35.4)
   var n=(cur&&cur.words)?cur.words.filter(function(w){return w.inStudy;}).length:0;
   el.textContent=n+(n===1?' saved word':' saved words');
 }
