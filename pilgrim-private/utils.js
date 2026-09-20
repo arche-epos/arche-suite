@@ -496,7 +496,20 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.35.1',date:'Sep 20, 2026',label:'Latest',
+    version:'4.35.3',date:'Sep 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the Notes editor box no longer hangs over the Saved Words and Photos & Documents headings. The editor was drawn one toolbar-height taller than the space reserved for it (found by measuring the layout in a real browser); it now sizes to its content. Same fix applies to the Conclusions and Outline editors."
+    ]},
+  {
+    version:'4.35.2',date:'Sep 20, 2026',label:'',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feat: the counter next to Look Up Word now shows how many words are saved to the study (e.g. \u201c3 saved words\u201d) instead of the notes word count.",
+      "new: a short hint beside Look Up Word points to where saved words live: \u201cSaved words are below the notes\u201d."
+    ]},
+  {
+    version:'4.35.1',date:'Sep 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the Look Up Word button was hidden underneath the Notes editor on every device (phone and Chromebook). It now lives in the Observations & Notes header row, always visible. The Notes/Saved Words section also now stacks above the editor and the editor wrapper contains its own height (flow-root), so it can no longer be covered.",

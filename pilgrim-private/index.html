@@ -543,6 +543,8 @@ input[type="range"]{accent-color:var(--gold)}
    below is the static fallback for browsers without visualViewport support —
    JS overrides it with an inline top/bottom:auto once available. */
 .ql-editorwrap{display:flow-root;}
+/* v4.35.3: Quill's snow CSS gives .ql-container height:100% of its parent. The toolbar sits ABOVE the container inside the same wrap, so the container was as tall as the whole wrap and hung one toolbar-height past the bottom, painting over the Saved Words / Photos labels. Height:auto lets the wrap size to toolbar + content. */
+.ql-editorwrap>.ql-container{height:auto;}
 .ql-rail-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:15px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;}
 .ql-rail-btn.ql-active{border-color:var(--gold);color:var(--gold);}
 .ql-rail{position:fixed;left:4px;right:4px;bottom:calc(4px + var(--safe-b));z-index:58;display:none;flex-direction:row;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -810,7 +812,8 @@ input[type="range"]{accent-color:var(--gold)}
       <div class="seclabel" style="margin-bottom:0;flex:1">Observations &amp; Notes</div>
       <div style="display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px">
         <button id="field-lookupword-btn" onclick="openLexiconModalFor('study')" title="Look up a Greek or Hebrew word" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;white-space:nowrap">✦ Look Up Word</button>
-        <span id="notes-wc" style="font-size:11px;color:var(--txt4)">0 words</span>
+        <span id="saved-words-hint" style="font-size:11px;color:var(--txt4);font-style:italic">Saved words are below the notes ↓</span>
+        <span id="notes-wc" title="Words saved to this study" style="font-size:11px;color:var(--txt4)">0 saved words</span>
         <button id="listen-fn-btn" onclick="ttsToggleField('fn')" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 8px;cursor:pointer;min-height:26px;display:flex;align-items:center;gap:4px"><svg id="listen-fn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-fn-label">Listen</span></button>
         <button id="tts-restart-fn" onclick="ttsRestart('fn')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);padding:2px 7px;cursor:pointer;min-height:26px;align-items:center;font-size:13px">⏮</button>
         <button onclick="adjustFontScale(-1)" id="notes-font-minus-btn" title="Smaller text (full control in Settings > Appearance)" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:11px;padding:2px 7px;cursor:pointer;min-height:26px">A−</button>
@@ -1810,7 +1813,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.35.1"></script>
+<script type="module" src="app.js?v=4.35.3"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
