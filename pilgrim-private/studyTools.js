@@ -13,11 +13,11 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.35.4';
+} from './utils.js?v=4.35.5';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.35.4';
-import { syncToGist } from './sync.js?v=4.35.4';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.35.4';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.35.5';
+import { syncToGist } from './sync.js?v=4.35.5';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.35.5';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1693,7 +1693,7 @@ async function _lexFullLookup(query,btn,res,bar){
   bar.style.display='none';
   var prompt='You are a biblical lexicographer with deep knowledge of Greek NT and Hebrew OT.\nThe user has looked up: "'+query+'"\n\nIf the input is a Strong\'s number (G#### or H####), use that number. If it is an English word, transliteration, or original language word, identify the most likely Strong\'s number.\n\nReturn ONLY a valid JSON object — absolutely no markdown fences, no backticks, no preamble, no text before or after the JSON. Use this exact structure:\n\n{"strongsNumber":"G#### or H####","testament":"NT or OT","originalWord":"word in original script","transliteration":"romanized form","pronunciation":"phonetic e.g. log\'-os","partOfSpeech":"e.g. masculine noun","gender":"masculine/feminine/neuter or null","rootWord":"etymology e.g. from λέγω (G3004) or null","tdntReference":"vol:page,entry or null","primaryDefinition":"concise primary definition","usageOutline":["I. main usage","   A. sub-usage","   B. sub-usage","II. second main usage"],"kjvCount":0,"kjvTranslations":[{"word":"translation","count":0}],"strongsDefinition":"full Strong\'s Concordance definition text","scholarlyEntry":"150-200 word summary of Thayer\'s Greek Lexicon (NT) or Brown-Driver-Briggs (OT) in their scholarly style","occurrences":[{"ref":"Book Ch:v","text":"full verse text (KJV) showing the word in context"}]}\n\nFor occurrences: list ALL known occurrences up to 30. For very common words (100+ occurrences), list the 25 most theologically significant. Always include the full verse text, never just the reference.';
   try{
-    // v4.35.4 — up to 2 attempts: the model occasionally returns an empty/truncated body
+    // v4.35.5 — up to 2 attempts: the model occasionally returns an empty/truncated body
     // (logged as "Unexpected end of JSON input"); a second call almost always succeeds.
     var lex=null;
     for(var _try=0;_try<2&&!lex;_try++){

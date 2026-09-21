@@ -496,7 +496,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.35.4',date:'Sep 20, 2026',label:'Latest',
+    version:'4.35.5',date:'Sep 20, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: on Chromebook and desktop, the left menu could not be scrolled, so on a shorter window Settings (and sometimes Progress) was cut off and unreachable. The menu now scrolls, and the \u201cPart of Arch\u00e9 Study Tools\u201d footer sits below the last button instead of on top of it."
+    ]},
+  {
+    version:'4.35.4',date:'Sep 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the Observations & Notes header is now balanced on phones: two tidy rows with large 44px buttons (Look Up Word and Listen on top; saved-words note and A\u2212 / A+ below), instead of small buttons scattered across three lines.",

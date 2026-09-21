@@ -5,30 +5,30 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.35.4';
+} from './utils.js?v=4.35.5';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.35.4';
+} from './storage.js?v=4.35.5';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.35.4';
+} from './sync.js?v=4.35.5';
 
 import {
   loadTTSSett, initTTSVoices
-} from './tts.js?v=4.35.4';
+} from './tts.js?v=4.35.5';
 
-import { mediaInit } from './media.js?v=4.35.4';
+import { mediaInit } from './media.js?v=4.35.5';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.35.4';
-import * as Storage from './storage.js?v=4.35.4';
-import * as TTS from './tts.js?v=4.35.4';
-import * as Sync from './sync.js?v=4.35.4';
-import * as StudyTools from './studyTools.js?v=4.35.4';
-import * as UI from './ui.js?v=4.35.4';
-import * as Media from './media.js?v=4.35.4';
+import * as Utils from './utils.js?v=4.35.5';
+import * as Storage from './storage.js?v=4.35.5';
+import * as TTS from './tts.js?v=4.35.5';
+import * as Sync from './sync.js?v=4.35.5';
+import * as StudyTools from './studyTools.js?v=4.35.5';
+import * as UI from './ui.js?v=4.35.5';
+import * as Media from './media.js?v=4.35.5';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
