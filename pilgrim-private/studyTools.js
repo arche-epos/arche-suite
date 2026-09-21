@@ -13,11 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.35.5';
+} from './utils.js?v=4.36.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.35.5';
-import { syncToGist } from './sync.js?v=4.35.5';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.35.5';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.36.0';
+import { syncToGist } from './sync.js?v=4.36.0';
+import { memAddWithToast, memBuildVerseRef, renderMemoryList } from './memory.js?v=4.36.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.36.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1260,9 +1261,9 @@ var _lexLastResult=null; // {query, html, reference, studyId, studyTitle}
 var _lexSaveContext=null; // 'global' | 'study' | null
 
 /**
- * Switches the Library between the Studies and Words tabs.
- * Toggles .on classes on tab buttons, shows/hides panels, and triggers renderWordList() when switching to words.
- * @param {string} tab - Tab key: 'studies' | 'words'.
+ * Switches the Library between the Studies, Words and Memory tabs.
+ * Toggles .on classes on tab buttons, shows/hides panels, and triggers renderWordList() / renderMemoryList() when switching to words / memory.
+ * @param {string} tab - Tab key: 'studies' | 'words' | 'memory'.
  */
 function switchLibTab(tab){
   trackEvent({screen:'library.'+tab}); // usage tracking — sub-tab visit (spec-usage-tracking-admin-v2.md)
@@ -1271,7 +1272,21 @@ function switchLibTab(tab){
   document.getElementById('lib-tab-words').classList.toggle('on',tab==='words');
   document.getElementById('lib-studies-panel').style.display=tab==='studies'?'':'none';
   document.getElementById('lib-words-panel').style.display=tab==='words'?'':'none';
+  document.getElementById('lib-tab-memory').classList.toggle('on',tab==='memory');
+  document.getElementById('lib-memory-panel').style.display=tab==='memory'?'':'none';
   if(tab==='words')renderWordList();
+  if(tab==='memory')renderMemoryList();
+}
+/**
+ * Saves the verse currently selected (tapped verse number) in the study Scripture panel
+ * to Scripture Memory. Reference is rebuilt per verse from the panel's reference field so
+ * a chapter or range load still yields "Book Chapter:Verse".
+ */
+function saveScrVerseToMemory(){
+  if(_scrSelectedIdx===null||!_scrVerses[_scrSelectedIdx]){toast('Tap a verse number in the passage first, then Save to Memory');return;}
+  var ref=document.getElementById('f-ref').value.trim(),trans=document.getElementById('f-trans').value;
+  var v=_scrVerses[_scrSelectedIdx];
+  memAddWithToast({reference:memBuildVerseRef(ref,_scrVerses,_scrSelectedIdx),translation:trans,text:v.text.replace(/\s+/g,' ').trim(),source:'study'});
 }
 
 // _wlCache declared in module header
@@ -2066,7 +2081,7 @@ export {
   // S14-partial — Expand / Copy / Share
   updateExpandBtn, expandCurrentTool, updateContinueBtn, continueCurrentTool, copyAIResult, shareAIResult,
   // S15 — Lexicon & Word List
-  libTab, switchLibTab, renderWordList, wlView, wlRemove,
+  libTab, switchLibTab, saveScrVerseToMemory, renderWordList, wlView, wlRemove,
   renderStudyWords, swView, swRemove,
   showWordDetail, showWordDetailCur, _showWordOverlay,
   openLexSaveSheet, toggleLexCb, saveLexWord,

@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.35.5';
+} from './utils.js?v=4.36.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.35.5';
+} from './storage.js?v=4.36.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.35.5';
+} from './media.js?v=4.36.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.35.5';
+} from './tts.js?v=4.36.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.35.5';
+} from './sync.js?v=4.36.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,7 +70,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.35.5';
+} from './studyTools.js?v=4.36.0';
+
+import {
+  memAddWithToast, memBuildVerseRef, renderMemoryList, memExportStore, memHasData, memMergeRemote
+} from './memory.js?v=4.36.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -923,6 +927,7 @@ function createFromTemplate(tplKey){
  */
 function renderLib(){
   if(libTab==='words'){renderWordList();return;}
+  if(libTab==='memory'){renderMemoryList();return;}
   loadStudies();
   var q=(document.getElementById('lib-search').value||'').toLowerCase();
   var sortBy=(document.getElementById('lib-sort')&&document.getElementById('lib-sort').value)||'date';
@@ -1709,6 +1714,8 @@ function importDataFromFile(input){
         else{winner={lastDay:localSk.lastDay,streak:Math.max(localSk.streak||0,fileSk.streak||0)};}
         localStorage.setItem(SK_STREAK,JSON.stringify(winner));
       }
+      // Scripture Memory: merged (never replaces), tombstone-aware. Old backups have no key.
+      if(!Array.isArray(payload)&&payload.memoryVerses)memMergeRemote(payload.memoryVerses);
       renderLib();
       // Transcripts: added only to studies that have none locally; never overwritten. Old backups have no key.
       var trP=(!Array.isArray(payload)&&payload.transcripts&&typeof payload.transcripts==='object')
@@ -2579,6 +2586,31 @@ function readSetPlayerEnabled(enabled){
   ['read-skip-prev','read-playpause-btn','read-skip-next'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.disabled=!enabled;
   });
+  var mb=document.getElementById('read-save-mem-btn');if(mb)mb.style.display=enabled?'':'none'; // Save to Memory follows the same "passage loaded" state (v4.36.0)
+}
+/**
+ * Builds the full "Book Chapter:Verse" reference for one verse of the Read tab's loaded text.
+ * Chapter mode: book/chapter are known. Range mode: start from the typed reference, then
+ * follow the chapter boundaries computed at load (handles cross-chapter/cross-book ranges).
+ * @param {number} idx - Index into _readVerses.
+ * @returns {string}
+ */
+function _readVerseRef(idx){
+  var v=_readVerses[idx];if(!v)return '';
+  if(!_readRangeMode)return _readBook+' '+_readChapter+':'+v.num;
+  var p=parseRef(_readReference),b=p?_bpFlatBooks[p.book-1]:null;
+  var book=b?b.n:'',chapter=p?p.chapter:0;
+  _readChapterBoundaries.forEach(function(bd){if(bd.atIndex<=idx){book=bd.book;chapter=bd.chapter;}});
+  if(!book||!chapter)return memBuildVerseRef(_readReference,_readVerses,idx);
+  return book+' '+chapter+':'+v.num;
+}
+/**
+ * Saves the verse selected on the Read tab (tapped verse number) to Scripture Memory.
+ */
+function saveReadVerseToMemory(){
+  if(_readSelectedIdx===null||!_readVerses[_readSelectedIdx]){toast('Tap a verse number first, then Save to Memory');return;}
+  var v=_readVerses[_readSelectedIdx];
+  memAddWithToast({reference:_readVerseRef(_readSelectedIdx),translation:_readTranslation,text:v.text.replace(/\s+/g,' ').trim(),source:'read'});
 }
 /**
  * Auto-continues Read tab TTS playback into the next chapter when the current
@@ -2651,6 +2683,7 @@ async function confirmExport(){
   var payload={studies:selected,tags:TAGS,deletedTags:DELETED_TAGS,streak:streak};
   var trs=await mediaExportTranscripts(selected.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;
+  if(isAll&&memHasData())payload.memoryVerses=memExportStore(); // Scripture Memory rides along only with a full (all-studies) export (v4.36.0)
   var fname=isAll?'arche-pilgrim-backup.json':'arche-pilgrim-backup-'+selected.length+'-studies.json';
   var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
@@ -2676,6 +2709,7 @@ async function exportData(){
   // Transcript text rides along in the backup (audio never does). Key only present when there is one.
   var trs=await mediaExportTranscripts(studies.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;
+  if(memHasData())payload.memoryVerses=memExportStore(); // Scripture Memory (v4.36.0) — key only present when there is data
   var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
   var fname='arche-pilgrim-backup.json';
@@ -4037,7 +4071,7 @@ export {
   bpOpen, bpClose, bpSetTestament, bpPickBook, bpPickChapter, bpUpdatePreview,
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
-  fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, getReadText,
+  fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, saveReadVerseToMemory, getReadText,
   getReadVerseChunks, getReadStartIdx, readSelectVerse, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding

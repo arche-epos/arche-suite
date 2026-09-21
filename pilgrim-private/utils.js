@@ -99,7 +99,7 @@ var SK_ERROR_LOG='bsn_error_log';
 var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TAGS_DEL='bsn_tags_deleted_v1';
 var SK_OB='bsn_ob_done', SK_TAB_HINTS='bsn_tab_hints_shown';
 var SK_UPDATE_SKIP='bsn_update_skip'; // Intentionally NOT namespaced in activateUser() — tracks which app version this browser dismissed the update banner for, not per-user study data (same treatment as bsn_active_user)
-var SK_STREAK='bsn_streak', SK_TTS_SETT='bsn_tts_sett', SK_WORDS='bsn_words_global';
+var SK_STREAK='bsn_streak', SK_TTS_SETT='bsn_tts_sett', SK_WORDS='bsn_words_global', SK_MEM='bsn_memverses'; // SK_MEM: Scripture Memory store (v4.36.0) — new key, no legacy un-suffixed data to migrate
 var SK_TOUR_STUDY_SEEN='bsn_tour_study_seen', SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen'; // Guided Tours "seen" flags — namespaced per-user below, same as the other SK_* keys
 
 // ════════════════════════════════════════════════════════
@@ -438,6 +438,7 @@ function activateUser(userId){
   SK_STREAK='bsn_streak_'+userId;
   SK_TTS_SETT='bsn_tts_sett_'+userId;
   SK_WORDS='bsn_words_global_'+userId;
+  SK_MEM='bsn_memverses_'+userId;
   SK_TOUR_STUDY_SEEN='bsn_tour_study_seen_'+userId;
   SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen_'+userId;
   migrateLegacyKey('bsn_studies_v2',SK);
@@ -496,7 +497,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.35.5',date:'Sep 20, 2026',label:'Latest',
+    version:'4.36.0',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Scripture Memory (part 1 of 2). The Library now has a Memory tab next to Studies and Words \u2014 a home for the verses you want to memorize. Add a verse by typing its reference and text, or save it straight from Read or from a study's Scripture panel: tap a verse number, then tap Save to Memory.",
+      "Your Memory verses are included in Backup, Restore and the JSON export, and a verse you remove on one device stays removed on your others. Review and practice tools come in the next update."
+    ]},
+  {
+    version:'4.35.5',date:'Sep 20, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: on Chromebook and desktop, the left menu could not be scrolled, so on a shorter window Settings (and sometimes Progress) was cut off and unreachable. The menu now scrolls, and the \u201cPart of Arch\u00e9 Study Tools\u201d footer sits below the last button instead of on top of it."
@@ -2177,7 +2185,7 @@ export {
   WORKER_URL, ACTIVE_USER, trackEvent, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   APP_SHARE_URL,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
-  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
+  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
   SK_UPDATE_SKIP,
   // Section 02 — state
   studies, cur, online, sett, _diagResults, hdrCollapsed, scrCollapsed,

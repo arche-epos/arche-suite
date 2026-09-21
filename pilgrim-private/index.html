@@ -677,6 +677,7 @@ input[type="range"]{accent-color:var(--gold)}
   <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg1);">
     <button class="lib-tab on" id="lib-tab-studies" onclick="switchLibTab('studies')">Studies</button>
     <button class="lib-tab" id="lib-tab-words" onclick="switchLibTab('words')">Words</button>
+    <button class="lib-tab" id="lib-tab-memory" onclick="switchLibTab('memory')">Memory</button>
   </div>
   <div class="scroll" id="lib-studies-panel">
     <div class="searchbar">
@@ -689,6 +690,26 @@ input[type="range"]{accent-color:var(--gold)}
   <div class="scroll" id="lib-words-panel" style="display:none;">
     <div style="padding:16px 16px 0;"><button class="btn btn-sec btn-sm" style="width:100%;gap:6px" onclick="openLexiconModalFor('global')">✦ Look Up Word &amp; Save to Word List</button></div>
     <div id="word-list" style="padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+  <div class="scroll" id="lib-memory-panel" style="display:none;">
+    <div style="padding:16px 16px 0;"><button class="btn btn-sec btn-sm" style="width:100%;gap:6px" onclick="memToggleAdd()">+ Add a Verse to Memory</button></div>
+    <div id="mem-add-form" style="display:none;padding:14px 16px 0;">
+      <div class="ig"><label for="mem-in-ref">Reference</label><input type="text" id="mem-in-ref" placeholder="e.g. John 3:16" autocomplete="off"></div>
+      <div class="ig"><label for="mem-in-trans">Version</label>
+        <select id="mem-in-trans">
+          <option value="esv">ESV</option><option value="kjv">KJV</option>
+          <option value="asv">ASV</option><option value="web">WEB</option>
+          <option value="ylt">YLT</option><option value="darby">Darby</option>
+          <option value="nkjv">NKJV</option><option value="net">NET</option>
+          <option value="amp">AMP</option><option value="csb">CSB</option>
+          <option value="nlt">NLT</option><option value="msg">MSG</option>
+          <option value="nasb">NASB</option><option value="niv">NIV</option>
+        </select>
+      </div>
+      <div class="ig"><label for="mem-in-text">Verse Text</label><textarea id="mem-in-text" rows="4" placeholder="Type or paste the verse exactly as you want to memorize it"></textarea></div>
+      <div style="display:flex;gap:8px;"><button class="btn btn-primary btn-sm" style="flex:1" onclick="memSaveManual()">Save Verse</button><button class="btn btn-ghost btn-sm" onclick="memToggleAdd()">Cancel</button></div>
+    </div>
+    <div id="mem-list" style="padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
   </div>
 </div>
 
@@ -747,6 +768,7 @@ input[type="range"]{accent-color:var(--gold)}
   </div>
   <div style="padding:0 16px 20px">
     <button class="btn btn-primary btn-full" id="read-start-study-btn" style="display:none" onclick="startStudyFromReading()">Start a Study from this Passage</button>
+    <button class="btn btn-sec btn-full" id="read-save-mem-btn" style="display:none;margin-top:8px" onclick="saveReadVerseToMemory()">Save Selected Verse to Memory</button>
   </div>
 </div>
 
@@ -814,6 +836,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div id="scracts" style="display:none" class="scractions">
       <button class="btn btn-sm btn-ghost" onclick="copyScrip()">Copy</button>
       <button class="btn btn-sm btn-ghost" onclick="openPasteModal()">Paste</button>
+      <button class="btn btn-sm btn-ghost" onclick="saveScrVerseToMemory()">Save to Memory</button>
       <button id="scr-skip-prev" onclick="scrSkipVerse(-1)" title="Previous verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏮</button>
       <button id="listen-scr-btn" onclick="ttsToggleScr()" style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;padding:0 12px;cursor:pointer;height:44px;display:flex;align-items:center;gap:5px;flex-shrink:0"><svg id="listen-scr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-scr-label">Listen</span></button>
       <button id="scr-skip-next" onclick="scrSkipVerse(1)" title="Next verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏭</button>
@@ -1839,7 +1862,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.35.5"></script>
+<script type="module" src="app.js?v=4.36.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

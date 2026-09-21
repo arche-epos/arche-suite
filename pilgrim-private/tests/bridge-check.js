@@ -32,6 +32,7 @@ const MODULES = [
   { file: 'studyTools.js', name: 'StudyTools' },
   { file: 'ui.js',         name: 'UI'         },
   { file: 'media.js',      name: 'Media'      },
+  { file: 'memory.js',     name: 'Memory'     },
 ];
 
 // Native JS/DOM names that appear in inline handlers but are NOT module
