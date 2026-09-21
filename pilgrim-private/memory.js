@@ -7,10 +7,11 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.36.0';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.36.1';
 import {
-  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef
-} from './memory-core.js?v=4.36.0';
+  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
+  memRangeLabel, memJoinVerses
+} from './memory-core.js?v=4.36.1';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
@@ -128,7 +129,7 @@ function renderMemoryList() {
     return (b.createdAt || '').localeCompare(a.createdAt || '');
   });
   if (!items.length) {
-    el.innerHTML = '<div class="empty"><p style="font-style:italic;font-size:13px">No verses saved yet.<br>Add one above, or tap a verse number in Read or in a study\'s Scripture panel, then choose Save to Memory.</p></div>';
+    el.innerHTML = '<div class="empty"><p style="font-style:italic;font-size:13px">No verses saved yet.<br>Add one above, or load a passage in Read or in a study\'s Scripture panel and choose Save to Memory.</p></div>';
     return;
   }
   el.innerHTML = items.map(function(it) {
@@ -173,5 +174,5 @@ export {
   memWireSync, memLoad, memSave, memExportStore, memHasData, memMergeRemote, memReplaceFromRemote,
   memAddVerse, memAddWithToast, memDelete, memDeleteBtn,
   renderMemoryList, memToggleAdd, memSaveManual,
-  memBuildVerseRef
+  memBuildVerseRef, memRangeLabel, memJoinVerses
 };

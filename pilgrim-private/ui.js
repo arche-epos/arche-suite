@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.36.0';
+} from './utils.js?v=4.36.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.36.0';
+} from './storage.js?v=4.36.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.36.0';
+} from './media.js?v=4.36.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.36.0';
+} from './tts.js?v=4.36.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.36.0';
+} from './sync.js?v=4.36.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,11 +70,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.36.0';
+} from './studyTools.js?v=4.36.1';
 
 import {
-  memAddWithToast, memBuildVerseRef, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.36.0';
+  memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
+} from './memory.js?v=4.36.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2605,12 +2605,27 @@ function _readVerseRef(idx){
   return book+' '+chapter+':'+v.num;
 }
 /**
- * Saves the verse selected on the Read tab (tapped verse number) to Scripture Memory.
+ * Saves the passage currently loaded on the Read tab to Scripture Memory as ONE item, exactly as
+ * the reference box was typed: a range saves the whole range, a single verse saves just that
+ * verse (even though the tab displays its whole chapter), a bare chapter saves the whole chapter.
+ * Multi-verse text keeps [n] verse numbers.
  */
 function saveReadVerseToMemory(){
-  if(_readSelectedIdx===null||!_readVerses[_readSelectedIdx]){toast('Tap a verse number first, then Save to Memory');return;}
-  var v=_readVerses[_readSelectedIdx];
-  memAddWithToast({reference:_readVerseRef(_readSelectedIdx),translation:_readTranslation,text:v.text.replace(/\s+/g,' ').trim(),source:'read'});
+  if(!_readVerses.length){toast('Load a passage first, then Save to Memory');return;}
+  var ref,verses;
+  if(_readRangeMode){
+    verses=_readVerses;
+    ref=memRangeLabel(_readVerseRef(0),_readVerseRef(verses.length-1));
+  }else if(_readTargetVerse){
+    var ti=_readVerses.findIndex(function(v){return v.num===String(_readTargetVerse);});
+    if(ti<0){toast('Could not find that verse in the loaded chapter');return;}
+    verses=[_readVerses[ti]];
+    ref=_readVerseRef(ti);
+  }else{
+    verses=_readVerses;
+    ref=_readBook+' '+_readChapter;
+  }
+  memAddWithToast({reference:ref,translation:_readTranslation,text:memJoinVerses(verses),source:'read'});
 }
 /**
  * Auto-continues Read tab TTS playback into the next chapter when the current

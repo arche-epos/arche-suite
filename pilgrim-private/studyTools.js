@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.36.0';
+} from './utils.js?v=4.36.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.36.0';
-import { syncToGist } from './sync.js?v=4.36.0';
-import { memAddWithToast, memBuildVerseRef, renderMemoryList } from './memory.js?v=4.36.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.36.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.36.1';
+import { syncToGist } from './sync.js?v=4.36.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.36.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.36.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1278,15 +1278,17 @@ function switchLibTab(tab){
   if(tab==='memory')renderMemoryList();
 }
 /**
- * Saves the verse currently selected (tapped verse number) in the study Scripture panel
- * to Scripture Memory. Reference is rebuilt per verse from the panel's reference field so
- * a chapter or range load still yields "Book Chapter:Verse".
+ * Saves the passage loaded in the study Scripture panel to Scripture Memory as ONE item, exactly
+ * as the reference field reads: a range saves the whole range, a single verse saves that verse,
+ * a bare chapter saves the whole chapter (label kept as typed). Multi-verse text keeps [n] numbers.
  */
 function saveScrVerseToMemory(){
-  if(_scrSelectedIdx===null||!_scrVerses[_scrSelectedIdx]){toast('Tap a verse number in the passage first, then Save to Memory');return;}
+  if(!_scrVerses.length){toast('Load a passage first, then Save to Memory');return;}
   var ref=document.getElementById('f-ref').value.trim(),trans=document.getElementById('f-trans').value;
-  var v=_scrVerses[_scrSelectedIdx];
-  memAddWithToast({reference:memBuildVerseRef(ref,_scrVerses,_scrSelectedIdx),translation:trans,text:v.text.replace(/\s+/g,' ').trim(),source:'study'});
+  var last=_scrVerses.length-1;
+  var bareChapter=!/:/.test(ref)&&/^.+?\s+\d+$/.test(ref);
+  var label=bareChapter?ref:memRangeLabel(memBuildVerseRef(ref,_scrVerses,0),memBuildVerseRef(ref,_scrVerses,last));
+  memAddWithToast({reference:label,translation:trans,text:memJoinVerses(_scrVerses),source:'study'});
 }
 
 // _wlCache declared in module header

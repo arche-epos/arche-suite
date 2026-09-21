@@ -75,6 +75,20 @@ import(tmp).then((m) => {
   eq('ref: multi-passage falls back', m.memBuildVerseRef('John 3:16; Rom 8:1', V([16, 1]), 1), 'John 3:16; Rom 8:1 v.1');
   eq('ref: bad idx returns ref', m.memBuildVerseRef('John 3', V([1]), 5), 'John 3');
 
+  // memRangeLabel
+  eq('label: same chapter range', m.memRangeLabel('Romans 8:28', 'Romans 8:30'), 'Romans 8:28-30');
+  eq('label: single verse', m.memRangeLabel('John 3:16', 'John 3:16'), 'John 3:16');
+  eq('label: cross-chapter', m.memRangeLabel('John 3:35', 'John 4:2'), 'John 3:35 - John 4:2');
+  eq('label: cross-book', m.memRangeLabel('Malachi 4:6', 'Matthew 1:1'), 'Malachi 4:6 - Matthew 1:1');
+  eq('label: numbered book range', m.memRangeLabel('1 John 3:1', '1 John 3:3'), '1 John 3:1-3');
+  eq('label: unparseable falls back', m.memRangeLabel('Psalm 23', 'Psalm 24'), 'Psalm 23 - Psalm 24');
+
+  // memJoinVerses
+  const JV = [{ num: '16', text: 'For God so loved\n\nthe world' }, { num: '17', text: '  For God did not send  ' }];
+  eq('join: multi-verse keeps [n]', m.memJoinVerses(JV), '[16] For God so loved the world [17] For God did not send');
+  eq('join: single verse is plain', m.memJoinVerses([JV[0]]), 'For God so loved the world');
+  eq('join: empty', m.memJoinVerses([]), '');
+
   fs.unlinkSync(tmp);
   console.log(pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

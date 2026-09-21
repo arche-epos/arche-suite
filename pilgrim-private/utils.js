@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.36.0',date:'Sep 21, 2026',label:'Latest',
+    version:'4.36.1',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Save to Memory now saves the whole passage in the reference box as one memory verse \u2014 type a range like John 3:16-18 (or load it in a study's Scripture panel), then tap Save. A single verse saves just that verse, and a bare chapter saves the whole chapter. Multi-verse passages keep their verse numbers, like [16]. No more tapping a verse first."
+    ]},
+  {
+    version:'4.36.0',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Scripture Memory (part 1 of 2). The Library now has a Memory tab next to Studies and Words \u2014 a home for the verses you want to memorize. Add a verse by typing its reference and text, or save it straight from Read or from a study's Scripture panel: tap a verse number, then tap Save to Memory.",

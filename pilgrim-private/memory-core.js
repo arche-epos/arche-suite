@@ -166,7 +166,37 @@ function memBuildVerseRef(refStr, verses, idx) {
   return m[1] + ' ' + chapter + ':' + v.num;
 }
 
+/**
+ * Joins a firstRef/lastRef pair ("Romans 8:28", "Romans 8:30") into one passage label.
+ * Same book+chapter -> "Romans 8:28-30"; different chapter/book -> "John 3:35 - John 4:2".
+ * Falls back to "first - last" if either side isn't in "Book C:V" form.
+ * @param {string} firstRef
+ * @param {string} lastRef
+ * @returns {string}
+ */
+function memRangeLabel(firstRef, lastRef) {
+  var a = String(firstRef || '').trim(), b = String(lastRef || '').trim();
+  if (!a || a === b) return a || b;
+  var ma = a.match(/^(.+?)\s+(\d+):(\d+)$/), mb = b.match(/^(.+?)\s+(\d+):(\d+)$/);
+  if (ma && mb && ma[1] === mb[1] && ma[2] === mb[2]) return a + '-' + mb[3];
+  return a + ' - ' + b;
+}
+
+/**
+ * Builds the saved memory text for a loaded passage. One verse -> plain text; two or more ->
+ * "[16] text [17] text ..." so verse boundaries stay visible. Whitespace is collapsed.
+ * @param {{num:string,text:string}[]} verses
+ * @returns {string}
+ */
+function memJoinVerses(verses) {
+  var vs = verses || [];
+  var clean = function(t) { return String(t || '').replace(/\s+/g, ' ').trim(); };
+  if (vs.length === 1) return clean(vs[0].text);
+  return vs.map(function(v) { return '[' + v.num + '] ' + clean(v.text); }).join(' ');
+}
+
 export {
   TOMBSTONE_TTL_MS,
-  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef
+  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
+  memRangeLabel, memJoinVerses
 };
