@@ -6,12 +6,16 @@ Arché · Pilgrim is a browser-based Bible study tool built as a single-file HTM
 
 ## Stack
 
+> ⚠️ **Updated June 18, 2026:** Repo migrated from the old `Gizmo5332/JC-Study-Tool` to
+> `arche-epos/arche-suite`. Pilgrim Public now lives in the `pilgrim-public/` folder of
+> that repo, not the repo root — see corrected File Structure and Branch Structure below.
+
 | Layer | Technology |
 |---|---|
 | App | Single-file HTML (Vanilla JS) |
-| Hosting | GitHub Pages (`main` branch, repo root) |
+| Hosting | GitHub Pages, `arche-epos/arche-suite`, `main` branch, `/pilgrim-public/` folder |
 | AI | Groq — `llama-3.3-70b-versatile` via `arche-proxy` |
-| Bible API | bolls.life (14 translations), bible-api.com, ESV API |
+| Bible API | bolls.life (14 translations), bible-api.com, ESV API, api.bible (6 more translations) |
 | Sync | GitHub Gist via `arche-proxy` Cloudflare Worker |
 | TTS | Web Speech API (browser-native) |
 
@@ -20,24 +24,32 @@ Arché · Pilgrim is a browser-based Bible study tool built as a single-file HTM
 ## File Structure
 
 ```
-/
-├── index.html          ← The entire application (4,600+ lines)
-├── sw.js               ← Service worker (offline support)
-└── README.md           ← This file
+arche-epos/arche-suite/
+├── index.html                ← Thin redirect stub → /pilgrim-public/
+├── pilgrim-public/
+│   ├── index.html            ← The entire application (6,500+ lines)
+│   ├── sw.js                 ← Service worker (offline support, cache arche-pilgrim-v1)
+│   └── README.md             ← This file
+├── pilgrim-private/           ← Separate app, separate README
+├── scribe/                    ← Separate app, separate README
+└── codex/                     ← Separate app
 ```
 
-Everything lives in `index.html`. There is no build step, no node_modules, no bundler. What you see is what ships.
+Everything for this app lives in `pilgrim-public/index.html`. There is no build step, no node_modules, no bundler. What you see is what ships. Other Arché apps are sibling folders in the same monorepo — see their own READMEs.
 
 ---
 
 ## Branch Structure
 
 ```
-main     ← live site (archestudytools.com)
+main     ← live site (archestudytools.com, served from /pilgrim-public/)
 └── dev  ← staging — all PRs merge here first
       ├── yourname/feature-name
       └── yourname/fix-name
 ```
+
+> Repo is now the `arche-epos/arche-suite` monorepo (post-June-18-2026 migration) —
+> same branch model, this app is just one folder among several siblings now.
 
 **Rules:**
 - Never commit directly to `main` or `dev`
@@ -49,9 +61,9 @@ main     ← live site (archestudytools.com)
 
 ## Deployment
 
-GitHub Pages serves `index.html` from the root of `main` automatically on every merge. There is no manual deploy step.
+GitHub Pages serves `pilgrim-public/index.html` (mapped to `archestudytools.com/` via the root redirect stub) automatically on every merge to `main`. There is no manual deploy step.
 
-**Critical:** This file is 4,600+ lines. **Never paste it into the GitHub web editor** — it silently truncates at ~5,900 characters and will corrupt the file. Always use the **file picker** (drag and drop or "choose file") when uploading via the GitHub UI.
+**Critical:** This file is 6,500+ lines. **Never paste it into the GitHub web editor** — it silently truncates at ~5,900 characters and will corrupt the file. Always use the **file picker** (drag and drop or "choose file") when uploading via the GitHub UI.
 
 ---
 

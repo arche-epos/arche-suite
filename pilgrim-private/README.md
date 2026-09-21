@@ -4,6 +4,8 @@ This is the Private staging environment for Arché · Pilgrim. Features are buil
 
 **Private is always ahead of Public.** Do not treat this as the stable version — it is the active development environment.
 
+> Lives at `arche-epos/arche-suite` → `pilgrim-private/` folder (migrated June 18, 2026 from the old `Gizmo5332/JC-Study-Tool` repo, now retired).
+
 ---
 
 ## Relationship to Public

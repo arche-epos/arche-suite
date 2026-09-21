@@ -1,5 +1,5 @@
 # Arché Mentor — App Spec v1.0
-**Status:** Approved for build (Phase I placeholder content)  
+**Status:** Built — POC live (`mentor/index.html`, v0.3.0, verified Sep 20, 2026). Bootstrap-security options below remain open.
 **Repo:** arche-epos/arche-suite  
 **Path:** `mentor/index.html`  
 **URL:** archestudytools.com/mentor/  

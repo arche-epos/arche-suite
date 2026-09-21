@@ -8,9 +8,12 @@ Bible study, prayer, worship, and discipleship tools for the church.
 
 | App | Folder | Status |
 |---|---|---|
-| Pilgrim Public | `pilgrim/` | Active |
-| Pilgrim Private | `pilgrim-private/` | Active — ES Modules in progress |
+| Pilgrim Public | `pilgrim-public/` | Active |
+| Pilgrim Private | `pilgrim-private/` | Active — ES Modules migration complete |
+| Pilgrim Admin | `pilgrim-admin/` | Active (Boss-only analytics dashboard) |
 | Scribe | `scribe/` | Active |
+| Codex Arête | `codex/` | Active |
+| Mentor | `mentor/` | Active — POC |
 | Prayer | `prayer/` | Planned |
 | Worship | `worship/` | Planned |
 | Teacher | `teacher/` | Planned |
