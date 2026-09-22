@@ -1869,7 +1869,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.37.1"></script>
+<script type="module" src="app.js?v=4.37.2"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
@@ -2039,9 +2039,12 @@ input[type="range"]{accent-color:var(--gold)}
 </div>
 <!-- Scripture Memory quiz overlay (Stage 2) — full-screen, not a bottom sheet -->
 <div class="overlay" id="mem-quiz-overlay" style="z-index:450;background:var(--bg0);align-items:stretch;justify-content:stretch;cursor:default;padding-bottom:0;flex-direction:column;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:calc(14px + var(--safe-t)) 16px 14px;border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:calc(14px + var(--safe-t)) 16px 14px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;">
     <button class="btn btn-ghost btn-sm" onclick="memCloseQuiz()">Close</button>
-    <div id="mem-quiz-progress" style="font-size:13px;color:var(--txt3);"></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt3);cursor:pointer;white-space:nowrap;">
+      <input type="checkbox" id="mem-quiz-hideall" onchange="memToggleHideAll(this.checked)"> Hide All
+    </label>
+    <div id="mem-quiz-progress" style="font-size:13px;color:var(--txt3);flex-shrink:0;"></div>
   </div>
   <div id="mem-quiz-body" style="flex:1;overflow-y:auto;padding:20px 16px;"></div>
   <div id="mem-quiz-footer" style="padding:12px 16px calc(12px + var(--safe-b));border-top:1px solid var(--border);flex-shrink:0;"></div>

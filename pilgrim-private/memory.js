@@ -9,12 +9,12 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.37.1';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.37.2';
 import {
   memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
   memGradeAttempt, memNextChunkState, memLogPracticeAttempt, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.37.1';
+} from './memory-core.js?v=4.37.2';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
@@ -214,10 +214,35 @@ function memOpenQuiz(mode) {
     toast(mode === 'all' ? 'No verses saved yet to practice' : 'Nothing due right now — try Practice All');
     return;
   }
-  _memQuiz = { mode: mode, queue: _memShuffle(pulled), idx: 0, answeredThisStep: false, results: [] };
+  _memQuiz = { mode: mode, queue: _memShuffle(pulled), idx: 0, answeredThisStep: false, results: [], hideAll: false, stepVisible: true };
   var ov = document.getElementById('mem-quiz-overlay');
   if (ov) ov.classList.add('on');
+  var hideAllCb = document.getElementById('mem-quiz-hideall');
+  if (hideAllCb) hideAllCb.checked = false; // each Test Me/Practice All session starts unhidden
   _memRenderQuizStep();
+}
+
+/**
+ * Per-verse "Hide Passage" / "Show Passage" toggle. Only touches the prompt box,
+ * never the full step — so it never wipes a typed-in-progress answer.
+ */
+function memToggleStepVisibility() {
+  if (!_memQuiz) return;
+  _memQuiz.stepVisible = !_memQuiz.stepVisible;
+  _memRenderQuizPromptBox();
+}
+
+/**
+ * Header "Hide All" checkbox: sets the session-wide default for whether a new verse
+ * starts hidden. Also applies immediately to the verse on screen right now. Not
+ * persisted \u2014 resets to unchecked at the start of every Test Me/Practice All session.
+ * @param {boolean} checked
+ */
+function memToggleHideAll(checked) {
+  if (!_memQuiz) return;
+  _memQuiz.hideAll = !!checked;
+  _memQuiz.stepVisible = !_memQuiz.hideAll;
+  _memRenderQuizPromptBox();
 }
 
 /** Closes the quiz overlay and discards the in-progress session (already-graded steps were saved as they happened). */
@@ -248,19 +273,44 @@ function _memRenderQuizStep() {
   var chunk = step.chunk;
   if (progress) progress.textContent = (_memQuiz.idx + 1) + ' of ' + _memQuiz.queue.length +
     (_memQuiz.mode === 'all' ? ' \u00b7 Practice' : ' \u00b7 Test Me');
-  var prompt = memBuildBlankedText(chunk.text, chunk.level);
   var cueNote = chunk.level === 0 ? 'Read it aloud, then type it below from memory.'
     : chunk.level >= MEM_LEVEL_MAX ? 'No cue \u2014 type the whole thing from memory.'
     : 'Fill in the blanks from memory.';
+  // Every new verse resets to the session's Hide All default (spec: per-verse, not global-state) \u2014
+  // NOT to always-visible, so a "Hide All" run stays hidden verse to verse.
+  _memQuiz.stepVisible = !_memQuiz.hideAll;
   body.innerHTML =
     '<div style="font-family:\'EB Garamond\',serif;font-size:18px;color:var(--gold);margin-bottom:4px;">' + escHtml(step.reference) + '</div>' +
     '<div style="font-size:12px;color:var(--txt3);margin-bottom:14px;">Level ' + chunk.level + ' of ' + MEM_LEVEL_MAX + ' \u2014 ' + escHtml(cueNote) + '</div>' +
-    (prompt ? '<div style="font-family:var(--font-body);font-size:15px;color:var(--txt2);line-height:1.7;background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:14px;white-space:pre-wrap;">' + escHtml(prompt) + '</div>' : '') +
+    '<div id="mem-quiz-prompt-box"></div>' +
     '<textarea id="mem-quiz-input" rows="5" placeholder="Type the verse from memory\u2026" style="width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:15px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg1);color:var(--txt1);resize:vertical;"></textarea>' +
     '<div id="mem-quiz-result" style="margin-top:14px;"></div>';
+  _memRenderQuizPromptBox();
   footer.innerHTML = '<button class="btn btn-primary btn-full" onclick="memSubmitQuizAnswer()">Check</button>';
   var ta = document.getElementById('mem-quiz-input');
   if (ta) setTimeout(function() { ta.focus(); }, 50);
+}
+
+/**
+ * Renders just the passage prompt box (full text / blanked text / hidden placeholder +
+ * the Hide/Show Passage button) into #mem-quiz-prompt-box. Split out from
+ * _memRenderQuizStep so toggling visibility never touches the textarea \u2014 an
+ * in-progress typed answer survives a Hide/Show tap. Renders nothing for L4 (free
+ * recall already shows no cue, so there's nothing to hide).
+ */
+function _memRenderQuizPromptBox() {
+  var el = document.getElementById('mem-quiz-prompt-box');
+  if (!el || !_memQuiz) return;
+  var step = _memQuiz.queue[_memQuiz.idx];
+  var chunk = step.chunk;
+  var prompt = memBuildBlankedText(chunk.text, chunk.level);
+  if (!prompt) { el.innerHTML = ''; return; }
+  var visible = _memQuiz.stepVisible;
+  el.innerHTML =
+    (visible
+      ? '<div style="font-family:var(--font-body);font-size:15px;color:var(--txt2);line-height:1.7;background:var(--bg1);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;white-space:pre-wrap;">' + escHtml(prompt) + '</div>'
+      : '<div style="font-family:var(--font-body);font-size:14px;color:var(--txt4);font-style:italic;background:var(--bg1);border:1px dashed var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;text-align:center;">Passage hidden \u2014 type it from memory below.</div>') +
+    '<button type="button" class="btn btn-sec btn-sm" style="margin-bottom:14px;" onclick="memToggleStepVisibility()">' + (visible ? 'Hide Passage' : 'Show Passage') + '</button>';
 }
 
 /** Grades the current step's typed answer, updates the chunk, and shows a diff + Next/Finish. */
@@ -328,5 +378,6 @@ export {
   memAddVerse, memAddWithToast, memDelete, memDeleteBtn,
   renderMemoryList, memToggleAdd, memSaveManual,
   memBuildVerseRef, memRangeLabel, memJoinVerses,
-  memOpenQuiz, memCloseQuiz, memSubmitQuizAnswer, memAdvanceQuiz, memFinishQuiz
+  memOpenQuiz, memCloseQuiz, memSubmitQuizAnswer, memAdvanceQuiz, memFinishQuiz,
+  memToggleStepVisibility, memToggleHideAll
 };

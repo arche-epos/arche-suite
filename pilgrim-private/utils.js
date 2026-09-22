@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.37.1',date:'Sep 21, 2026',label:'Latest',
+    version:'4.37.2',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Hide Passage in Scripture Memory quizzes. A Hide/Show Passage button under each verse lets you blank the text right before you type it from memory instead of reading it while you type. Resets to visible for each new verse by default. A Hide All toggle at the top of the quiz keeps every verse hidden for the whole session."
+    ]},
+  {
+    version:'4.37.1',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Pilgrim Guide's Scripture Finder no longer wrongly says a verse \"didn't check out\" when you ask about a reference it already showed you earlier in the same conversation (e.g. after tapping Show me more). It now re-verifies and shows it again, since asking about it was deliberate. The \"don't repeat\" behavior still works correctly for Show me more itself."
