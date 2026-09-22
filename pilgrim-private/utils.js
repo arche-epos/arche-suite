@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.37.0',date:'Sep 21, 2026',label:'Latest',
+    version:'4.37.1',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Pilgrim Guide's Scripture Finder no longer wrongly says a verse \"didn't check out\" when you ask about a reference it already showed you earlier in the same conversation (e.g. after tapping Show me more). It now re-verifies and shows it again, since asking about it was deliberate. The \"don't repeat\" behavior still works correctly for Show me more itself."
+    ]},
+  {
+    version:'4.37.0',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Scripture Memory (part 2 of 2) \u2014 spaced-recall quizzes. Two buttons on the Memory tab: Test Me quizzes whatever's due and reschedules it based on how you did; Practice All lets you drill any saved verse anytime without touching its schedule. Type the verse from memory, get a word-by-word check, and see exactly what you missed.",

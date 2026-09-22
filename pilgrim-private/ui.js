@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.37.0';
+} from './utils.js?v=4.37.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.37.0';
+} from './storage.js?v=4.37.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.37.0';
+} from './media.js?v=4.37.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.37.0';
+} from './tts.js?v=4.37.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.37.0';
+} from './sync.js?v=4.37.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,11 +70,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.37.0';
+} from './studyTools.js?v=4.37.1';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.37.0';
+} from './memory.js?v=4.37.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -387,7 +387,13 @@ var _pgMessages=[]; // {role, content, display?, type?, results?, sourceQuery?, 
 var _pgReferenceDoc=null;
 var _pgLoading=false;
 var PG_REFERENCE_URL='https://raw.githubusercontent.com/arche-epos/arche-suite/main/docs/pilgrim-guide-app-help-reference.md';
-var _pgShownRefs=[];        // normalized (lower/trimmed) refs already verified+shown this session — de-dupe guard
+var _pgShownRefs=[];        // normalized (lower/trimmed) refs already verified+shown this session.
+                             // Exclusion is applied ONLY on a Deeper Dive turn (see _pgVerifyCandidates'
+                             // excludeShown param) — an ordinary typed message is never suppressed just
+                             // because its reference was shown earlier in the conversation (real bug,
+                             // found live Sep 21 2026: user asked to see 1 John 5:21 again after Deeper
+                             // Dive had already shown it; got a false "didn't check out" error because
+                             // this exclusion used to apply unconditionally on every turn).
 var _pgShownRefsDisplay=[]; // same refs, original casing — used as the exclusion hint sent back to the model
 var PG_ALT_TRANS=['kjv','nasb','niv','esv']; // preference order for "Search All Translations"; current default is filtered out at use time
 
@@ -494,10 +500,18 @@ function _pgRangesOverlap(a,b){
  * Verifies AI-proposed candidate references against real fetched text before
  * any of them can be shown — the hard rule for Scripture Finder (never show
  * unverified/AI-recalled scripture). Fetches in the user's current default
- * translation (sett.defaultTrans), skips anything already shown this session
- * (_pgShownRefs) or a within-batch duplicate, stops once 10 verified, and
- * silently drops candidates that fail to fetch — that's the safeguard doing
- * its job, not an error.
+ * translation (sett.defaultTrans), collapses within-batch duplicates, stops
+ * once 10 verified, and silently drops candidates that fail to fetch —
+ * that's the safeguard doing its job, not an error.
+ *
+ * @param {Array} candidates
+ * @param {boolean} [excludeShown] - Only true for a Deeper Dive turn. When true,
+ *   a candidate already in _pgShownRefs (shown earlier THIS conversation) is
+ *   skipped, since "show me more" means "don't repeat what I've already seen."
+ *   An ordinary typed message never sets this — if the user names or re-asks
+ *   about a reference they saw earlier, that's deliberate and must still be
+ *   verified and shown, not silently dropped (real bug, found live Sep 21
+ *   2026 — see _pgShownRefs comment above for the exact repro).
  *
  * Also collapses nested/overlapping candidates within the same batch (found
  * live Sep 8 2026: the model proposed "Luke 15:11-32", "Luke 15:11-26", and
@@ -506,13 +520,20 @@ function _pgRangesOverlap(a,b){
  * reference doc, so the first candidate covering a verse range wins and any
  * later one that overlaps it is skipped as redundant, without spending a
  * fetch call on it.
+ *
+ * @returns {{results:Object[], attempted:string[], allAlreadyShown:boolean}}
+ *   allAlreadyShown is true only when excludeShown suppressed every single
+ *   candidate before any fetch was even attempted — lets the caller show an
+ *   honest "you already saw that" message instead of the generic
+ *   verification-failure one.
  */
-async function _pgVerifyCandidates(candidates){
+async function _pgVerifyCandidates(candidates,excludeShown){
   var trans=sett.defaultTrans||'esv';
   var seen={};
   var results=[];
   var acceptedRanges=[];
   var attempted=[];
+  var newAttempts=0; // candidates that got past dedupe and were actually fetch-attempted
   for(var i=0;i<candidates.length&&results.length<10;i++){
     var c=candidates[i];
     var ref=typeof c==='string'?c:(c&&c.ref);
@@ -521,8 +542,10 @@ async function _pgVerifyCandidates(candidates){
     var why=(c&&typeof c==='object'&&c.why)?c.why:'';
     var norm=ref.toLowerCase().replace(/\s+/g,' ');
     attempted.push(ref);
-    if(seen[norm]||_pgShownRefs.indexOf(norm)>=0)continue;
+    if(seen[norm])continue;
+    if(excludeShown&&_pgShownRefs.indexOf(norm)>=0)continue;
     seen[norm]=true;
+    newAttempts++;
     var range=_pgParseRefRange(ref);
     if(range){
       var overlaps=false;
@@ -540,7 +563,7 @@ async function _pgVerifyCandidates(candidates){
       _pgShownRefsDisplay.push(ref);
     }catch(e){/* verification failure — skip silently, never show unverified scripture */}
   }
-  return {results:results,attempted:attempted};
+  return {results:results,attempted:attempted,allAlreadyShown:results.length===0&&attempted.length>0&&newAttempts===0};
 }
 
 /**
@@ -639,7 +662,7 @@ function _pgDeeperDive(idx){
   var msg=_pgMessages[idx];
   if(!msg||msg.type!=='scripture-results')return;
   var api='Show me more scripture matches for: "'+msg.sourceQuery+'". Do not repeat these references: '+_pgShownRefsDisplay.join('; ')+'.';
-  _pgRunTurn(api,'Show me more',msg.sourceQuery);
+  _pgRunTurn(api,'Show me more',msg.sourceQuery,true); // excludeShown: true — this IS "don't repeat" intent
 }
 
 /**
@@ -665,8 +688,10 @@ function _pgParseEnvelope(raw){
  * verification before rendering. apiContent is what the model sees; display
  * is what renders in the chat bubble (they differ for Deeper Dive, where the
  * exclusion list is sent to the model but the user just sees "Show me more").
+ * @param {boolean} [excludeShown] - Passed through to _pgVerifyCandidates.
+ *   Only _pgDeeperDive sets this true; an ordinary typed turn never does.
  */
-async function _pgRunTurn(apiContent,display,sourceQuery){
+async function _pgRunTurn(apiContent,display,sourceQuery,excludeShown){
   if(_pgLoading)return;
   if(!online){toast('Pilgrim Guide requires internet');return;}
   _pgMessages.push({role:'user',content:apiContent,display:display});
@@ -705,11 +730,13 @@ async function _pgRunTurn(apiContent,display,sourceQuery){
     var raw=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
     var env=_pgParseEnvelope(raw);
     if(env.mode==='scripture_finder'&&env.candidates&&env.candidates.length){
-      var v=await _pgVerifyCandidates(env.candidates);
+      var v=await _pgVerifyCandidates(env.candidates,excludeShown);
       if(v.results.length){
         _pgMessages.push({role:'assistant',type:'scripture-results',
           content:'Proposed candidates: '+v.attempted.join('; ')+'.',
           results:v.results,sourceQuery:sourceQuery||display,altLoading:false,altLoaded:false});
+      }else if(v.allAlreadyShown){
+        _pgMessages.push({role:'assistant',content:'That\u2019s already been shown earlier in this conversation \u2014 scroll up to see it, or ask about something else.'});
       }else{
         _pgMessages.push({role:'assistant',content:'None of those references checked out against the real text \u2014 try rephrasing, or give me a bit more to go on.'});
       }
