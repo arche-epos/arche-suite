@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.37.2',date:'Sep 21, 2026',label:'Latest',
+    version:'4.37.3',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Add a Verse to Memory now pulls the verse text automatically as soon as you enter a reference \u2014 same as Read or Study, no more copy/paste. Changing the Version dropdown re-fetches in that translation. You can still edit the pulled text by hand afterward."
+    ]},
+  {
+    version:'4.37.2',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Hide Passage in Scripture Memory quizzes. A Hide/Show Passage button under each verse lets you blank the text right before you type it from memory instead of reading it while you type. Resets to visible for each new verse by default. A Hide All toggle at the top of the quiz keeps every verse hidden for the whole session."

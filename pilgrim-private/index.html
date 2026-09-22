@@ -701,9 +701,9 @@ input[type="range"]{accent-color:var(--gold)}
       <button class="btn btn-sec btn-sm" style="width:100%;gap:6px" onclick="memToggleAdd()">+ Add a Verse to Memory</button>
     </div>
     <div id="mem-add-form" style="display:none;padding:14px 16px 0;">
-      <div class="ig"><label for="mem-in-ref">Reference</label><input type="text" id="mem-in-ref" placeholder="e.g. John 3:16" autocomplete="off"></div>
+      <div class="ig"><label for="mem-in-ref">Reference</label><input type="text" id="mem-in-ref" placeholder="e.g. John 3:16" autocomplete="off" onblur="memAutoFetchVerseText()" onkeydown="if(event.key==='Enter'){this.blur();}"></div>
       <div class="ig"><label for="mem-in-trans">Version</label>
-        <select id="mem-in-trans">
+        <select id="mem-in-trans" onchange="memAutoFetchVerseText()">
           <option value="esv">ESV</option><option value="kjv">KJV</option>
           <option value="asv">ASV</option><option value="web">WEB</option>
           <option value="ylt">YLT</option><option value="darby">Darby</option>
@@ -1869,7 +1869,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.37.2"></script>
+<script type="module" src="app.js?v=4.37.3"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

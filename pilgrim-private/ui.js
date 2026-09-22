@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.37.2';
+} from './utils.js?v=4.37.3';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.37.2';
+} from './storage.js?v=4.37.3';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.37.2';
+} from './media.js?v=4.37.3';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.37.2';
+} from './tts.js?v=4.37.3';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.37.2';
+} from './sync.js?v=4.37.3';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,11 +70,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.37.2';
+} from './studyTools.js?v=4.37.3';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.37.2';
+} from './memory.js?v=4.37.3';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2329,6 +2329,43 @@ function isReadRangeRef(ref){
   return /^-/.test(rest)&&rest.length>1;
 }
 /**
+ * Auto-pulls verse text into the manual Add-a-Verse form (Library > Memory) as
+ * soon as a reference is entered — same fetch-on-blur/onchange pattern as the Read
+ * tab (fetchReadChapter below), same translation routing (getESV/getBibleAPI), and
+ * the same memJoinVerses normalization Save-to-Memory-from-Read/Study already use,
+ * so a manually-added verse's text format always matches one pulled from elsewhere
+ * in the app. Overwrites whatever is currently in the Verse Text box — same as
+ * changing the Read tab's reference always replaces its display regardless of
+ * prior content.
+ */
+async function memAutoFetchVerseText(){
+  var refInput=document.getElementById('mem-in-ref');
+  var textInput=document.getElementById('mem-in-text');
+  if(!refInput||!textInput)return;
+  var ref=refInput.value.trim();
+  if(!ref)return;
+  if(!online){toast('Offline \u2014 verse text requires a connection');return;}
+  var transSel=document.getElementById('mem-in-trans');
+  var t=transSel?transSel.value:'esv';
+  var prevPh=textInput.placeholder;
+  textInput.value='';
+  textInput.placeholder='Loading\u2026';
+  textInput.disabled=true;
+  try{
+    var raw=t==='esv'?await getESV(ref):await getBibleAPI(ref,t);
+    if(!raw)throw new Error('Empty response');
+    var verses=parseVerseChunks(raw);
+    textInput.value=verses.length?memJoinVerses(verses):raw.trim();
+  }catch(e){
+    logError('Memory: auto-fetch verse text',e);
+    toast('Could not find that reference \u2014 you can type the verse text manually');
+  }finally{
+    textInput.disabled=false;
+    textInput.placeholder=prevPh;
+  }
+}
+
+/**
  * Fetches and renders the reference typed/picked into #read-ref. A bare chapter
  * or single-verse reference widens to the full containing chapter (reading "in
  * context"); an explicit range fetches and shows exactly that range — see RANGE
@@ -4114,6 +4151,7 @@ export {
   bpConfirm, bpBack, bpGoStage,
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, saveReadVerseToMemory, getReadText,
+  memAutoFetchVerseText,
   getReadVerseChunks, getReadStartIdx, readSelectVerse, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
