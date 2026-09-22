@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.36.1',date:'Sep 21, 2026',label:'Latest',
+    version:'4.37.0',date:'Sep 21, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Scripture Memory (part 2 of 2) \u2014 spaced-recall quizzes. Two buttons on the Memory tab: Test Me quizzes whatever's due and reschedules it based on how you did; Practice All lets you drill any saved verse anytime without touching its schedule. Type the verse from memory, get a word-by-word check, and see exactly what you missed.",
+      "Each verse gets its own cue-removal ladder \u2014 full text at first, then more and more blanked out as you get it right, down to typing it with no cue at all. A long passage is quizzed in a few verses at a time instead of all at once.",
+      "A due-count badge shows on the Memory tab. Real push notifications are a separate future project \u2014 for now it's an in-app reminder only."
+    ]},
+  {
+    version:'4.36.1',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Save to Memory now saves the whole passage in the reference box as one memory verse \u2014 type a range like John 3:16-18 (or load it in a study's Scripture panel), then tap Save. A single verse saves just that verse, and a bare chapter saves the whole chapter. Multi-verse passages keep their verse numbers, like [16]. No more tapping a verse first."
