@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.38.1';
+} from './utils.js?v=4.38.2';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.1';
-import { syncToGist } from './sync.js?v=4.38.1';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.1';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.1';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.2';
+import { syncToGist } from './sync.js?v=4.38.2';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.2';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.2';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -579,7 +579,12 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
   // when the source dictionaries store precomposed characters. Without this, a
   // genuinely-grounded word fails the exact string match and gets wrongly stripped
   // (spec-ai-tools-grounding-v1.md Phase 3 finding, Sep 23 2026).
-  content=(content||'').normalize('NFC');
+  // Strip invisible/zero-width Unicode artifacts (zero-width space/joiner/non-joiner,
+  // word joiner, BOM, soft hyphen) before matching -- some AI providers insert these
+  // between reassembled sub-word tokens in Greek/Hebrew output, splitting a single
+  // real word into two extracted tokens and causing a false "unverified" strip on
+  // the tail half (spec-ai-tools-grounding-v1.md Phase 3 finding, Sep 23 2026).
+  content=(content||'').normalize('NFC').replace(/[\u200B\u200C\u200D\u2060\uFEFF\u00AD]/g,'');
   var cleaned=content,stripped=[];
   if(ground.allowedStrongs){
     extractStrongsTokens(content).forEach(function(tok){

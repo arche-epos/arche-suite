@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.1',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.2',date:'Sep 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: found in live re-testing of the 4.38.1 fix -- some AI-provider output inserts an invisible zero-width character (zero-width joiner or similar) in the middle of a real Greek word, splitting it into two extracted tokens during grounding verification and causing the tail half to be wrongly flagged as unverified (e.g. \"\u1f10\" + zero-width-joiner + \"\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf\" instead of \"\u1f10\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf\"). Verification now strips known invisible/zero-width Unicode characters before matching. Genuine fabrications are still caught."
+    ]},
+  {
+    version:'4.38.1',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) was wrongly stripping genuinely-grounded content in two cases -- (1) real Greek words the model emitted with decomposed Unicode accents (base letter + combining mark) failed the exact-string check against the precomposed dictionary data and were flagged as unverified; (2) Cross-References checked the passage's own reference (e.g. \"Acts 2:1-13\" while studying Acts 2:1-13) against the supplied cross-reference list and stripped it as an unverified citation, since a passage is never its own cross-reference. Verified content is no longer corrupted by either false positive; genuinely unsupported Strong's numbers, words, and cross-references are still caught and stripped as before.",
