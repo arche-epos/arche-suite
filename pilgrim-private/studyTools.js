@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.38.0';
+} from './utils.js?v=4.38.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.0';
-import { syncToGist } from './sync.js?v=4.38.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.1';
+import { syncToGist } from './sync.js?v=4.38.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -552,7 +552,11 @@ function extractOriginalScriptWords(text){
  * @returns {string[]} Reference tokens found (not deduplicated — position doesn't matter for checking).
  */
 function extractRefTokens(text){
-  var re=/\b([1-3]\s?[A-Za-z]+|[A-Za-z]+)\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?/g;
+  // Verse-range dash: match ASCII hyphen and the Unicode dash variants AI-generated
+  // text commonly uses (non-breaking hyphen U+2011, en/em dash, minus sign) -- a
+  // mismatch here left partial ref tokens (e.g. just "Acts 2:1" out of "Acts 2:1-13")
+  // un-stripped downstream (spec-ai-tools-grounding-v1.md Phase 3 finding, Sep 23 2026).
+  var re=/\b([1-3]\s?[A-Za-z]+|[A-Za-z]+)\s+(\d{1,3}):(\d{1,3})(?:[-\u2010\u2011\u2012\u2013\u2014\u2212](\d{1,3}))?/g;
   var out=[],mm;
   while((mm=re.exec(text||'')))out.push(mm[0]);
   return out;
@@ -570,6 +574,12 @@ function extractRefTokens(text){
  * @returns {string} Cleaned content, safe to render/store.
  */
 function verifyGroundedOutput(tool,content,ground,passageRef){
+  // Normalize to NFC before extracting tokens -- the AI provider can emit accented
+  // Greek/Hebrew as decomposed base+combining-mark sequences (\u0300-\u036F) even
+  // when the source dictionaries store precomposed characters. Without this, a
+  // genuinely-grounded word fails the exact string match and gets wrongly stripped
+  // (spec-ai-tools-grounding-v1.md Phase 3 finding, Sep 23 2026).
+  content=(content||'').normalize('NFC');
   var cleaned=content,stripped=[];
   if(ground.allowedStrongs){
     extractStrongsTokens(content).forEach(function(tok){
@@ -580,8 +590,9 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
     });
   }
   if(ground.allowedWords){
+    var allowedWordsNorm=ground.allowedWords.map(function(w){return w.normalize('NFC');});
     extractOriginalScriptWords(content).forEach(function(tok){
-      if(ground.allowedWords.indexOf(tok)===-1){
+      if(allowedWordsNorm.indexOf(tok)===-1){
         cleaned=cleaned.split(tok).join('[unverified original-language text removed]');
         stripped.push({type:'word',token:tok});
       }
@@ -589,12 +600,23 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
   }
   if(ground.allowedRefs){
     var normAllowed=ground.allowedRefs.map(function(r){return r.toLowerCase().replace(/\s+/g,' ').trim();});
+    // The passage's own reference (or any verse within it) is not a cross-reference --
+    // exclude it before checking, so the tool's self-citation of the passage under
+    // study doesn't get flagged as an unverified cross-reference (Phase 3 finding).
+    var selfRef=passageRef?parseRef(passageRef):null;
     extractRefTokens(content).forEach(function(tok){
       var norm=tok.toLowerCase().replace(/\s+/g,' ').trim();
-      if(normAllowed.indexOf(norm)===-1){
-        cleaned=cleaned.split(tok).join('[unverified cross-reference removed]');
-        stripped.push({type:'ref',token:tok});
+      if(normAllowed.indexOf(norm)!==-1)return;
+      if(selfRef){
+        var tokRef=parseRef(tok);
+        if(tokRef&&tokRef.book===selfRef.book&&tokRef.chapter===selfRef.chapter){
+          var tokStart=tokRef.startVerse||1,tokEnd=tokRef.endVerse||tokRef.startVerse||1;
+          var selfStart=selfRef.startVerse||1,selfEnd=selfRef.endVerse||selfRef.startVerse||9999;
+          if(tokStart>=selfStart&&tokEnd<=selfEnd)return;
+        }
       }
+      cleaned=cleaned.split(tok).join('[unverified cross-reference removed]');
+      stripped.push({type:'ref',token:tok});
     });
   }
   if(stripped.length)beaconError('AI Grounding Verification: '+tool,JSON.stringify({passage:passageRef,stripped:stripped}));

@@ -497,7 +497,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.0',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.1',date:'Sep 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) was wrongly stripping genuinely-grounded content in two cases -- (1) real Greek words the model emitted with decomposed Unicode accents (base letter + combining mark) failed the exact-string check against the precomposed dictionary data and were flagged as unverified; (2) Cross-References checked the passage's own reference (e.g. \"Acts 2:1-13\" while studying Acts 2:1-13) against the supplied cross-reference list and stripped it as an unverified citation, since a passage is never its own cross-reference. Verified content is no longer corrupted by either false positive; genuinely unsupported Strong's numbers, words, and cross-references are still caught and stripped as before.",
+      "fix: a Unicode dash mismatch (AI-generated verse ranges use a non-breaking hyphen, not a plain ASCII hyphen) meant the cross-reference verification regex only matched part of a range like \"Acts 2:1-13\", leaving a stray \"-13\" behind after stripping. Regex now accepts the common Unicode dash variants."
+    ]},
+  {
+    version:'4.38.0',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Word Study, Language & Structure, and Cross-References now ground every Strong's number, original-language word, and cross-reference in real source data (MACULA/Open Scriptures Hebrew Bible word tags, OpenBible.info cross-references, Strong's Hebrew & Greek Dictionaries) fetched per-passage before the AI call, instead of asking the model to recall them from memory. A verification pass strips and logs anything the model states that isn't in the supplied data \u2014 see spec-ai-tools-grounding-v1.md.",
