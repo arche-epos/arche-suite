@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.2',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.3',date:'Sep 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) replaced an unverified token by matching it as a bare substring anywhere in the whole response, instead of only at its actual occurrence -- so a single stray token that happened to be a common letter or short sequence (e.g. the model discussing a Greek grammatical marker like \"the \u03c3 suffix\") could wipe out that same letter/sequence inside every other, genuinely-grounded word in the response. Language & Structure on a real passage showed every occurrence of the Greek letter sigma removed, corrupting words that were never actually unverified. Replacement is now boundary-aware: it only strips a token where it stands alone, not where it's embedded inside a larger correctly-grounded word. Genuine fabrications are still caught and stripped as before."
+    ]},
+  {
+    version:'4.38.2',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: found in live re-testing of the 4.38.1 fix -- some AI-provider output inserts an invisible zero-width character (zero-width joiner or similar) in the middle of a real Greek word, splitting it into two extracted tokens during grounding verification and causing the tail half to be wrongly flagged as unverified (e.g. \"\u1f10\" + zero-width-joiner + \"\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf\" instead of \"\u1f10\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf\"). Verification now strips known invisible/zero-width Unicode characters before matching. Genuine fabrications are still caught."

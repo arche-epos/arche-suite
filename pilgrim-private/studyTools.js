@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.38.2';
+} from './utils.js?v=4.38.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.2';
-import { syncToGist } from './sync.js?v=4.38.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.3';
+import { syncToGist } from './sync.js?v=4.38.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -573,6 +573,25 @@ function extractRefTokens(text){
  * @param {string} passageRef - The passage/book this call was for, for the log entry.
  * @returns {string} Cleaned content, safe to render/store.
  */
+function _escapeRegexLiteral(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+/**
+ * Replaces tok in text only where it appears as a complete, isolated match --
+ * not embedded inside a larger run of boundaryClass characters. Plain
+ * String.split(tok).join(replacement) replaces every occurrence of tok as a
+ * bare substring anywhere in the whole text; for a short or common token (a
+ * single Greek letter like "\u03c3", say) that silently corrupts every OTHER
+ * word in the response that merely contains that letter, not just the one
+ * genuinely-unverified occurrence (spec-ai-tools-grounding-v1.md Phase 3
+ * finding, Sep 23 2026 -- observed wiping every sigma in a Language &
+ * Structure response). The negative lookaround mirrors the character class
+ * the token was extracted with, so it only fires on a true standalone match.
+ */
+function _replaceIsolatedToken(text,tok,replacement,boundaryClass){
+  var re=new RegExp('(?<!['+boundaryClass+'])'+_escapeRegexLiteral(tok)+'(?!['+boundaryClass+'])','g');
+  return text.replace(re,replacement);
+}
+
 function verifyGroundedOutput(tool,content,ground,passageRef){
   // Normalize to NFC before extracting tokens -- the AI provider can emit accented
   // Greek/Hebrew as decomposed base+combining-mark sequences (\u0300-\u036F) even
@@ -586,10 +605,12 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
   // the tail half (spec-ai-tools-grounding-v1.md Phase 3 finding, Sep 23 2026).
   content=(content||'').normalize('NFC').replace(/[\u200B\u200C\u200D\u2060\uFEFF\u00AD]/g,'');
   var cleaned=content,stripped=[];
+  var GREEK_HEBREW_CLASS='\\u0370-\\u03FF\\u1F00-\\u1FFFa-zA-Z\\u0590-\\u05FF';
+  var WORD_CLASS='A-Za-z0-9';
   if(ground.allowedStrongs){
     extractStrongsTokens(content).forEach(function(tok){
       if(ground.allowedStrongs.indexOf(tok)===-1){
-        cleaned=cleaned.split(tok).join('[unverified Strong\'s number removed]');
+        cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified Strong\'s number removed]',WORD_CLASS);
         stripped.push({type:'strongs',token:tok});
       }
     });
@@ -598,7 +619,7 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
     var allowedWordsNorm=ground.allowedWords.map(function(w){return w.normalize('NFC');});
     extractOriginalScriptWords(content).forEach(function(tok){
       if(allowedWordsNorm.indexOf(tok)===-1){
-        cleaned=cleaned.split(tok).join('[unverified original-language text removed]');
+        cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified original-language text removed]',GREEK_HEBREW_CLASS);
         stripped.push({type:'word',token:tok});
       }
     });
@@ -620,7 +641,7 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
           if(tokStart>=selfStart&&tokEnd<=selfEnd)return;
         }
       }
-      cleaned=cleaned.split(tok).join('[unverified cross-reference removed]');
+      cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified cross-reference removed]',WORD_CLASS);
       stripped.push({type:'ref',token:tok});
     });
   }
