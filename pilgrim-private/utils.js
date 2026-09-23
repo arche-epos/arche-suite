@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.37.3',date:'Sep 21, 2026',label:'Latest',
+    version:'4.37.4',date:'Sep 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: AI Study Tools (Word Study, Language & Structure, Historical, Cultural, Cross-References, Places & Geography) were confidently fabricating Strong's numbers, invented Greek text presented as direct Scripture quotations, and unverifiable named-scholar citations \u2014 no lexical/text grounding existed anywhere in the pipeline. Access to these tools is temporarily locked to testing accounts only (arche-proxy /auth/pin and /groq) while a grounded fix is built \u2014 see pilgrim-ai-tools-fabrication doc."
+    ]},
+  {
+    version:'4.37.3',date:'Sep 21, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Add a Verse to Memory now pulls the verse text automatically as soon as you enter a reference \u2014 same as Read or Study, no more copy/paste. Changing the Version dropdown re-fetches in that translation. You can still edit the pulled text by hand afterward."

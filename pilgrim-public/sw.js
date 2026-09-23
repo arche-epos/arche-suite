@@ -6,7 +6,7 @@
      - API calls (ESV, Groq, Gemini, bible-api) → network-only, never cache
 */
 
-const CACHE = 'arche-pilgrim-v1';
+const CACHE = 'arche-pilgrim-v2-maintenance'; // bumped Sep 23 2026 — forces stale app cache to purge for the offline page
 
 const SHELL = [
   './',

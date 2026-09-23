@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.37.3';
+} from './utils.js?v=4.37.4';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.37.3';
+} from './storage.js?v=4.37.4';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.37.3';
+} from './media.js?v=4.37.4';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.37.3';
+} from './tts.js?v=4.37.4';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.37.3';
+} from './sync.js?v=4.37.4';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -70,11 +70,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.37.3';
+} from './studyTools.js?v=4.37.4';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.37.3';
+} from './memory.js?v=4.37.4';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3992,7 +3992,9 @@ async function submitPin(){
     var res=await fetch(WORKER_URL+'/auth/pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin})});
     var data=await res.json();
     if(!res.ok||!data.userId){
-      if(errEl)errEl.textContent='Incorrect PIN — try again';
+      // 'temporarily_locked' = emergency access lockdown (arche-proxy), not a wrong PIN —
+      // see pilgrim-ai-tools-fabrication doc. Remove this branch once lockdown is lifted.
+      if(errEl)errEl.textContent=data.error==='temporarily_locked'&&data.message?data.message:'Incorrect PIN — try again';
       if(input){input.value='';input.focus();}
       return;
     }
