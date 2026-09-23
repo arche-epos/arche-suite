@@ -15,10 +15,10 @@ import {
   toast, toastSuccess, parseVerseChunks, logError
 } from './utils.js?v=4.38.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.37.4';
-import { syncToGist } from './sync.js?v=4.37.4';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.37.4';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.37.4';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.38.0';
+import { syncToGist } from './sync.js?v=4.38.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.38.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.38.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
