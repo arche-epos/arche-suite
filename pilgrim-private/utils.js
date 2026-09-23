@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.3',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.4',date:'Sep 23, 2026',label:'Latest',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) compared original-language words by exact string match, so a genuinely-correct word was wrongly flagged \"unverified\" whenever the AI's accent placement differed from the source dictionary's exact recorded form -- e.g. a word's citation-form acute accent instead of its actual in-context grave, or a missed accent shift before an enclitic. Verified against live grounding data: Ἰερουσαλήμ, οὗτοι, λαλούντων, ἐδίδου, φερομένης, and a caps-styled καί were all stripped this way despite being the correct word. Word matching now compares with accent/breathing marks and letter case folded out, so accent-only variance no longer trips the check. A genuinely different word, or the correct word in the wrong grammatical case, is still caught and stripped as before."
+    ]},
+  {
+    version:'4.38.3',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) replaced an unverified token by matching it as a bare substring anywhere in the whole response, instead of only at its actual occurrence -- so a single stray token that happened to be a common letter or short sequence (e.g. the model discussing a Greek grammatical marker like \"the \u03c3 suffix\") could wipe out that same letter/sequence inside every other, genuinely-grounded word in the response. Language & Structure on a real passage showed every occurrence of the Greek letter sigma removed, corrupting words that were never actually unverified. Replacement is now boundary-aware: it only strips a token where it stands alone, not where it's embedded inside a larger correctly-grounded word. Genuine fabrications are still caught and stripped as before."

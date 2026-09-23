@@ -592,6 +592,27 @@ function _replaceIsolatedToken(text,tok,replacement,boundaryClass){
   return text.replace(re,replacement);
 }
 
+/**
+ * Folds a Greek/Hebrew word down to a diacritic- and case-insensitive key for
+ * comparison only (never used for display/replacement -- the original token text
+ * is always what gets matched/replaced in the rendered output). Strips all
+ * combining marks (accents, breathing, iota subscript -- U+0300-036F, what a
+ * precomposed polytonic Greek character decomposes into under NFD) and folds
+ * final sigma (\u03C2) to medial sigma (\u03C3). This absorbs legitimate
+ * accent-placement variance the AI provider produces (citation-form acute vs.
+ * a word's actual in-context grave, or a missed enclitic accent shift) that is
+ * NOT fabrication -- the word itself is correct, only its accent mark differs
+ * from the source dictionary's exact recorded form (spec-ai-tools-grounding-v1.md
+ * Phase 3 finding, Sep 23 2026 -- verified against live MACULA data: Ἰερουσαλήμ,
+ * οὗτοι, λαλούντων, ἐδίδου, φερομένης, and ΚΑΙ/καί all flagged unverified purely
+ * on accent/case, never on the underlying word). A genuinely different word or
+ * wrong inflected case (e.g. accusative for a dative in the source) still fails
+ * this comparison and is correctly stripped.
+ */
+function _foldGreekWord(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036F]/g,'').toLowerCase().replace(/\u03C2/g,'\u03C3');
+}
+
 function verifyGroundedOutput(tool,content,ground,passageRef){
   // Normalize to NFC before extracting tokens -- the AI provider can emit accented
   // Greek/Hebrew as decomposed base+combining-mark sequences (\u0300-\u036F) even
@@ -616,9 +637,9 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
     });
   }
   if(ground.allowedWords){
-    var allowedWordsNorm=ground.allowedWords.map(function(w){return w.normalize('NFC');});
+    var allowedWordsFold=ground.allowedWords.map(_foldGreekWord);
     extractOriginalScriptWords(content).forEach(function(tok){
-      if(allowedWordsNorm.indexOf(tok)===-1){
+      if(allowedWordsFold.indexOf(_foldGreekWord(tok))===-1){
         cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified original-language text removed]',GREEK_HEBREW_CLASS);
         stripped.push({type:'word',token:tok});
       }
