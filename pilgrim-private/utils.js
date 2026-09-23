@@ -497,10 +497,12 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.37.4',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.0',date:'Sep 23, 2026',label:'Latest',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      "fix: AI Study Tools (Word Study, Language & Structure, Historical, Cultural, Cross-References, Places & Geography) were confidently fabricating Strong's numbers, invented Greek text presented as direct Scripture quotations, and unverifiable named-scholar citations \u2014 no lexical/text grounding existed anywhere in the pipeline. Access to these tools is temporarily locked to testing accounts only (arche-proxy /auth/pin and /groq) while a grounded fix is built \u2014 see pilgrim-ai-tools-fabrication doc."
+      "fix: Word Study, Language & Structure, and Cross-References now ground every Strong's number, original-language word, and cross-reference in real source data (MACULA/Open Scriptures Hebrew Bible word tags, OpenBible.info cross-references, Strong's Hebrew & Greek Dictionaries) fetched per-passage before the AI call, instead of asking the model to recall them from memory. A verification pass strips and logs anything the model states that isn't in the supplied data \u2014 see spec-ai-tools-grounding-v1.md.",
+      "fix: the Word Study lexicon search box no longer free-generates Strong's numbers, definitions, or occurrence verse text. English-word lookups now resolve against a real candidate list (built from the dictionaries' own KJV renderings); definitions come directly from the Strong's dictionaries; occurrence verse text is fetched live via the app's existing translation API, not model-invented.",
+      "removed: named-scholar citation instructions (BDAG/BDB/Thayer's) from these tools' prompts \u2014 replaced by direct dictionary text."
     ]},
   {
     version:'4.37.3',date:'Sep 21, 2026',label:'',

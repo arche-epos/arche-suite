@@ -13,7 +13,7 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.37.4';
+} from './utils.js?v=4.38.0';
 
 import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.37.4';
 import { syncToGist } from './sync.js?v=4.37.4';
@@ -385,6 +385,224 @@ function openTransDetail(abbr){
 
 // ════════════════════════════════════════════════════════
 
+// SECTION 11B — AI STUDY TOOLS GROUNDING DATA (spec-ai-tools-grounding-v1.md, Phase 2)
+// Real source data (MACULA/OSHB word-level tags, OpenBible.info cross-refs, Strong's
+// dictionaries) fetched from the arche-suite repo's data/ folder and injected into AI
+// prompts as ground truth, so the model explains real facts instead of recalling them.
+// buildPrompt() (below, Section 12) is the main consumer. _lexClassify/_lexFullLookup
+// (Section 15) consume the strongs/gloss-index/occurrences files directly, without an
+// AI call for the factual lookup itself.
+// ════════════════════════════════════════════════════════
+var GROUND_CDN='https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
+// Per-session in-memory cache — a study session commonly runs 3-4 grounded tools
+// against the same book, so this avoids re-fetching the same per-book file repeatedly.
+var _groundCache={};
+// Caps — keep grounded prompts/responses bounded for whole-BOOK scope (passage scope
+// never approaches these). Tunable constants, not spec-mandated numbers.
+var GROUND_BOOK_WORD_CAP=40;      // max distinct words sent to the model for book-scope Word Study
+var GROUND_BOOK_CROSSREF_CAP=30;  // max cross-refs sent to the model for book-scope Cross-References
+var GROUND_PASSAGE_CROSSREF_CAP=15; // max cross-refs sent to the model for passage-scope Cross-References
+var LEX_OCCURRENCE_TEXT_CAP=10;   // of up to 30 real refs from occurrences.json, how many get real fetched verse text (rest listed as reference-only, to avoid 30 sequential verse fetches per lookup)
+
+/**
+ * Fetches and caches one grounding data file from the arche-suite repo's data/ folder
+ * via jsDelivr. Fails loudly (throws) rather than silently degrading to an ungrounded
+ * prompt — a failed grounding fetch should surface as a normal AI-tool error, not a
+ * quiet return to fabrication risk.
+ * @param {string} path - Path under data/, e.g. 'macula/44.json'.
+ * @returns {Promise<Object>} Parsed JSON.
+ */
+async function fetchGroundData(path){
+  if(_groundCache[path])return _groundCache[path];
+  var r=await fetch(GROUND_CDN+path);
+  if(!r.ok)throw new Error('Grounding data unavailable: '+path+' (HTTP '+r.status+')');
+  var d=await r.json();
+  _groundCache[path]=d;
+  return d;
+}
+function _padBookNum(n){return n<10?'0'+n:''+n;}
+/** Per-verse word-level data (Greek NT / Hebrew OT) for a whole book. */
+async function getMaculaBook(bookNum){return fetchGroundData('macula/'+_padBookNum(bookNum)+'.json');}
+/** Per-verse ranked cross-references for a whole book. */
+async function getCrossrefsBook(bookNum){return fetchGroundData('crossrefs/'+_padBookNum(bookNum)+'.json');}
+/** Full Strong's dictionary — 'greek' or 'hebrew'. */
+async function getStrongsDict(testament){return fetchGroundData('strongs/'+testament+'.json');}
+/** English word -> real candidate Strong's numbers (built from the dictionaries' own KJV renderings). */
+async function getGlossIndex(){return fetchGroundData('strongs/gloss-index.json');}
+/** Strong's number -> up to 30 real verse references where it occurs. */
+async function getOccurrenceIndex(){return fetchGroundData('strongs/occurrences.json');}
+/** Resolves the correct dictionary ('greek'|'hebrew') for a Strong's number string like "G26"/"H430". */
+function _dictForStrongs(sn){return /^H/i.test(sn)?'hebrew':'greek';}
+
+/**
+ * Slices a per-book macula/crossrefs object down to the verses in scope.
+ * @param {Object} bookData - The full per-book object, keyed "chap:verse".
+ * @param {Object|null} parsed - parseRef() result, or null for whole-book scope.
+ * @returns {Array<{chapter:number, verse:number, data:*}>} Sorted verse entries in scope.
+ */
+function sliceBookData(bookData,parsed){
+  var out=[];
+  Object.keys(bookData).forEach(function(key){
+    var parts=key.split(':');
+    var c=parseInt(parts[0]),v=parseInt(parts[1]);
+    if(!parsed || (c===parsed.chapter && v>=(parsed.startVerse||1) && v<=(parsed.endVerse||parsed.startVerse||9999))){
+      out.push({chapter:c,verse:v,data:bookData[key]});
+    }
+  });
+  out.sort(function(a,b){return a.chapter-b.chapter||a.verse-b.verse;});
+  return out;
+}
+
+/**
+ * Builds the Word Study (lexical) ground-truth block: distinct words in scope, each
+ * with its real Strong's number and dictionary definition. Deduplicates by Strong's
+ * number (first occurrence's word form kept) — a passage repeating a word doesn't need
+ * repeated ground-truth lines. Caps to GROUND_BOOK_WORD_CAP for book scope.
+ * @returns {Promise<{text:string, allowedStrongs:string[], allowedWords:string[]}>}
+ */
+async function buildLexicalGround(bookNum,parsed,isBook){
+  var bookData=await getMaculaBook(bookNum);
+  var verses=sliceBookData(bookData,isBook?null:parsed);
+  var seen={},entries=[];
+  verses.forEach(function(ve){
+    ve.data.forEach(function(w){
+      if(!w.strongs||seen[w.strongs])return;
+      seen[w.strongs]=true;
+      entries.push({ref:ve.chapter+':'+ve.verse,word:w.word,strongs:w.strongs});
+    });
+  });
+  if(isBook&&entries.length>GROUND_BOOK_WORD_CAP)entries=entries.slice(0,GROUND_BOOK_WORD_CAP);
+  var greek=null,hebrew=null;
+  var lines=[];
+  for(var i=0;i<entries.length;i++){
+    var e=entries[i];
+    var dictName=_dictForStrongs(e.strongs);
+    if(dictName==='greek'){if(!greek)greek=await getStrongsDict('greek');}else{if(!hebrew)hebrew=await getStrongsDict('hebrew');}
+    var dict=dictName==='greek'?greek:hebrew;
+    var def=dict[e.strongs];
+    if(!def)continue; // Strong's number tagged in the text but absent from our dictionary copy — skip rather than guess
+    lines.push('['+e.ref+'] '+e.word+' ('+(def.translit||'')+', '+e.strongs+') \u2014 '+def.strongs_def+(def.kjv_def?' [KJV renderings: '+def.kjv_def+']':''));
+  }
+  return {text:lines.join('\n'),allowedStrongs:Object.keys(seen)};
+}
+
+/**
+ * Builds the Language & Structure (grammar) ground-truth block: the real original-
+ * language text plus each word's actual morphology tag, verse by verse.
+ * @returns {Promise<{text:string, allowedStrongs:string[], allowedWords:string[]}>}
+ */
+async function buildGrammarGround(bookNum,parsed,isBook){
+  var bookData=await getMaculaBook(bookNum);
+  var verses=sliceBookData(bookData,isBook?null:parsed);
+  var allowedStrongs={},allowedWords={};
+  var lines=verses.map(function(ve){
+    var wordLine=ve.data.map(function(w){
+      if(w.strongs)allowedStrongs[w.strongs]=true;
+      allowedWords[w.word]=true;
+      return w.word+'/'+w.morph;
+    }).join(' ');
+    return '['+ve.chapter+':'+ve.verse+'] '+wordLine;
+  });
+  return {text:lines.join('\n'),allowedStrongs:Object.keys(allowedStrongs),allowedWords:Object.keys(allowedWords)};
+}
+
+/**
+ * Builds the Cross-References ground-truth block: the real ranked cross-refs for the
+ * verses in scope, deduplicated and capped.
+ * @returns {Promise<{text:string, allowedRefs:string[]}>}
+ */
+async function buildCrossrefsGround(bookNum,parsed,isBook){
+  var bookData=await getCrossrefsBook(bookNum);
+  var verses=sliceBookData(bookData,isBook?null:parsed);
+  var best={}; // ref -> highest vote seen
+  verses.forEach(function(ve){
+    (ve.data||[]).forEach(function(pair){
+      var ref=pair[0],votes=pair[1];
+      if(!best[ref]||votes>best[ref])best[ref]=votes;
+    });
+  });
+  var cap=isBook?GROUND_BOOK_CROSSREF_CAP:GROUND_PASSAGE_CROSSREF_CAP;
+  var sorted=Object.keys(best).sort(function(a,b){return best[b]-best[a];}).slice(0,cap);
+  var lines=sorted.map(function(ref){return ref+' (vote weight: '+best[ref]+')';});
+  return {text:lines.join('\n'),allowedRefs:sorted};
+}
+
+/**
+ * Extracts every Strong's-number token (G####/H####) from AI response text.
+ * @param {string} text
+ * @returns {string[]} Unique tokens found.
+ */
+function extractStrongsTokens(text){
+  var m=(text||'').match(/\b[GH]\d{1,4}\b/g);
+  return m?Array.from(new Set(m)):[];
+}
+/**
+ * Extracts runs of Greek or Hebrew script from AI response text.
+ * @param {string} text
+ * @returns {string[]} Unique original-language word tokens found.
+ */
+function extractOriginalScriptWords(text){
+  var m=(text||'').match(/[\u0370-\u03FF\u1F00-\u1FFFa-zA-Z]*[\u0370-\u03FF\u1F00-\u1FFF][\u0370-\u03FF\u1F00-\u1FFFa-zA-Z]*|[\u0590-\u05FF]+/g);
+  return m?Array.from(new Set(m)):[];
+}
+/**
+ * Extracts Bible-reference-shaped tokens ("Book Ch:V" or "Book Ch:V-V") from AI
+ * response text, for checking against the supplied cross-reference list.
+ * @param {string} text
+ * @returns {string[]} Reference tokens found (not deduplicated — position doesn't matter for checking).
+ */
+function extractRefTokens(text){
+  var re=/\b([1-3]\s?[A-Za-z]+|[A-Za-z]+)\s+(\d{1,3}):(\d{1,3})(?:-(\d{1,3}))?/g;
+  var out=[],mm;
+  while((mm=re.exec(text||'')))out.push(mm[0]);
+  return out;
+}
+/**
+ * The verification pass (spec §5) — the mechanical guarantee behind grounding. Scans
+ * a grounded tool's AI response for any Strong's number, original-language word, or
+ * cross-reference NOT present in the data actually sent for that request; strips each
+ * unmatched token from the rendered text and logs it via the existing error-log beacon
+ * (tool, passage, unmatched token) so drift is visible rather than silently rendered.
+ * @param {string} tool - 'lexical'|'grammar'|'crossrefs'.
+ * @param {string} content - Raw AI response text.
+ * @param {{allowedStrongs?:string[], allowedWords?:string[], allowedRefs?:string[]}} ground
+ * @param {string} passageRef - The passage/book this call was for, for the log entry.
+ * @returns {string} Cleaned content, safe to render/store.
+ */
+function verifyGroundedOutput(tool,content,ground,passageRef){
+  var cleaned=content,stripped=[];
+  if(ground.allowedStrongs){
+    extractStrongsTokens(content).forEach(function(tok){
+      if(ground.allowedStrongs.indexOf(tok)===-1){
+        cleaned=cleaned.split(tok).join('[unverified Strong\'s number removed]');
+        stripped.push({type:'strongs',token:tok});
+      }
+    });
+  }
+  if(ground.allowedWords){
+    extractOriginalScriptWords(content).forEach(function(tok){
+      if(ground.allowedWords.indexOf(tok)===-1){
+        cleaned=cleaned.split(tok).join('[unverified original-language text removed]');
+        stripped.push({type:'word',token:tok});
+      }
+    });
+  }
+  if(ground.allowedRefs){
+    var normAllowed=ground.allowedRefs.map(function(r){return r.toLowerCase().replace(/\s+/g,' ').trim();});
+    extractRefTokens(content).forEach(function(tok){
+      var norm=tok.toLowerCase().replace(/\s+/g,' ').trim();
+      if(normAllowed.indexOf(norm)===-1){
+        cleaned=cleaned.split(tok).join('[unverified cross-reference removed]');
+        stripped.push({type:'ref',token:tok});
+      }
+    });
+  }
+  if(stripped.length)beaconError('AI Grounding Verification: '+tool,JSON.stringify({passage:passageRef,stripped:stripped}));
+  return cleaned;
+}
+
+// ════════════════════════════════════════════════════════
+
 // SECTION 12 — STUDY TOOLS PANEL
 // AI Study Tools panel: scope toggle, tool buttons, and AI result display.
 // populateDeep() populates results; buildPrompt() constructs the AI prompt.
@@ -669,31 +887,56 @@ function updateToolDots(){
 }
 
 /**
- * Builds the full AI prompt string for a given tool, reference, and scope.
- * Applies the theological framework (Scripture as primary authority; present all major
- * scholarly positions on debated matters). Includes a CRITICAL footer blocking conclusions.
+ * Builds the full AI prompt for a given tool, reference, and scope. For the three
+ * grounded tools (lexical/grammar/crossrefs — spec-ai-tools-grounding-v1.md), fetches
+ * real source data first and appends it as ground truth the model may explain but not
+ * contradict or supplement; returns the allowed-token sets the caller must pass to
+ * verifyGroundedOutput() after the AI responds. Historical/Cultural/Geography are
+ * explicitly out of scope for grounding (spec §7) and behave as before.
  * @param {string} tool - Tool key: 'lexical'|'grammar'|'historical'|'cultural'|'crossrefs'|'geography'.
  * @param {string} ref - The passage reference (e.g. "Romans 8:1-4").
  * @param {string} trans - Translation code (e.g. "NASB").
  * @param {string} scope - 'passage' or 'book'.
- * @returns {string} Full prompt string, or empty string if tool key is unrecognized.
+ * @returns {Promise<{prompt:string, ground:Object|null}>} ground is null for ungrounded tools.
  */
-function buildPrompt(tool,ref,trans,scope){
+async function buildPrompt(tool,ref,trans,scope){
   var isBook=(scope||studyScope)==='book',book=getBookFromRef(ref);
   var subject=isBook?'the book of '+book+' as a whole':ref; // Governs whether prompts say 'this passage' or 'the book of X'
-  var base='You are a scholarly biblical reference tool. The student is studying '+subject+' ('+trans.toUpperCase()+' translation). Scripture is the sole and infallible Word of God — the primary authority. Where the text speaks plainly, the text takes precedence over scholarly consensus. When scholarly debate exists, present all major positions with named scholars and their evidence — never state a debated matter as settled fact.\n\n';
+  var base='You are a scholarly biblical reference tool. The student is studying '+subject+' ('+trans.toUpperCase()+' translation). Scripture is the sole and infallible Word of God — the primary authority. Where the text speaks plainly, the text takes precedence over scholarly consensus.\n\n';
   // Appended to every prompt — blocks the AI from drawing theological conclusions
   var noC='\n\nCRITICAL: Provide ONLY the data requested. Do NOT draw theological conclusions, make doctrinal interpretations, or express any theological opinion. The student draws all conclusions.';
+  // Shared structural constraint for all three grounded tools (spec §4.4)
+  var groundRule='\n\nYou are given the verified source data below. You may explain, categorize, and describe it. You may NOT state a Strong\'s number, original-language word, or cross-reference that does not appear in the supplied data. If the supplied data doesn\'t cover something, say so — do not fill the gap.';
   var intro=isBook?'Provide a complete analysis of the book of '+book+'.':'Provide a complete analysis of '+ref+'.';
+
+  if(tool==='lexical'||tool==='grammar'||tool==='crossrefs'){
+    var parsed=parseRef(ref);
+    if(!parsed)throw new Error('Could not parse reference for grounding: '+ref);
+    var bookNum=parsed.book;
+    if(tool==='lexical'){
+      var lg=await buildLexicalGround(bookNum,parsed,isBook);
+      var prompt=base+intro+' Lexical study of the 4-5 most exegetically significant words below -- do not truncate. Choose ONLY from the words in the VERIFIED DATA. For EACH word chosen:\n\nWORD N: [English gloss]\n- Original word & Strong\'s number: [from the data]\n- Definition: [from the data — you may explain it in plain language, but the definition text itself must come from the data]\n- Plain reading in this text: [most natural meaning as written, given the definition supplied]\n- Where relevant, briefly note any range of meaning apparent in the definition\n\nComplete all words.'+groundRule+'\n\n--- VERIFIED SOURCE DATA (real Strong\'s-tagged words for '+(isBook?'this book':'this passage')+') ---\n'+(lg.text||'(no tagged words found)')+'\n--- END VERIFIED SOURCE DATA ---'+noC;
+      return {prompt:prompt,ground:{allowedStrongs:lg.allowedStrongs}};
+    }
+    if(tool==='grammar'){
+      var gg=await buildGrammarGround(bookNum,parsed,isBook);
+      var prompt=base+intro+' Provide a plain-language grammar and syntax overview -- readable for someone without Greek/Hebrew training, do not truncate:\n\nSUMMARY\n[2-3 sentence plain-language overview of what stands out grammatically in this passage]\n\nSENTENCE STRUCTURE\n[Overall syntax and logical flow, explained plainly, based on the actual word order and tags below]\n\nKEY VERBS\n[The 2-3 most significant verbs from the data and how their ACTUAL tense/mood/voice/case (as tagged below) shapes the meaning — explain in plain terms, not a technical catalog]\n\nNOTABLE CONSTRUCTIONS\n[Any participles, infinitives, or conditionals visible in the tags below that meaningfully affect how the passage should be read — brief]\n\nComplete all sections in plain language.'+groundRule+' The original-language text and morphology tags below are the real, already-tagged text — explain what the tags mean; do not alter, invent, or contradict them.\n\n--- VERIFIED SOURCE DATA (real word/morphology tags, verse by verse) ---\n'+(gg.text||'(no tagged words found)')+'\n--- END VERIFIED SOURCE DATA ---'+noC;
+      return {prompt:prompt,ground:{allowedStrongs:gg.allowedStrongs,allowedWords:gg.allowedWords}};
+    }
+    // crossrefs
+    var cg=await buildCrossrefsGround(bookNum,parsed,isBook);
+    var prompt=base+intro+' Cross-references for this passage, using ONLY the references in the VERIFIED DATA below -- do not truncate:\n\nDIRECT SCRIPTURAL REFERENCES\n[Reference] - [connection explicit in the text itself or clear authorial intent]\n\nTHEMATIC CONNECTIONS\n[Reference] - [thematic link, explained plainly]\n\nNARRATIVE OR PROPHETIC CONNECTIONS (if applicable)\n[Reference] - [narrative parallel/contrast, or prophetic fulfillment/typology]\n\nGroup the supplied references into whichever categories apply — you do not need to force references into every category. Complete all sections that apply.'+groundRule+'\n\n--- VERIFIED SOURCE DATA (real ranked cross-references) ---\n'+(cg.text||'(no cross-references found)')+'\n--- END VERIFIED SOURCE DATA ---'+noC;
+    return {prompt:prompt,ground:{allowedRefs:cg.allowedRefs}};
+  }
+
+  // Ungrounded tools (spec §7 — no equivalent structured dataset; unchanged, scholarly debate framing retained)
+  var base2=base.replace(/\n\n$/,' When scholarly debate exists, present all major positions with named scholars and their evidence — never state a debated matter as settled fact.\n\n');
   var prompts={
-    lexical:base+intro+' Lexical study of 4-5 key words -- do not truncate. For EACH word:\n\nWORD N: [English word]\n- Language: Greek (NT) or Hebrew (OT)\n- Transliteration: [form]\n- Strong\'s: G#### or H####\n- Primary definition: [cite BDAG for Greek or BDB for Hebrew by name]\n- Semantic range: [full range in biblical usage]\n- Plain reading in this text: [most natural meaning as written]\n- Disputed: [note any scholarly disagreement with sources]\n- Key occurrences: [2-3 references]\n\nComplete all words.'+noC,
-    grammar:base+intro+' Provide a plain-language grammar and syntax overview -- readable for someone without Greek/Hebrew training, do not truncate:\n\nSUMMARY\n[2-3 sentence plain-language overview of what stands out grammatically in this passage]\n\nSENTENCE STRUCTURE\n[Overall syntax and logical flow, explained plainly]\n\nKEY VERBS\n[The 2-3 most significant verbs and how their tense, mood, or voice shapes the meaning — explain in plain terms, not a technical catalog]\n\nNOTABLE CONSTRUCTIONS\n[Any participles, infinitives, or conditionals that meaningfully affect how the passage should be read — brief]\n\nComplete all sections in plain language, without an exhaustive conjunction-by-conjunction breakdown or scholarly citation.'+noC,
-    historical:base+intro+' Provide a solid historical overview -- accessible to a general reader but substantive, not superficial. Do not truncate:\n\nSUMMARY\n[3-5 sentence overview: when this was likely written, by whom, and the key historical backdrop]\n\nTIME PERIOD & AUTHOR\n[If the date or authorship is genuinely debated among scholars, say so plainly and give the general range each side holds (e.g., \"critical scholarship dates this to X; conservative/evangelical scholarship dates this to Y\"), in 3-4 sentences — do not present either as settled. If there is broad scholarly consensus with no significant debate, state the accepted date and author plainly]\n\nPOLITICAL & HISTORICAL LANDSCAPE\n[The empires, rulers, and major historical events shaping this period — a full paragraph]\n\nAUTHOR BACKGROUND\n[What is known or traditionally held about the author\'s identity and relationship to the events, in 2-3 sentences]\n\nORIGINAL AUDIENCE\n[Who originally received this and why it mattered to them, in 2-3 sentences]\n\nARCHAEOLOGICAL ATTESTATION\n[Brief note on well-established archaeological findings relevant to this book, if any]\n\nComplete all sections with real substance, in accessible language. Reserve extended scholarly debate, minority positions, and exhaustive named-scholar citations for a follow-up request.'+noC,
-    cultural:base+intro+' Provide a concise cultural overview -- readable for someone without seminary background, do not truncate:\n\nSUMMARY\n[2-4 sentence plain-language overview of the cultural setting most relevant to understanding this text]\n\nCULTURAL CUSTOMS & IDIOMS\n[The 2-3 most important customs or idioms in the passage, briefly explained]\n\nSOCIAL STRUCTURES\n[Brief note on hierarchies or social dynamics relevant to the text]\n\nComplete all sections in plain, accessible language.'+noC,
-    crossrefs:base+intro+' Cross-references for this passage -- do not truncate:\n\nDIRECT SCRIPTURAL REFERENCES (3-5)\n[Reference] - [connection explicit in the text itself or clear authorial intent]\n\nTHEMATIC CONNECTIONS (2-3)\n[Reference] - [thematic link, explained plainly]\n\nNARRATIVE OR PROPHETIC CONNECTIONS (1-2, if applicable)\n[Reference] - [narrative parallel/contrast, or prophetic fulfillment/typology]\n\nFor each, note whether it is: (a) made explicit in Scripture itself, (b) widely recognized across traditions, or (c) one tradition\'s interpretive reading.\n\nComplete all sections that apply.'+noC,
-      geography:base+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification with the specific conservative scholarly sources or works (e.g. Zondervan Atlas of the Bible, ISBE, ESV Study Bible notes, Aharoni) supporting each view. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey).\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
+    historical:base2+intro+' Provide a solid historical overview -- accessible to a general reader but substantive, not superficial. Do not truncate:\n\nSUMMARY\n[3-5 sentence overview: when this was likely written, by whom, and the key historical backdrop]\n\nTIME PERIOD & AUTHOR\n[If the date or authorship is genuinely debated among scholars, say so plainly and give the general range each side holds (e.g., \"critical scholarship dates this to X; conservative/evangelical scholarship dates this to Y\"), in 3-4 sentences — do not present either as settled. If there is broad scholarly consensus with no significant debate, state the accepted date and author plainly]\n\nPOLITICAL & HISTORICAL LANDSCAPE\n[The empires, rulers, and major historical events shaping this period — a full paragraph]\n\nAUTHOR BACKGROUND\n[What is known or traditionally held about the author\'s identity and relationship to the events, in 2-3 sentences]\n\nORIGINAL AUDIENCE\n[Who originally received this and why it mattered to them, in 2-3 sentences]\n\nARCHAEOLOGICAL ATTESTATION\n[Brief note on well-established archaeological findings relevant to this book, if any]\n\nComplete all sections with real substance, in accessible language. Reserve extended scholarly debate, minority positions, and exhaustive named-scholar citations for a follow-up request.'+noC,
+    cultural:base2+intro+' Provide a concise cultural overview -- readable for someone without seminary background, do not truncate:\n\nSUMMARY\n[2-4 sentence plain-language overview of the cultural setting most relevant to understanding this text]\n\nCULTURAL CUSTOMS & IDIOMS\n[The 2-3 most important customs or idioms in the passage, briefly explained]\n\nSOCIAL STRUCTURES\n[Brief note on hierarchies or social dynamics relevant to the text]\n\nComplete all sections in plain, accessible language.'+noC,
+    geography:base2+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification with the specific conservative scholarly sources or works (e.g. Zondervan Atlas of the Bible, ISBE, ESV Study Bible notes, Aharoni) supporting each view. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey).\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
   };
-  return prompts[tool]||'';
+  return {prompt:prompts[tool]||'',ground:null};
 }
 
 /**
@@ -748,13 +991,14 @@ async function runTool(tool){
   setTimeout(function(){document.getElementById('aipanel').scrollIntoView({behavior:'smooth',block:'nearest'});},120);
   try{
     var trans=ar.pastedTranslation||ar.translation||'ESV';
-    var prompt=buildPrompt(tool,ar.reference,trans,studyScope);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool,'X-Tool-Scope':studyScope},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
+    var built=await buildPrompt(tool,ar.reference,trans,studyScope);
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool,'X-Tool-Scope':studyScope},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:built.prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
     var finishReason=data.choices&&data.choices[0]&&data.choices[0].finish_reason;
     _truncatedTabs[ck]=(finishReason==='length');
+    if(built.ground)content=verifyGroundedOutput(tool,content,built.ground,ar.reference);
     if(!ar.deep)ar.deep={};
     ar.deep[ck]=content;saveStudy();
     // TEMP DIAGNOSTIC (Aug 2026 max_tokens right-sizing test — remove after data collected).
@@ -983,13 +1227,14 @@ async function runSnapshot(){
     var controller=new AbortController();
     _snapshotAbortControllers[item.tool]=controller;
     try{
-      var prompt=buildPrompt(item.tool,ar.reference,trans,item.scope);
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':item.tool},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3}),signal:controller.signal});
+      var built2=await buildPrompt(item.tool,ar.reference,trans,item.scope);
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':item.tool},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:built2.prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3}),signal:controller.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
       var finishReason2=data.choices&&data.choices[0]&&data.choices[0].finish_reason;
       _truncatedTabs[ck]=(finishReason2==='length');
+      if(built2.ground)content2=verifyGroundedOutput(item.tool,content2,built2.ground,ar.reference);
       if(content2){if(!ar.deep)ar.deep={};ar.deep[ck]=content2;saveStudy(true);}
       var toolBtn=document.getElementById('btn-'+item.tool);
       if(toolBtn){toolBtn.classList.add('ready');if(!toolBtn.querySelector('.rdot')){var d=document.createElement('div');d.className='rdot';toolBtn.appendChild(d);}}
@@ -1201,13 +1446,14 @@ async function continueCurrentTool(){
   if(lbl2)lbl2.textContent='Continuing...';
   try{
     var trans2=ar.pastedTranslation||ar.translation||'ESV';
-    var origPrompt=buildPrompt(base,ar.reference,trans2,scope);
-    var contPrompt=origPrompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
+    var builtC=await buildPrompt(base,ar.reference,trans2,scope);
+    var contPrompt=builtC.prompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
     var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:contPrompt}],max_tokens:2048,temperature:0.2,frequency_penalty:0.3})});
     if(!res2.ok){var err2=await res2.json().catch(function(){return{};});throw new Error(err2.error?err2.error.message:'HTTP '+res2.status);}
     var data2=await res2.json();
     var addition=data2.choices&&data2.choices[0]&&data2.choices[0].message&&data2.choices[0].message.content||'';
     var finishReason3=data2.choices&&data2.choices[0]&&data2.choices[0].finish_reason;
+    if(builtC.ground)addition=verifyGroundedOutput(base,addition,builtC.ground,ar.reference);
     var merged=existing+addition;
     aiPanelResults[ck]=merged;
     if(!ar.deep)ar.deep={};
@@ -1581,13 +1827,13 @@ function openLexiconModalFor(context){
  */
 function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');}
 /**
- * Word Study — entry point wired to the Lexicon button. A Strong's-number
- * input (G#### / H####) is already unambiguous, so it skips straight to
- * _lexFullLookup. Anything else goes through the cheap classify pre-check
- * (_lexClassify) first: an ambiguous word (e.g. "love") renders a sense
- * picker instead of letting the AI silently guess one meaning; an
- * unambiguous word (or a failed/unparseable classify call, which fails open)
- * runs today's single full-lookup path, unchanged. See spec-pilgrim-assistant-v2.md.
+ * Word Study — entry point wired to the Lexicon button (spec-ai-tools-grounding-v1.md
+ * Plan A). A Strong's-number input (G#### / H####) is already unambiguous, so it skips
+ * straight to _lexFullLookup. Anything else is looked up against the real gloss-index
+ * (English word -> real candidate Strong's numbers, built from the dictionaries' own
+ * KJV renderings) — no AI call, no invented candidates. Zero matches means an honest
+ * "not found" rather than a model guess; one match proceeds straight to full lookup;
+ * multiple matches render a real-data sense picker.
  */
 async function runLexiconLookup(){
   var inp=document.getElementById('lexicon-input');
@@ -1600,49 +1846,56 @@ async function runLexiconLookup(){
   if(/^[GH]\d+$/i.test(query)){await _lexFullLookup(query,btn,res,bar);return;}
   btn.disabled=true;btn.textContent='Checking\u2026';
   res.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);padding:8px 0;"><div class="spin"></div>Checking word\u2026</div>';
-  var cls=await _lexClassify(query);
-  if(cls&&cls.ambiguous&&cls.senses&&cls.senses.length){
-    _lexRenderSensePicker(query,cls.senses,res);
+  try{
+    var cls=await _lexClassify(query);
+    if(!cls||!cls.length){
+      res.innerHTML='<p style="color:var(--txt3);font-size:13px;">No direct match found for \u201c'+escHtml(query)+'\u201d in the Strong\'s dictionaries. Try a different spelling, or search a Strong\'s number directly (e.g. G26 or H430).</p>';
+      btn.disabled=false;btn.textContent='Look up';
+      return;
+    }
+    if(cls.length===1){await _lexFullLookup(cls[0].strongsNumber,btn,res,bar);return;}
+    _lexRenderSensePicker(query,cls,res);
     btn.disabled=false;btn.textContent='Look up';
-    return;
+  }catch(e){
+    logError('Lexicon Classify',e);
+    res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(e.message)+'</p>';
+    btn.disabled=false;btn.textContent='Look up';
   }
-  await _lexFullLookup(query,btn,res,bar);
 }
 
 /**
- * Word Study — cheap first-pass classification call. Determines whether the
- * searched word has one clear original-language source or multiple
- * meaningfully distinct ones (e.g. "love" -> agap\u0113/phile\u014d/eros/storg\u0113).
- * Small max_tokens \u2014 this is a triage call, not the full lookup, and its cost
- * shouldn't approach the main lookup's. Fails open (returns null) on any
- * network/parse error so Lexicon degrades to its prior single-lookup
- * behavior rather than blocking on a broken classify call.
- * @param {string} query - The raw text from the lexicon input.
- * @returns {Promise<Object|null>} {ambiguous, senses} or null on failure.
+ * Word Study — real candidate lookup (replaces the old AI-guessed classify call).
+ * Looks the searched English word up in the real gloss-index (built solely from each
+ * Strong's entry's own KJV-rendering list — never model-invented), and returns each
+ * candidate's real lemma/transliteration/short definition from the dictionaries, so
+ * even the sense-picker card text is 100% sourced data, not AI prose.
+ * @param {string} query - The raw text from the lexicon input (an English word).
+ * @returns {Promise<Array<Object>>} Candidate senses (possibly empty — no AI fallback).
  */
 async function _lexClassify(query){
-  var prompt='You are a biblical lexicographer. The user searched for the word: "'+query+'".\n\nDetermine whether this word, in a Bible-study context, has ONE clear original-language (Greek/Hebrew) source, or MULTIPLE meaningfully distinct original-language sources with genuinely different shades of meaning (e.g. "love" -> agap\u0113/phile\u014d/eros/storg\u0113; "know" -> gin\u014dsk\u014d/oida/yada).\n\nReturn ONLY a valid JSON object — no markdown fences, no preamble, no text before or after it. Exact shape:\n{"ambiguous":true|false,"senses":[{"originalWord":"word in original script","transliteration":"romanized form","strongsNumber":"G#### or H####","differentiator":"one short phrase distinguishing this sense, e.g. \'selfless, unconditional love\'"}]}\n\n"senses" is REQUIRED when ambiguous (3-5 entries, most common/relevant first), and should be omitted or empty when not ambiguous.';
-  try{
-    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'word_study_classify'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:500,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],frequency_penalty:0.3})});
-    if(!r.ok)return null;
-    var d=await r.json();
-    var raw=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
-    if(!raw)return null;
-    var clean=raw.replace(/```json|```/g,'').trim();
-    var firstBrace=clean.indexOf('{'),lastBrace=clean.lastIndexOf('}');
-    if(firstBrace>-1&&lastBrace>-1)clean=clean.slice(firstBrace,lastBrace+1);
-    var obj=JSON.parse(clean);
-    return (obj&&typeof obj==='object')?obj:null;
-  }catch(e){return null;}
+  var gi=await getGlossIndex();
+  var nums=gi[query.toLowerCase().trim()];
+  if(!nums||!nums.length)return [];
+  var greek=null,hebrew=null;
+  var out=[];
+  for(var i=0;i<nums.length;i++){
+    var sn=nums[i];
+    var dictName=_dictForStrongs(sn);
+    if(dictName==='greek'){if(!greek)greek=await getStrongsDict('greek');}else{if(!hebrew)hebrew=await getStrongsDict('hebrew');}
+    var entry=(dictName==='greek'?greek:hebrew)[sn];
+    if(!entry)continue;
+    out.push({strongsNumber:sn,originalWord:entry.lemma||'',transliteration:entry.translit||'',differentiator:(entry.strongs_def||'').trim().slice(0,90)});
+  }
+  return out;
 }
 
 /**
- * Word Study — renders 3-5 tappable sense-candidate cards in the Lexicon
- * result area when _lexClassify flags the query as ambiguous. Stashes the
- * query + senses on module state (_lexPendingQuery/_lexPendingSenses) for
+ * Word Study — renders tappable sense-candidate cards in the Lexicon result area
+ * when the gloss-index lookup finds more than one real Strong's-number match.
+ * Stashes the query + senses on module state (_lexPendingQuery/_lexPendingSenses) for
  * pickWordSense to read when a card is tapped.
  * @param {string} query - The original searched word.
- * @param {Array<Object>} senses - Candidate senses from _lexClassify.
+ * @param {Array<Object>} senses - Real candidate senses from _lexClassify.
  * @param {HTMLElement} res - The #lexicon-result element to render into.
  */
 function _lexRenderSensePicker(query,senses,res){
@@ -1654,14 +1907,13 @@ function _lexRenderSensePicker(query,senses,res){
       (s.differentiator?'<div style="color:var(--txt3);font-size:calc(13px * var(--content-scale));margin-top:4px;font-weight:400;">'+escHtml(s.differentiator)+'</div>':'')+
     '</button>';
   }).join('');
-  res.innerHTML='<div style="color:var(--txt3);font-size:calc(13px * var(--content-scale));margin-bottom:10px;">\u201c'+escHtml(query)+'\u201d has more than one sense in the original languages — which do you mean?</div>'+cards;
+  res.innerHTML='<div style="color:var(--txt3);font-size:calc(13px * var(--content-scale));margin-bottom:10px;">\u201c'+escHtml(query)+'\u201d has more than one Strong\'s-number match — which do you mean?</div>'+cards;
 }
 
 /**
  * Word Study — handles a sense-card tap: fires the sense-pick tracking
  * beacon (fire-and-forget, see _trackWordSense) then runs the full lexicon
- * lookup by the chosen sense's Strong's number instead of the original
- * ambiguous word — never a silent AI guess.
+ * lookup by the chosen sense's real Strong's number.
  * @param {HTMLElement} btn - The tapped sense-card button (carries data-sense-i).
  */
 async function pickWordSense(btn){
@@ -1711,37 +1963,64 @@ async function _lexFullLookup(query,btn,res,bar){
   btn.disabled=true;btn.textContent='Looking up\u2026';
   res.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);padding:8px 0;"><div class="spin"></div>Searching lexicon\u2026</div>';
   bar.style.display='none';
-  var prompt='You are a biblical lexicographer with deep knowledge of Greek NT and Hebrew OT.\nThe user has looked up: "'+query+'"\n\nIf the input is a Strong\'s number (G#### or H####), use that number. If it is an English word, transliteration, or original language word, identify the most likely Strong\'s number.\n\nReturn ONLY a valid JSON object — absolutely no markdown fences, no backticks, no preamble, no text before or after the JSON. Use this exact structure:\n\n{"strongsNumber":"G#### or H####","testament":"NT or OT","originalWord":"word in original script","transliteration":"romanized form","pronunciation":"phonetic e.g. log\'-os","partOfSpeech":"e.g. masculine noun","gender":"masculine/feminine/neuter or null","rootWord":"etymology e.g. from λέγω (G3004) or null","tdntReference":"vol:page,entry or null","primaryDefinition":"concise primary definition","usageOutline":["I. main usage","   A. sub-usage","   B. sub-usage","II. second main usage"],"kjvCount":0,"kjvTranslations":[{"word":"translation","count":0}],"strongsDefinition":"full Strong\'s Concordance definition text","scholarlyEntry":"150-200 word summary of Thayer\'s Greek Lexicon (NT) or Brown-Driver-Briggs (OT) in their scholarly style","occurrences":[{"ref":"Book Ch:v","text":"full verse text (KJV) showing the word in context"}]}\n\nFor occurrences: list ALL known occurrences up to 30. For very common words (100+ occurrences), list the 25 most theologically significant. Always include the full verse text, never just the reference.';
+  var sn=(query||'').toUpperCase().trim();
+  if(!/^[GH]\d+$/.test(sn)){
+    res.innerHTML='<p style="color:var(--txt3);font-size:13px;">Could not resolve a Strong\'s number for \u201c'+escHtml(query)+'\u201d. Try an English word, or a Strong\'s number directly (e.g. G26 or H430).</p>';
+    btn.disabled=false;btn.textContent='Look up';
+    return;
+  }
   try{
-    // v4.35.5 — up to 2 attempts: the model occasionally returns an empty/truncated body
-    // (logged as "Unexpected end of JSON input"); a second call almost always succeeds.
-    var lex=null;
-    for(var _try=0;_try<2&&!lex;_try++){
-    try{
-    var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'lexicon'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:16000,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:prompt}],frequency_penalty:0.3})});
-    var d=await r.json();
-    if(!r.ok){if(r.status>=500&&_try===0)continue;res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(d.error&&d.error.message?d.error.message:'HTTP '+r.status)+'</p>';return;}
-    var raw=d.choices[0].message.content;
-    if(!raw||!raw.trim())throw new SyntaxError('Empty AI response');
-    var clean=raw.replace(/```json|```/g,'').trim();
-    // Defensively extract JSON — AI occasionally wraps output in prose or residual markdown
-    var firstBrace=clean.indexOf('{'),lastBrace=clean.lastIndexOf('}');
-    if(firstBrace>-1&&lastBrace>-1)clean=clean.slice(firstBrace,lastBrace+1);
-    lex=JSON.parse(clean);
-    }catch(_e){if(_try===1)throw _e;}
+    var dictName=_dictForStrongs(sn);
+    var dict=await getStrongsDict(dictName);
+    var entry=dict[sn];
+    if(!entry){
+      res.innerHTML='<p style="color:var(--txt3);font-size:13px;">No dictionary entry found for '+escHtml(sn)+'.</p>';
+      btn.disabled=false;btn.textContent='Look up';
+      return;
     }
+    var occIndex=await getOccurrenceIndex();
+    var refs=occIndex[sn]||[];
+    // Real verse text (KJV) fetched for the first LEX_OCCURRENCE_TEXT_CAP refs via the
+    // app's existing translation API — never model-generated. Remaining refs (data caps
+    // at 30) are listed reference-only, to avoid a 30-fetch storm on one lookup.
+    var toFetch=refs.slice(0,LEX_OCCURRENCE_TEXT_CAP);
+    var fetched=await Promise.all(toFetch.map(function(ref){
+      return getBibleAPI(ref,'kjv').then(function(t){return t.replace(/^\[\d+\]\s*/,'');}).catch(function(){return '';});
+    }));
+    var occurrences=toFetch.map(function(ref,i){return {ref:ref,text:fetched[i]};})
+      .concat(refs.slice(LEX_OCCURRENCE_TEXT_CAP).map(function(ref){return {ref:ref,text:''};}));
+    // One short, tightly-grounded AI paragraph explaining the real definition data below —
+    // never asked to identify the word, number, or definition itself (all real/deterministic
+    // above); verified afterward against this single word's own data before rendering.
+    var explainPrompt='You are a biblical lexicographer. Explain the following REAL, verified dictionary data about '+sn+' ('+(entry.lemma||'')+', '+(entry.translit||'')+') in one accessible paragraph (120-180 words) for a Bible study student with no Greek/Hebrew training. Base your explanation ONLY on the data below. Do not introduce a different Strong\'s number or original word, do not state a definition beyond what\'s given, and do not attribute this data to a named lexicon (e.g. Thayer\'s, BDB) — it is Strong\'s own dictionary text, supplied directly.\n\n--- VERIFIED DATA ---\nStrong\'s definition: '+(entry.strongs_def||'(none)')+'\nDerivation: '+(entry.derivation||'(none)')+'\nKJV renderings: '+(entry.kjv_def||'(none)')+'\n--- END VERIFIED DATA ---';
+    var explanation='';
+    try{
+      var er=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'lexicon'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:400,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:explainPrompt}],frequency_penalty:0.3})});
+      if(er.ok){
+        var ed=await er.json();
+        explanation=(ed.choices&&ed.choices[0]&&ed.choices[0].message&&ed.choices[0].message.content||'').trim();
+        explanation=verifyGroundedOutput('lexical',explanation,{allowedStrongs:[sn],allowedWords:entry.lemma?[entry.lemma]:[]},sn);
+      }
+    }catch(_e){/* explanation is a nice-to-have on top of the real dictionary data above — a failed call here still renders the rest */}
+    var lex={
+      strongsNumber:sn,
+      testament:dictName==='greek'?'NT':'OT',
+      originalWord:entry.lemma||'',
+      transliteration:entry.translit||'',
+      pronunciation:entry.pron||'',
+      rootWord:entry.derivation||'',
+      primaryDefinition:entry.kjv_def||'',
+      strongsDefinition:entry.strongs_def||'',
+      scholarlyEntry:explanation,
+      occurrences:occurrences
+    };
     var html=renderLexiconEntry(lex,query);
     res.innerHTML=html;
     _lexLastResult={query:lex.originalWord||lex.transliteration||query,englishGloss:lex.primaryDefinition||'',strongsNumber:lex.strongsNumber||'',html:html,reference:(activeRef()&&activeRef().reference)||''};
     bar.style.display='';
   }catch(e){
     logError('Lexicon Lookup',e);
-    // Distinguish parse errors (bad JSON from AI) from network/API errors
-    if(e instanceof SyntaxError){
-      res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">Could not parse lexicon data — please try again.</p>';
-    }else{
-      res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(e.message)+'</p>';
-    }
+    res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(e.message)+'</p>';
     bar.style.display='none';
   }finally{btn.disabled=false;btn.textContent='Look up';}
 }
@@ -1767,9 +2046,9 @@ function renderLexiconEntry(lex,query){
   if(lex.tdntReference)metaParts.push('TDNT '+lex.tdntReference);
   if(metaParts.length)h+='<div class="lex-meta">'+metaParts.join(' &nbsp;·&nbsp; ')+'</div>';
   h+='</div>';
-  // ── Usage Outline ──
+  // ── Definition ──
   h+='<div class="lex-section">';
-  h+='<div class="lex-sec-title">Outline of Biblical Usage</div>';
+  h+='<div class="lex-sec-title">KJV Renderings</div>';
   if(lex.primaryDefinition)h+='<div class="lex-primary-def">'+lex.primaryDefinition+'</div>';
   if(lex.usageOutline&&lex.usageOutline.length){
     lex.usageOutline.forEach(function(line){
@@ -1797,27 +2076,27 @@ function renderLexiconEntry(lex,query){
     h+='<div class="lex-def-text">'+lex.strongsDefinition+'</div>';
     h+='</div>';
   }
-  // ── Thayer's / BDB ──
+  // ── Explanation (grounded — see verifyGroundedOutput) ──
   if(lex.scholarlyEntry){
-    var lexLabel=(lex.testament==='OT')?'Brown-Driver-Briggs Hebrew Lexicon':'Thayer\'s Greek Lexicon';
     h+='<div class="lex-section">';
-    h+='<div class="lex-sec-title">'+lexLabel+'</div>';
+    h+='<div class="lex-sec-title">Explanation</div>';
     h+='<div class="lex-scholarly-text">'+lex.scholarlyEntry+'</div>';
     h+='</div>';
   }
-  // ── Concordance ──
+  // ── Concordance (real refs from occurrences.json; verse text fetched via the app's
+  //    existing translation API for the first LEX_OCCURRENCE_TEXT_CAP, reference-only beyond that) ──
   if(lex.occurrences&&lex.occurrences.length){
     h+='<div class="lex-section">';
-    h+='<div class="lex-sec-title">Concordance &mdash; '+lex.occurrences.length+' Occurrence'+(lex.occurrences.length!==1?'s':'')+'</div>';
+    h+='<div class="lex-sec-title">Concordance &mdash; '+lex.occurrences.length+' Occurrence'+(lex.occurrences.length!==1?'s':'')+' (KJV)</div>';
     lex.occurrences.forEach(function(occ){
       h+='<div class="lex-occur">';
       h+='<div class="lex-occur-ref">'+occ.ref+'</div>';
-      h+='<div class="lex-occur-text">'+occ.text+'</div>';
+      if(occ.text)h+='<div class="lex-occur-text">'+occ.text+'</div>';
       h+='</div>';
     });
     h+='</div>';
   }
-  h+='<div class="lex-footer">Word lookup data generated by AI \u2014 verify against primary sources. All theological conclusions are yours.</div>';
+  h+='<div class="lex-footer">Strong\'s number, definition, and occurrences are sourced data. The explanation paragraph above is AI-written from that data \u2014 verify against primary sources. All theological conclusions are yours.</div>';
   return h;
 }
 
