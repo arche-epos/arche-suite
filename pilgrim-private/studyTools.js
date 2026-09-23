@@ -613,6 +613,24 @@ function _foldGreekWord(s){
   return (s||'').normalize('NFD').replace(/[\u0300-\u036F]/g,'').toLowerCase().replace(/\u03C2/g,'\u03C3');
 }
 
+/**
+ * TEMP DIAGNOSTIC (Sep 23 2026) -- returns ~15 characters of raw surrounding
+ * context for a stripped word token, so a hidden formatting character or
+ * mid-word split (like the ἐγένετο -> "ἐ" + "γένετο" bug fixed in v4.38.2) can
+ * be identified by inspection next time it recurs, via the existing
+ * pilgrim-admin error log, instead of guessed at. Purely additive to the log
+ * payload -- does not affect matching or rendered output. Remove once the
+ * open γένετο-type finding (spec-ai-tools-grounding-v1.md Phase 3) is
+ * resolved or confirmed non-recurring.
+ */
+function _contextSnippet(text,tok,boundaryClass){
+  var re=new RegExp('(?<!['+boundaryClass+'])'+_escapeRegexLiteral(tok)+'(?!['+boundaryClass+'])');
+  var m=re.exec(text);
+  if(!m)return null;
+  var start=Math.max(0,m.index-15),end=Math.min(text.length,m.index+tok.length+15);
+  return text.slice(start,end);
+}
+
 function verifyGroundedOutput(tool,content,ground,passageRef){
   // Normalize to NFC before extracting tokens -- the AI provider can emit accented
   // Greek/Hebrew as decomposed base+combining-mark sequences (\u0300-\u036F) even
@@ -641,7 +659,7 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
     extractOriginalScriptWords(content).forEach(function(tok){
       if(allowedWordsFold.indexOf(_foldGreekWord(tok))===-1){
         cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified original-language text removed]',GREEK_HEBREW_CLASS);
-        stripped.push({type:'word',token:tok});
+        stripped.push({type:'word',token:tok,context:_contextSnippet(content,tok,GREEK_HEBREW_CLASS)});
       }
     });
   }
@@ -989,7 +1007,7 @@ async function buildPrompt(tool,ref,trans,scope){
     }
     if(tool==='grammar'){
       var gg=await buildGrammarGround(bookNum,parsed,isBook);
-      var prompt=base+intro+' Provide a plain-language grammar and syntax overview -- readable for someone without Greek/Hebrew training, do not truncate:\n\nSUMMARY\n[2-3 sentence plain-language overview of what stands out grammatically in this passage]\n\nSENTENCE STRUCTURE\n[Overall syntax and logical flow, explained plainly, based on the actual word order and tags below]\n\nKEY VERBS\n[The 2-3 most significant verbs from the data and how their ACTUAL tense/mood/voice/case (as tagged below) shapes the meaning — explain in plain terms, not a technical catalog]\n\nNOTABLE CONSTRUCTIONS\n[Any participles, infinitives, or conditionals visible in the tags below that meaningfully affect how the passage should be read — brief]\n\nComplete all sections in plain language.'+groundRule+' The original-language text and morphology tags below are the real, already-tagged text — explain what the tags mean; do not alter, invent, or contradict them.\n\n--- VERIFIED SOURCE DATA (real word/morphology tags, verse by verse) ---\n'+(gg.text||'(no tagged words found)')+'\n--- END VERIFIED SOURCE DATA ---'+noC;
+      var prompt=base+intro+' Provide a plain-language grammar and syntax overview -- readable for someone without Greek/Hebrew training, do not truncate:\n\nSUMMARY\n[2-3 sentence plain-language overview of what stands out grammatically in this passage]\n\nSENTENCE STRUCTURE\n[Overall syntax and logical flow, explained plainly, based on the actual word order and tags below]\n\nKEY VERBS\n[The 2-3 most significant verbs from the data and how their ACTUAL tense/mood/voice/case (as tagged below) shapes the meaning — explain in plain terms, not a technical catalog]\n\nNOTABLE CONSTRUCTIONS\n[Any participles, infinitives, or conditionals visible in the tags below that meaningfully affect how the passage should be read — brief]\n\nComplete all sections in plain language.'+groundRule+' The original-language text and morphology tags below are the real, already-tagged text — explain what the tags mean; do not alter, invent, or contradict them. Whenever you write an original-language word, copy it character-for-character from the data below — never retype it from memory, even a form you are confident is the standard one, since accent placement and grammatical case here are exact and can differ from the form you recall. Reference individual words or short phrases from the data one at a time; do not write out a full continuous clause or verse from memory.\n\n--- VERIFIED SOURCE DATA (real word/morphology tags, verse by verse) ---\n'+(gg.text||'(no tagged words found)')+'\n--- END VERIFIED SOURCE DATA ---'+noC;
       return {prompt:prompt,ground:{allowedStrongs:gg.allowedStrongs,allowedWords:gg.allowedWords}};
     }
     // crossrefs

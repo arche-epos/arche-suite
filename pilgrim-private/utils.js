@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.4',date:'Sep 23, 2026',label:'Latest',
+    version:'4.38.5',date:'Sep 23, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix (untested, pending live verification): Language & Structure's grounding verification still caught two remaining kinds of drift not fixed by v4.38.4's accent matching -- the AI writing a real word in the wrong grammatical case (e.g. accusative \u03c4\u1f70\u03c2 \u1f21\u03bc\u03b5\u03c4\u03ad\u03c1\u03b1\u03c2 \u03b3\u03bb\u03ce\u03c3\u03b1\u03c2 in place of the source's dative \u03c4\u03b1\u1fd6\u03c2 \u1f21\u03bc\u03b5\u03c4\u03ad\u03c1\u03b1\u03b9\u03c2 \u03b3\u03bb\u03ce\u03c3\u03b1\u03b9\u03c2), and a different word entirely (\u1f45\u03c0\u03bf\u03c5 in place of the source's \u03bf\u1f57) -- both consistent with the model retyping a clause from memory instead of copying the exact word forms it was given, even though those exact forms are already present in the prompt's verified data. Added an explicit instruction to the Language & Structure prompt: copy original-language words character-for-character from the supplied data, never retype a full clause from memory. Also added temporary diagnostic logging (surrounding-text context on any stripped word) to investigate a possible recurrence of the v4.38.2 word-splitting bug (\u1f10\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf 4.38.2 fixed) spotted once more as bare \u03b3\u03ad\u03bd\u03b5\u03c4\u03bf in a live error-log check -- logging only, no behavior change. Prompt change not yet re-tested live -- do not treat Category B/C (wrong case, wrong word) as resolved until confirmed."
+    ]},
+  {
+    version:'4.38.4',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the AI Study Tools grounding verification pass (spec-ai-tools-grounding-v1.md Phase 3) compared original-language words by exact string match, so a genuinely-correct word was wrongly flagged \"unverified\" whenever the AI's accent placement differed from the source dictionary's exact recorded form -- e.g. a word's citation-form acute accent instead of its actual in-context grave, or a missed accent shift before an enclitic. Verified against live grounding data: Ἰερουσαλήμ, οὗτοι, λαλούντων, ἐδίδου, φερομένης, and a caps-styled καί were all stripped this way despite being the correct word. Word matching now compares with accent/breathing marks and letter case folded out, so accent-only variance no longer trips the check. A genuinely different word, or the correct word in the wrong grammatical case, is still caught and stripped as before."
