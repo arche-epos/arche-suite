@@ -986,6 +986,29 @@ function updateToolDots(){
  * @param {string} scope - 'passage' or 'book'.
  * @returns {Promise<{prompt:string, ground:Object|null}>} ground is null for ungrounded tools.
  */
+/**
+ * Per-tool reasoning effort and max_tokens for the /groq (DeepInfra gpt-oss-120b)
+ * call. Every tool ran at "Reasoning: low" / max_tokens:6000 (or 2048 for the
+ * Go Deeper/Continue follow-ups). Language & Structure ("grammar") is bumped to
+ * "medium" with a larger token budget -- live error-log review (Sep 23 2026)
+ * showed it, specifically, reproducing quoted original-language text in the
+ * wrong grammatical case or as a different word entirely (spec-ai-tools-
+ * grounding-v1.md Phase 3, Category B/C), consistent with the model reciting a
+ * remembered form instead of checking against the supplied word tags -- exactly
+ * what more reasoning effort should help with. Every other tool showed no such
+ * pattern and stays at "low" to avoid the added latency/cost where it isn't
+ * needed. max_tokens is raised alongside it so the extra reasoning phase can't
+ * eat into the visible-answer budget and cause truncation. UNTESTED as of this
+ * push -- watch completion_tokens/finish_reason on the next live grammar runs.
+ * @param {string} toolName - 'lexical'|'grammar'|'historical'|'cultural'|'crossrefs'|'geography'
+ * @param {number} baseMaxTokens - the max_tokens this call site uses for every non-grammar tool
+ * @returns {{reasoning:string, maxTokens:number}}
+ */
+function _reasoningConfigFor(toolName,baseMaxTokens){
+  if(toolName==='grammar')return {reasoning:'medium',maxTokens:Math.round(baseMaxTokens*1.8)};
+  return {reasoning:'low',maxTokens:baseMaxTokens};
+}
+
 async function buildPrompt(tool,ref,trans,scope){
   var isBook=(scope||studyScope)==='book',book=getBookFromRef(ref);
   var subject=isBook?'the book of '+book+' as a whole':ref; // Governs whether prompts say 'this passage' or 'the book of X'
@@ -1079,7 +1102,8 @@ async function runTool(tool){
   try{
     var trans=ar.pastedTranslation||ar.translation||'ESV';
     var built=await buildPrompt(tool,ar.reference,trans,studyScope);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool,'X-Tool-Scope':studyScope},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:built.prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3})});
+    var _rc=_reasoningConfigFor(tool,6000);
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':tool,'X-Tool-Scope':studyScope},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc.reasoning},{role:'user',content:built.prompt}],max_tokens:_rc.maxTokens,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var content=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'No response received.';
@@ -1315,7 +1339,8 @@ async function runSnapshot(){
     _snapshotAbortControllers[item.tool]=controller;
     try{
       var built2=await buildPrompt(item.tool,ar.reference,trans,item.scope);
-      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':item.tool},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:built2.prompt}],max_tokens:6000,temperature:0.2,frequency_penalty:0.3}),signal:controller.signal});
+      var _rc2=_reasoningConfigFor(item.tool,6000);
+      var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':item.tool},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc2.reasoning},{role:'user',content:built2.prompt}],max_tokens:_rc2.maxTokens,temperature:0.2,frequency_penalty:0.3}),signal:controller.signal});
       if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
       var data=await res.json();
       var content2=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -1500,7 +1525,8 @@ async function expandCurrentTool(){
   var toolLabel=TOOL_LABELS[base]||base;
   var expandPrompt='The following '+toolLabel+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\nPrioritize: '+DEEP_PRIORITIES[base]+'.\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, name scholars on each side.\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
   try{
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:expandPrompt}],max_tokens:2048,temperature:0.2,frequency_penalty:0.3})});
+    var _rc3=_reasoningConfigFor(base,2048);
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc3.reasoning},{role:'user',content:expandPrompt}],max_tokens:_rc3.maxTokens,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
     var more=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
@@ -1535,7 +1561,8 @@ async function continueCurrentTool(){
     var trans2=ar.pastedTranslation||ar.translation||'ESV';
     var builtC=await buildPrompt(base,ar.reference,trans2,scope);
     var contPrompt=builtC.prompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
-    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:contPrompt}],max_tokens:2048,temperature:0.2,frequency_penalty:0.3})});
+    var _rc4=_reasoningConfigFor(base,2048);
+    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc4.reasoning},{role:'user',content:contPrompt}],max_tokens:_rc4.maxTokens,temperature:0.2,frequency_penalty:0.3})});
     if(!res2.ok){var err2=await res2.json().catch(function(){return{};});throw new Error(err2.error?err2.error.message:'HTTP '+res2.status);}
     var data2=await res2.json();
     var addition=data2.choices&&data2.choices[0]&&data2.choices[0].message&&data2.choices[0].message.content||'';

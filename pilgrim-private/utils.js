@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.38.5',date:'Sep 23, 2026',label:'Latest — untested',
+    version:'4.38.6',date:'Sep 23, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change (untested, pending live verification): Language & Structure's AI call now runs at \"Reasoning: medium\" instead of \"low\" (every other AI Study Tool is unchanged, still \"low\") -- the model's own reasoning-effort setting, raised specifically for this tool because the wrong-case/wrong-word drift addressed by v4.38.5's prompt change is exactly the kind of error more deliberation should reduce. max_tokens for Language & Structure is raised proportionally (6000\u219210800 for the main call, 2048\u21923686 for Go Deeper/Continue) so the added reasoning phase can't eat into the visible-answer budget and cause truncation. Expect a slower response for this one tool -- prior runs used ~3,600 of a 6,000 token budget at \"low\"; \"medium\" reasoning adds real wall-clock time before the visible answer even starts. Watch completion_tokens/finish_reason in the diagnostic line on the next live runs to confirm no truncation, and time the response to see whether the wait is acceptable."
+    ]},
+  {
+    version:'4.38.5',date:'Sep 23, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix (untested, pending live verification): Language & Structure's grounding verification still caught two remaining kinds of drift not fixed by v4.38.4's accent matching -- the AI writing a real word in the wrong grammatical case (e.g. accusative \u03c4\u1f70\u03c2 \u1f21\u03bc\u03b5\u03c4\u03ad\u03c1\u03b1\u03c2 \u03b3\u03bb\u03ce\u03c3\u03b1\u03c2 in place of the source's dative \u03c4\u03b1\u1fd6\u03c2 \u1f21\u03bc\u03b5\u03c4\u03ad\u03c1\u03b1\u03b9\u03c2 \u03b3\u03bb\u03ce\u03c3\u03b1\u03b9\u03c2), and a different word entirely (\u1f45\u03c0\u03bf\u03c5 in place of the source's \u03bf\u1f57) -- both consistent with the model retyping a clause from memory instead of copying the exact word forms it was given, even though those exact forms are already present in the prompt's verified data. Added an explicit instruction to the Language & Structure prompt: copy original-language words character-for-character from the supplied data, never retype a full clause from memory. Also added temporary diagnostic logging (surrounding-text context on any stripped word) to investigate a possible recurrence of the v4.38.2 word-splitting bug (\u1f10\u03b3\u03ad\u03bd\u03b5\u03c4\u03bf 4.38.2 fixed) spotted once more as bare \u03b3\u03ad\u03bd\u03b5\u03c4\u03bf in a live error-log check -- logging only, no behavior change. Prompt change not yet re-tested live -- do not treat Category B/C (wrong case, wrong word) as resolved until confirmed."
