@@ -12,7 +12,7 @@ import {
   activeRef,
   trackEvent,
   logError
-} from './utils.js?v=4.42.1';
+} from './utils.js?v=4.42.2';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -47,6 +47,9 @@ export var _ttsVoice = '';
 export var _ttsVolume = 1;
 export var _ttsCharOffset = 0;
 export var _ttsSession = 0;
+var _ttsErrRun = 0;      // consecutive non-interruption speech errors (v4.42.2 runaway guard)
+var _ttsPlayStart = 0;   // Date.now() when the current ttsPlay() began
+var _ttsLastStart = 0;   // index of the last utterance that actually started speaking
 export var _ttsRepeat = false;
 
 // ── Setters for cross-module writes ─────────────────────────────────────────
@@ -113,6 +116,12 @@ function ttsStop(){_ttsSession++;if(window.speechSynthesis)window.speechSynthesi
  * Pauses TTS by cancelling the current utterance and setting _ttsPaused=true.
  * Preserves _ttsIdx and _ttsCharOffset so playback can resume mid-sentence.
  */
+/** Called when the app returns to the foreground: if the OS silently killed the voice while we still think we're playing, show Resume on the verse we left. */
+function ttsSyncAfterResume(){
+  if(_ttsActive&&window.speechSynthesis&&!window.speechSynthesis.speaking&&!window.speechSynthesis.pending){
+    _ttsActive=false;_ttsPaused=true;ttsUpdateBtn(_ttsSource,'paused');
+  }
+}
 function ttsPause(){if(window.speechSynthesis)window.speechSynthesis.cancel();_ttsActive=false;_ttsPaused=true;ttsUpdateBtn(_ttsSource,'paused');}
 /**
  * Starts TTS playback for the given source, beginning at the specified sentence index.
@@ -126,6 +135,7 @@ function ttsPlay(source,fromIdx,charOffset){
   if(!window.speechSynthesis){toast('Text-to-speech not supported in this browser');return;}
   _ttsActive=true;_ttsPaused=false;_ttsSource=source;_ttsIdx=fromIdx||0;
   _ttsSession++;var mySession=_ttsSession;
+  _ttsPlayStart=Date.now();_ttsErrRun=0;_ttsLastStart=_ttsIdx;
   var resumeOffset=charOffset||0;
   ttsUpdateBtn(source,'playing');
   /**
@@ -144,6 +154,12 @@ function ttsPlay(source,fromIdx,charOffset){
       }
       // Reached the end naturally (still active, not paused/stopped) while reading —
       // hand off to readAutoAdvance() to continue into the next chapter, if available.
+      // v4.42.2 safety net: a chapter cannot really finish in under 0.8s. If it did, the voice was
+      // cut off (app backgrounded, OS took the audio) — pause on the last verse that actually started
+      // instead of racing into the next chapter.
+      if(_ttsActive&&source==='read'&&_ttsIdx>=_ttsSentences.length&&Date.now()-_ttsPlayStart<800){
+        _ttsIdx=_ttsLastStart;_ttsCharOffset=0;_ttsActive=false;_ttsPaused=true;ttsUpdateBtn(source,'paused');return;
+      }
       if(_ttsActive&&source==='read'&&_ttsIdx>=_ttsSentences.length&&window.readAutoAdvance){window.readAutoAdvance();return;}
       _ttsActive=false;_ttsPaused=false;_ttsCharOffset=0;ttsUpdateBtn(source,'stopped');return;
     }
@@ -160,8 +176,22 @@ function ttsPlay(source,fromIdx,charOffset){
     var capturedOffset=resumeOffset;
     // Track word-boundary char position so a pause can resume from the exact word
     utt.onboundary=function(e){if(mySession!==_ttsSession)return;if(e.name==='word')_ttsCharOffset=capturedOffset+e.charIndex;};
-    utt.onend=function(){if(mySession!==_ttsSession)return;_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
-    utt.onerror=function(){if(mySession!==_ttsSession)return;_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
+    utt.onstart=function(){if(mySession!==_ttsSession)return;_ttsLastStart=_ttsIdx;};
+    utt.onend=function(){if(mySession!==_ttsSession)return;_ttsErrRun=0;_ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();};
+    utt.onerror=function(e){
+      if(mySession!==_ttsSession)return;
+      var err=e&&e.error;
+      // v4.42.2: an interrupted/cancelled utterance was cut off (pause, app backgrounded, OS took the
+      // audio) — it did NOT finish, so never advance. Stay on this verse, paused.
+      if(err==='interrupted'||err==='canceled'){
+        if(_ttsActive){_ttsActive=false;_ttsPaused=true;ttsUpdateBtn(source,'paused');}
+        return;
+      }
+      // Any other error: skip that verse, but three failures in a row means the voice is dead — pause.
+      _ttsErrRun++;
+      if(_ttsErrRun>=3){_ttsIdx=_ttsLastStart;_ttsCharOffset=0;_ttsActive=false;_ttsPaused=true;ttsUpdateBtn(source,'paused');return;}
+      _ttsIdx++;resumeOffset=0;_ttsCharOffset=0;speakNext();
+    };
     window.speechSynthesis.speak(utt);
     resumeOffset=0;
   }
@@ -371,7 +401,7 @@ function updateTTSRepeatUI(){
 
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
-  ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause,
+  ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause, ttsSyncAfterResume,
   ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsPlayScrFrom, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
   adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI,

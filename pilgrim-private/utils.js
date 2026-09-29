@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.42.1',date:'Sep 28, 2026',label:'Latest — untested',
+    version:'4.42.2',date:'Sep 29, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Read tab no longer jumps to a later chapter (e.g. Mark 1 to Mark 14) after you leave the app and come back. When the phone cuts off the voice, Pilgrim now treats it as paused on the verse you were on instead of as \"finished\", and a chapter that ends in under a second can never auto-advance. Coming back to the app shows Resume on the verse you left.",
+      "note: reading still stops when you leave the app -- the phone suspends built-in speech in the background. Playing behind other apps would need a different approach (real audio files).",
+      "note: no stored data touched. Cache-buster bumped to 4.42.2."
+    ]},
+  {
+    version:'4.42.1',date:'Sep 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Translation Comparison could show \"Couldn't load this translation\" for a few translations when all 14 loaded at once (the Bolls service throttles bursts). Requests are now spaced out and retried automatically.",
