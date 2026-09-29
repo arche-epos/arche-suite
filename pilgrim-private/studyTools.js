@@ -13,12 +13,13 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.42.2';
+} from './utils.js?v=4.43.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.42.2';
-import { syncToGist } from './sync.js?v=4.42.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.42.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.42.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.43.0';
+import { syncToGist } from './sync.js?v=4.43.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.43.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.43.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.43.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -539,21 +540,32 @@ async function buildLexicalFactsHtml(ref,scope){
   var contentWords=(lg.wordEntries||[]).filter(function(e){return e.isContent;});
   if(!contentWords.length)return '';
   var rows=contentWords.map(function(e){
-    var kjv=e.kjvDef?'<div style="margin-top:5px;font-size:12px;color:var(--txt3)"><strong style="color:var(--txt2)">KJV renderings:</strong> '+escHtml(e.kjvDef)+'</div>':'';
     return '<details style="border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;background:var(--bg3)">'
       +'<summary style="cursor:pointer;padding:8px 11px;display:flex;align-items:center;gap:10px;list-style:none;font-family:\'EB Garamond\',serif">'
         +'<span style="font-size:16px;color:var(--gold)">'+escHtml(e.word)+'</span>'
         +'<span style="font-size:11px;color:var(--txt4);flex:1">['+escHtml(e.ref)+']</span>'
         +'<span style="font-size:11px;color:var(--txt4)">'+escHtml(e.strongs)+'</span>'
       +'</summary>'
-      +'<div style="padding:0 11px 11px 11px;font-size:13px;color:var(--txt2);line-height:1.55">'
-        +'<div><strong style="color:var(--goldpale)">'+escHtml(e.translit)+'</strong></div>'
-        +'<div style="margin-top:4px">'+escHtml(e.strongsDef)+'</div>'
-        +kjv
-      +'</div>'
+      +_dictCardBodyHtml(e)
     +'</details>';
   }).join('');
   return '<div style="margin-bottom:14px">'+rows+'</div>';
+}
+
+/**
+ * The dictionary card body (transliteration, Strong's definition, KJV renderings) shared by
+ * the Word Study facts panel above and the Interlinear rows in Bible Tools (v4.43.0). Pure
+ * data -> HTML; output is identical to what the facts panel rendered before it was extracted.
+ * @param {{translit:string, strongsDef:string, kjvDef:string}} e
+ * @returns {string} HTML
+ */
+function _dictCardBodyHtml(e){
+  var kjv=e.kjvDef?'<div style="margin-top:5px;font-size:12px;color:var(--txt3)"><strong style="color:var(--txt2)">KJV renderings:</strong> '+escHtml(e.kjvDef)+'</div>':'';
+  return '<div style="padding:0 11px 11px 11px;font-size:13px;color:var(--txt2);line-height:1.55">'
+    +'<div><strong style="color:var(--goldpale)">'+escHtml(e.translit)+'</strong></div>'
+    +'<div style="margin-top:4px">'+escHtml(e.strongsDef)+'</div>'
+    +kjv
+  +'</div>';
 }
 
 /**
@@ -2574,14 +2586,14 @@ function resInsertText(id){
 // ════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════
-// SECTION 12b — BIBLE TOOLS (v4.40.0 — spec-bible-tools-v1.md, Release 1; v4.42.0 Release 2)
-// Cross-References list + Translation Comparison (one verse, one row per loaded translation). Read-only lookups from data/crossrefs/<book#>.json
-// (OpenBible.info, via jsDelivr). NO AI call anywhere in this feature.
+// SECTION 12b — BIBLE TOOLS (v4.40.0 — spec-bible-tools-v1.md, Release 1; v4.42.0 Release 2; v4.43.0 Release 3)
+// Cross-References list + Translation Comparison (one verse, one row per loaded translation) + Interlinear (one verse, one row per original-language word). Read-only lookups from data/crossrefs/<book#>.json
+// (OpenBible.info, via jsDelivr) and data/macula + data/strongs (Interlinear). NO AI call anywhere in this feature.
 // Nothing is stored except ONE optional field, sett.cmpOrder (v4.42.0: the user's Translation
 // Comparison row order, inside the existing settings object). No new localStorage key, no
 // ar.deep, no sync/backup change. Everything else here is in-memory only.
 // ════════════════════════════════════════════════════════
-var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,tool('xref'|'cmp'|null),open,focus,state,cmpSel,cmpEdit}
+var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,tool('xref'|'cmp'|'ilx'|null),open,focus,state,cmpSel,cmpEdit,ilRows}
 var _btText={};     // 'trans|citation' -> Promise<html> (verse text cache)
 var _btChap={};     // 'code|book|chapter' -> Promise<[{verse,text}]> (Bolls chapter cache)
 var _btApiStamps=[]; // bible-api.com request timestamps (sliding window; it allows ~15 calls / 30s)
@@ -2693,9 +2705,12 @@ function _btRender(){
   }
   h+='<button class="bt-tool" style="margin-top:8px" onclick="btToggleTool(\'cmp\')"><span>Translation Comparison</span><span class="bt-meta">'+_BT_TRANS.length+' translations</span><span class="bt-chev">'+(x.tool==='cmp'?'▾':'▸')+'</span></button>';
   if(x.tool==='cmp')h+=_btCmpHTML();
+  h+='<button class="bt-tool" style="margin-top:8px" onclick="btToggleTool(\'ilx\')"><span>Interlinear</span><span class="bt-meta">'+(x.sec.book<=39?'Hebrew':'Greek')+' word by word</span><span class="bt-chev">'+(x.tool==='ilx'?'▾':'▸')+'</span></button>';
+  if(x.tool==='ilx')h+=_btIlxHTML();
   el.innerHTML=h;
   if(x.tool==='xref'&&x.state==='ready')x.verses.forEach(function(d){if(x.open[d.c+':'+d.v])_btHydrate(d);});
   if(x.tool==='cmp')_btCmpHydrate();
+  if(x.tool==='ilx')_btIlxHydrate();
 }
 function _btVerseHTML(d){
   var x=_btCtx,k=d.c+':'+d.v,multi=x.sec.s[0]!==x.sec.e[0];
@@ -2874,6 +2889,86 @@ function btCmpMove(t,dir){
   try{localStorage.setItem(SK_SETT,JSON.stringify(sett));}catch(e){logError('Bible Tools order save',e);}
   _btRender();
 }
+/**
+ * Interlinear (v4.43.0, spec-bible-tools-v1.md Release 3): one verse, one row per original-language
+ * word. NO AI call: words, lemma and parsing come from data/macula/<book#>.json, the dictionary
+ * text from data/strongs/. It shares the verse picker (x.cmpSel) with Translation Comparison, so
+ * picking a verse in either tool moves the other. Nothing is stored (no setting, no localStorage).
+ * Each row: original word + gloss on line 1; dictionary form, transliteration, Strong's number and a
+ * plain-English parsing chip on line 2. Tapping a row with a Strong's entry opens the same
+ * dictionary card the Word Study facts panel uses (_dictCardBodyHtml). Words with no Strong's
+ * number (mostly Hebrew prefix + pronoun forms) show but do not open.
+ * Notes on the data: the transliteration is the dictionary form's (from Strong's), not the inflected
+ * word's. OT gloss = short Strong's definition (OSHB has no gloss); Greek gloss = MACULA's, falling
+ * back to the same short definition when MACULA leaves it blank. OT verse numbers follow the Hebrew text.
+ */
+function _btIlxHTML(){
+  var x=_btCtx,vs=_btCmpVerses(),multi=x.sec.s[0]!==x.sec.e[0];
+  var h='<div class="bt-list">';
+  if(!vs.length)return h+'<div class="bt-note">No verses found for this passage.</div></div>';
+  h+='<div class="bt-pickbar"><select class="bt-pick" onchange="btCmpPick(this.value)" aria-label="Verse for Interlinear">'+vs.map(function(d){
+    var k=d.c+':'+d.v;return '<option value="'+k+'"'+(k===x.cmpSel?' selected':'')+'>'+(multi?d.c+':':'')+'Verse '+d.v+'</option>';
+  }).join('')+'</select></div>';
+  if(x.sec.book<=39)h+='<div class="bt-na" style="margin:2px 2px 8px">Verse numbers follow the Hebrew text. In a few places (many Psalm titles, Joel, Malachi, Genesis 31–32 and others) they differ from English Bibles, so a verse can show neighbouring words.</div>';
+  h+='<div id="bt-il-rows"><div class="bt-note"><div class="spin"></div>Loading words…</div></div></div>';
+  return h;
+}
+async function _btIlxHydrate(){
+  var x=_btCtx;if(!x||!x.cmpSel)return;
+  var sel=x.cmpSel,book=x.sec.book,isOT=book<=39;
+  var alive=function(){return _btCtx===x&&x.cmpSel===sel&&x.tool==='ilx';};
+  var box=document.getElementById('bt-il-rows');if(!box)return;
+  try{
+    var data=await getMaculaBook(book);
+    var dict=await getStrongsDict(isOT?'hebrew':'greek');
+    if(!alive())return;
+    var words=data[sel];
+    if(!words||!words.length){box.innerHTML='<div class="bt-note">No original-language words found for this verse.</div>';return;}
+    x.ilRows=words.map(function(w){
+      var def=w.strongs?dict[w.strongs]:null;
+      return {
+        word:w.word,
+        lemma:isOT?(def&&def.lemma)||'':(w.lemma||''),
+        translit:(def&&def.translit)||'',
+        strongs:w.strongs||'',
+        chip:decodeMorph(w.morph,isOT).chip,
+        gloss:w.gloss||shortGloss(def&&def.strongs_def),
+        rtl:isOT,
+        card:def?{translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||''}:null
+      };
+    });
+    box.innerHTML=x.ilRows.map(_btIlxRowHTML).join('');
+  }catch(e){
+    logError('Bible Tools Interlinear',e);
+    if(alive())box.innerHTML='<div class="bt-note">Could not load the words for this verse. Check your connection.<button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="btIlxRetry()">Try again</button></div>';
+  }
+}
+function _btIlxRowHTML(r,i){
+  var dir=r.rtl?'rtl':'ltr',lang=r.rtl?'he':'grc';
+  var meta=[];
+  if(r.lemma)meta.push('<span dir="'+dir+'" lang="'+lang+'">'+escHtml(r.lemma)+'</span>');
+  if(r.translit)meta.push(escHtml(r.translit));
+  if(r.strongs)meta.push(escHtml(r.strongs));
+  return '<div class="bt-ilr"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
+    +'<span class="bt-il1"><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-ilg">'+escHtml(r.gloss)+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
+    +'<span class="bt-il2">'+(meta.length?'<span class="bt-ilm">'+meta.join(' · ')+'</span>':'')+'<span class="bt-chip">'+escHtml(r.chip)+'</span></span>'
+    +'</button><div class="bt-ilcard" id="bt-ilc-'+i+'" hidden></div></div>';
+}
+/** Opens or closes the dictionary card under one Interlinear row (built the first time it opens). */
+function btIlxToggle(i){
+  var x=_btCtx;if(!x||!x.ilRows||!x.ilRows[i]||!x.ilRows[i].card)return;
+  var c=document.getElementById('bt-ilc-'+i);if(!c)return;
+  var b=c.previousElementSibling;
+  if(c.hidden){
+    if(!c.firstChild)c.innerHTML=_dictCardBodyHtml(x.ilRows[i].card);
+    c.hidden=false;
+  }else{c.hidden=true;}
+  if(b){
+    b.setAttribute('aria-expanded',String(!c.hidden));
+    var ch=b.querySelector('.bt-chev');if(ch)ch.textContent=c.hidden?'▸':'▾';
+  }
+}
+function btIlxRetry(){if(_btCtx)_btIlxHydrate();}
 /** Study-screen entry point: the active reference's passage, in the translation currently selected there. */
 function openBibleToolsFromStudy(){
   var ar=activeRef();
@@ -2893,9 +2988,9 @@ export {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
   getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
-  // S12b — Bible Tools (v4.40.0; Translation Comparison v4.42.0)
+  // S12b — Bible Tools (v4.40.0; Translation Comparison v4.42.0; Interlinear v4.43.0)
   openBibleTools, openBibleToolsFromStudy, btToggleTool, btToggleVerse, btRetry,
-  btCmpPick, btCmpEditToggle, btCmpMove, btCmpRetry,
+  btCmpPick, btCmpEditToggle, btCmpMove, btCmpRetry, btIlxToggle, btIlxRetry,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,

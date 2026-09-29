@@ -497,7 +497,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.42.2',date:'Sep 29, 2026',label:'Latest — untested',
+    version:'4.43.0',date:'Sep 29, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature (untested, pending live verification): Bible Tools now has an Interlinear row beneath Translation Comparison. Pick a verse and see it word by word in the original language -- the Greek or Hebrew word, its dictionary form, transliteration, Strong's number, a plain-English grammar chip (for example \"Verb: aorist active indicative, 3rd person singular\"), and a short English meaning. Tap a word to open its full dictionary entry, the same one Word Study shows. No AI involved; everything comes from the Greek (MACULA) and Hebrew (Open Scriptures) word data and the Strong's dictionaries.",
+      "note: Hebrew words show a short English meaning taken from Strong's (the Hebrew data has none). Words with no Strong's entry (mostly small prefix-and-pronoun forms) show but do not open. The transliteration is the dictionary form's, not the inflected word's.",
+      "note: Old Testament verse numbers follow the Hebrew text, so in a few places (many Psalm titles, Joel, Malachi, Genesis 31-32) a verse can show neighbouring words compared with English Bibles; the Interlinear panel says so on OT verses.",
+      "note: nothing new is stored (no setting, no change to saved studies, sync, or backup). New file morph.js holds the grammar decoding. Cache-buster bumped to 4.43.0."
+    ]},
+  {
+    version:'4.42.2',date:'Sep 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Read tab no longer jumps to a later chapter (e.g. Mark 1 to Mark 14) after you leave the app and come back. When the phone cuts off the voice, Pilgrim now treats it as paused on the verse you were on instead of as \"finished\", and a chapter that ends in under a second can never auto-advance. Coming back to the app shows Resume on the verse you left.",

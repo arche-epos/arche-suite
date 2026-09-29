@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, and Translation Comparison added in v4.42.0 (Sep 28, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), and Interlinear added in v4.43.0 (Sep 29, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -149,6 +149,16 @@ that avoids the excluded list.
   in all 14 translations, one row each. **Reorder** lets you move the
   translations you use most to the top with the up/down arrows; the order is
   remembered on this device. YLT shows only for New Testament verses.
+- See a verse word by word in Greek or Hebrew (no AI) → Bible Tools sheet >
+  **Interlinear** (below Translation Comparison; tap it to open). Pick a verse
+  from the dropdown (the same verse picker as Translation Comparison, so
+  changing it in one changes the other). Each row shows the original word and a
+  short English meaning, then its dictionary form, transliteration, Strong's
+  number, and a plain-English grammar chip. Tap a row to open its full
+  dictionary entry. Words with no Strong's entry (small prefix-and-pronoun
+  forms) show but do not open. Old Testament verse numbers follow the Hebrew
+  text, so a few (many Psalm titles, Joel, Malachi, Genesis 31-32) can differ
+  from English Bibles. Hebrew meanings are short Strong's definitions.
 
 ### Study — Notes tab
 - Take notes during a sermon/quiet time/small group → **Study > Notes**,
@@ -173,6 +183,13 @@ that avoids the excluded list.
   in the Scripture panel > **Translation Comparison**. Choose the verse from the
   dropdown (starts on the first verse of the passage); **Reorder** puts your
   most-used translations at the top; YLT covers the New Testament only
+- See the original-language words of a verse (no AI) → **Bible Tools** button
+  in the Scripture panel > **Interlinear**. Choose the verse from the dropdown
+  (starts on the first verse of the passage; shared with Translation
+  Comparison). One row per word: Greek/Hebrew word, meaning, dictionary form,
+  transliteration, Strong's number, grammar chip; tap a row for the dictionary
+  entry. Language & Structure (AI) still exists; Interlinear covers the same
+  parsing from fixed data
 - Run all the study tools at once → **Study Snapshot** (runs Word Study,
   Language & Structure, and Places & Geography on the exact
   passage, plus Historical and Cultural Context at the whole-book level)
