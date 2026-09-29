@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.40.0',date:'Sep 28, 2026',label:'Latest — untested',
+    version:'4.41.0',date:'Sep 28, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the AI Cross-References tool is retired -- its button is removed from the Study Tools tab and it no longer runs in Study Snapshot (now five tools). Bible Tools > Cross-References replaces it. Cross-reference results you already saved on studies are untouched and still appear in exports.",
+      "change: removed the \"Show all\" option from Bible Tools cross-references -- no verse has more than 8, so every reference is simply shown.",
+      "note: no new stored settings; nothing removed from saved studies, sync, or backup. Cache-buster bumped to 4.41.0."
+    ]},
+  {
+    version:'4.40.0',date:'Sep 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature (untested, pending live verification): new Bible Tools sheet with a Cross-References list -- no AI involved, every reference comes straight from the OpenBible.info dataset. Open it from Read (tap a verse number, then the Bible Tools button in the player bar; the whole chapter is listed with your verse expanded) or from the Study screen (Bible Tools button under the passage). One collapsed row per verse with a reference count; tap a verse to see its cross-references ranked by votes, each labeled OT/NT with the verse text in your current translation. Top 20 shown with a Show all option. Cross-chapter ranges (e.g. Genesis 1:5-2:3) load their full text.",

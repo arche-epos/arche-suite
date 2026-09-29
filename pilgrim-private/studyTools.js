@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.40.0';
+} from './utils.js?v=4.41.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.40.0';
-import { syncToGist } from './sync.js?v=4.40.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.40.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.40.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.41.0';
+import { syncToGist } from './sync.js?v=4.41.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.41.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.41.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -827,11 +827,11 @@ function populateDeep(){
   var snapSub=document.getElementById('snapshot-sub');
   if(snapSub){
     var _sd=ar&&ar.deep;
-    // All 6 snapshot tools must be present: lexical+grammar+crossrefs+geography (passage) + historical+cultural (book)
-    var _allReady=_sd&&_sd.lexical&&_sd.grammar&&_sd.crossrefs&&_sd.geography&&_sd.historical_book&&_sd.cultural_book;
+    // All 5 snapshot tools must be present: lexical+grammar+geography (passage) + historical+cultural (book)
+    var _allReady=_sd&&_sd.lexical&&_sd.grammar&&_sd.geography&&_sd.historical_book&&_sd.cultural_book;
     if(_snapshotRunning){/* leave as-is */}
     else if(_allReady){snapSub.textContent='All tools ready \u2014 tap to refresh';}
-    else{snapSub.textContent='Word Study \u00b7 Language & Structure \u00b7 Cross-Refs \u00b7 Places & Geography + Historical \u00b7 Cultural (book)';}
+    else{snapSub.textContent='Word Study \u00b7 Language & Structure \u00b7 Places & Geography + Historical \u00b7 Cultural (book)';}
   }
   // Scripture collapsible
   var scrEl=document.getElementById('d-scrtext');
@@ -1225,7 +1225,7 @@ var _snapshotRunning=false;var _snapshotLastRun=null;
 // tool -> {start:timestamp, intervalId} — drives the live elapsed-time counter per row
 var _snapRowTimers={};
 // Fixed ordering of all 6 snapshot tools — used by the progress modal to identify rows
-var SNAPSHOT_TOOL_ORDER=['lexical','grammar','crossrefs','geography','historical','cultural'];
+var SNAPSHOT_TOOL_ORDER=['lexical','grammar','geography','historical','cultural']; // crossrefs retired from the snapshot in v4.41.0 (replaced by Bible Tools)
 /**
  * Entry point for the Study Snapshot button.
  * On mobile (≤900px), opens the snapshot confirmation overlay before running.
@@ -1396,7 +1396,7 @@ async function runSnapshot(){
   var btn=document.getElementById('btn-snapshot');
   var sub=document.getElementById('snapshot-sub');
   if(btn){btn.style.opacity='.6';btn.style.pointerEvents='none';}
-  var passageTools=['lexical','grammar','crossrefs','geography'];
+  var passageTools=['lexical','grammar','geography'];
   var bookTools=['historical','cultural'];
   var all=passageTools.map(function(t){return {tool:t,scope:'passage'};}).concat(bookTools.map(function(t){return {tool:t,scope:'book'};}));
   openSnapshotProgressModal(all);
@@ -2580,8 +2580,7 @@ function resInsertText(id){
 // Nothing is stored: every variable below is in-memory only — no localStorage
 // keys, no ar.deep, no sync/backup impact.
 // ════════════════════════════════════════════════════════
-var BT_TOP=20;      // references shown per verse before "Show all"
-var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,toolOpen,open,showAll,focus,state}
+var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,toolOpen,open,focus,state}
 var _btText={};     // 'trans|citation' -> Promise<html> (verse text cache)
 var _btChap={};     // 'code|book|chapter' -> Promise<[{verse,text}]> (Bolls chapter cache)
 
@@ -2632,7 +2631,7 @@ async function openBibleTools(ref,trans,focusKey,verseNums){
   var sec=_btParseSection(ref);
   if(!sec){toast('Bible Tools works within one book — pick a chapter or verse range');return;}
   if(!online){toast('Bible Tools needs a connection');return;}
-  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,toolOpen:true,open:{},showAll:{},focus:focusKey||null,state:'loading',nums:verseNums||null};
+  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,toolOpen:true,open:{},focus:focusKey||null,state:'loading',nums:verseNums||null};
   document.getElementById('bt-overlay').classList.add('on');
   _btRender();
   await _btLoad();
@@ -2696,21 +2695,17 @@ function _btVerseHTML(d){
   var isOpen=!!x.open[k]&&d.refs.length>0;
   var h='<button class="bt-vhead" '+(d.refs.length?'':'disabled ')+'onclick="btToggleVerse(\''+k+'\')"><span>'+(multi?d.c+':':'')+'Verse '+d.v+'</span><span class="bt-count">'+d.refs.length+' ref'+(d.refs.length===1?'':'s')+'</span><span class="bt-chev">'+(d.refs.length?(isOpen?'▾':'▸'):'')+'</span></button>';
   if(!isOpen)return h;
-  var shown=x.showAll[k]?d.refs:d.refs.slice(0,BT_TOP);
-  h+='<div class="bt-refs">'+shown.map(function(r,i){
+  h+='<div class="bt-refs">'+d.refs.map(function(r,i){
     var pc=_btParseCitation(r[0]);
     var tag=pc?(pc.book<=39?'OT':'NT'):'';
     return '<div class="bt-ref"><div><span class="bt-cit">'+escHtml(r[0])+'</span>'+(tag?'<span class="bt-tag">'+tag+'</span>':'')+'</div><div class="bt-text" id="bt-t-'+d.c+'-'+d.v+'-'+i+'">Loading…</div></div>';
   }).join('');
-  if(d.refs.length>BT_TOP&&!x.showAll[k])h+='<button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="btShowAll(\''+k+'\')">Show all '+d.refs.length+'</button>';
   return h+'</div>';
 }
 /** Loads verse text for every visible reference of one verse (in parallel; cached per translation). */
 function _btHydrate(d){
   var x=_btCtx;if(!x)return;
-  var k=d.c+':'+d.v;
-  var shown=x.showAll[k]?d.refs:d.refs.slice(0,BT_TOP);
-  shown.forEach(function(r,i){
+  d.refs.forEach(function(r,i){
     _btLoadText(r[0]).then(function(html){
       var el=document.getElementById('bt-t-'+d.c+'-'+d.v+'-'+i);if(el&&_btCtx===x)el.innerHTML=html;
     }).catch(function(e){
@@ -2773,13 +2768,6 @@ function btToggleVerse(k){
   el.innerHTML=_btVerseHTML(d);
   if(x.open[k])_btHydrate(d);
 }
-function btShowAll(k){
-  var x=_btCtx;if(!x||!x.verses)return;
-  var d=x.verses.filter(function(v){return v.c+':'+v.v===k;})[0];if(!d)return;
-  x.showAll[k]=true;
-  var el=document.getElementById('bt-v-'+d.c+'-'+d.v);if(!el)return;
-  el.innerHTML=_btVerseHTML(d);_btHydrate(d);
-}
 /** Study-screen entry point: the active reference's passage, in the translation currently selected there. */
 function openBibleToolsFromStudy(){
   var ar=activeRef();
@@ -2800,7 +2788,7 @@ export {
   getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
   // S12b — Bible Tools (v4.40.0)
-  openBibleTools, openBibleToolsFromStudy, btToggleTool, btToggleVerse, btShowAll, btRetry,
+  openBibleTools, openBibleToolsFromStudy, btToggleTool, btToggleVerse, btRetry,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,
