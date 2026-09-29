@@ -178,19 +178,27 @@ function decodeMorph(morph,isOT){
 
 /**
  * Short English gloss from a Strong's definition (used where the source has no gloss:
- * every Hebrew word, and the few Greek words MACULA leaves blank). Takes the first clause,
- * with parentheses removed. Strong's KJV-rendering lists are alphabetical, not by frequency,
- * so they are NOT used here ("choose" would come first for bara, "angels" for Elohim).
+ * every Hebrew word, and the few Greek words MACULA leaves blank). Uses the first useful clause of
+ * the definition, with parentheses removed. Strong's opens many entries with filler such as
+ * "properly, the whole; hence, all", so leading filler words are dropped and, when a clause is
+ * only filler or a usage note ("adverb or preposition", "very widely used as ..."), the next clause
+ * is used if there is one. Strong's KJV-rendering lists are alphabetical, not by frequency, so they
+ * are NOT used here ("choose" would come first for bara, "angels" for Elohim).
  * @param {string} strongsDef - the entry's strongs_def text.
  * @returns {string} A short phrase, or '' if there is nothing usable.
  */
+var _GL_LEAD = /^(?:(?:perhaps|probably|apparently|literally|properly|hence|i\.e\.|by implication|also|or|and)(?:\s+|$))+/i;
+var _GL_USAGE = /^(?:adverb or preposition|used very widely|used|a primitive|primitive|a prim|a form|a variation|the same|contracted)\b/i;
 function shortGloss(strongsDef){
   var t=String(strongsDef||'').replace(/\([^)]*\)/g,' ').replace(/\(.*$/,' ').replace(/\)/g,' ').replace(/\s+/g,' ').trim();
-  var cut=t.search(/[;,:]/);
-  if(cut>0)t=t.slice(0,cut);
-  t=t.replace(/[\s.]+$/,'').trim();
-  if(t.length>60)t=t.slice(0,57).replace(/\s+\S*$/,'')+'…';
-  return t;
+  var clauses=t.split(/[;,:]/).map(function(c){return c.replace(_GL_LEAD,'').replace(/[\s.]+$/,'').trim();}).filter(Boolean);
+  if(!clauses.length)return '';
+  var pick=clauses[0];
+  for(var i=0;i<clauses.length;i++){
+    if(!_GL_USAGE.test(clauses[i])){pick=clauses[i];break;}
+  }
+  if(pick.length>60)pick=pick.slice(0,57).replace(/\s+\S*$/,'')+'\u2026';
+  return pick;
 }
 
 export { decodeMorph, shortGloss };

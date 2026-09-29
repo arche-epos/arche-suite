@@ -40,6 +40,10 @@ import(tmp).then((m) => {
   eq('gloss: first clause', m.shortGloss(' (absolutely) to create; (qualified) to cut down'), 'to create');
   eq('gloss: unclosed parenthesis', m.shortGloss(' the sky (as aloft; the dual perhaps'), 'the sky');
   eq('gloss: empty', m.shortGloss(''), '');
+  eq('gloss: leading filler skipped', m.shortGloss('properly, self (but generally used to point out more definitely the object)'), 'self');
+  eq('gloss: filler then real clause', m.shortGloss('properly, the whole; hence, all, any or every'), 'the whole');
+  eq('gloss: usage note skipped', m.shortGloss('adverb or preposition, with (i.e. in conjunction with)'), 'with');
+  eq('gloss: only clause kept even if descriptive', m.shortGloss('(by implication) very widely used as a relative conjunction or adverb'), 'very widely used as a relative conjunction or adverb');
 
   // Coverage: every distinct tag in all 66 book files decodes with no unrecognised code.
   const dir = path.join(__dirname, '..', '..', 'data', 'macula');

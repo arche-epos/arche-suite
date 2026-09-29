@@ -497,7 +497,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.43.0',date:'Sep 29, 2026',label:'Latest — untested',
+    version:'4.43.1',date:'Sep 29, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Interlinear's short English meaning for Hebrew words was poor for some of the most common words -- the direct-object marker and the word for \"all\" both showed just \"properly\" (Strong's opens many entries with that filler word). Filler is now skipped, so these show \"self\" and \"the whole\", \"from\" now shows \"a part of\", and so on.",
+      "note: these meanings are Strong's own short definitions, which sometimes give a word's root sense rather than its usual translation. The full entry (tap the row) is always one tap away. No stored data touched. Cache-buster bumped to 4.43.1."
+    ]},
+  {
+    version:'4.43.0',date:'Sep 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature (untested, pending live verification): Bible Tools now has an Interlinear row beneath Translation Comparison. Pick a verse and see it word by word in the original language -- the Greek or Hebrew word, its dictionary form, transliteration, Strong's number, a plain-English grammar chip (for example \"Verb: aorist active indicative, 3rd person singular\"), and a short English meaning. Tap a word to open its full dictionary entry, the same one Word Study shows. No AI involved; everything comes from the Greek (MACULA) and Hebrew (Open Scriptures) word data and the Strong's dictionaries.",
