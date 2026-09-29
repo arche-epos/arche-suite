@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.42.0';
+} from './utils.js?v=4.42.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.42.0';
-import { syncToGist } from './sync.js?v=4.42.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.42.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.42.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.42.1';
+import { syncToGist } from './sync.js?v=4.42.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.42.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.42.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2765,11 +2765,23 @@ async function _btFetchText(cit,trans,alive){
   if(!chunks.length)return [{label:'',text:String(raw).trim()}];
   return chunks.map(function(ch){return {label:ch.num,text:ch.text};});
 }
+/** Spaces Bolls requests ~300ms apart and retries HTTP 429 (it throttles bursts of 8 chapters at once). */
+var _btBollsNext=0;
+function _btWait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+async function _btBollsGet(url){
+  for(var i=0;;i++){
+    var now=Date.now(),at=Math.max(now,_btBollsNext);_btBollsNext=at+300;
+    if(at>now)await _btWait(at-now);
+    var r=await fetch(url);
+    if(r.status===429&&i<3){await _btWait(1200*(i+1));continue;}
+    if(!r.ok)throw new Error('Bolls '+r.status);
+    return r.json();
+  }
+}
 function _btBollsChapter(code,book,c){
   var k=code+'|'+book+'|'+c;
   if(!_btChap[k]){
-    _btChap[k]=fetch('https://bolls.life/get-text/'+code+'/'+book+'/'+c+'/')
-      .then(function(r){if(!r.ok)throw new Error('Bolls '+r.status);return r.json();})
+    _btChap[k]=_btBollsGet('https://bolls.life/get-text/'+code+'/'+book+'/'+c+'/')
       .then(function(vs){return vs.map(function(v){return {verse:v.verse,text:String(v.text).replace(/<sup[^>]*>.*?<\/sup>/gi,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()};});})
       .catch(function(e){delete _btChap[k];throw e;});
   }

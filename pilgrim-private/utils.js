@@ -497,7 +497,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.42.0',date:'Sep 28, 2026',label:'Latest — untested',
+    version:'4.42.1',date:'Sep 28, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Translation Comparison could show \"Couldn't load this translation\" for a few translations when all 14 loaded at once (the Bolls service throttles bursts). Requests are now spaced out and retried automatically.",
+      "note: no new stored settings. Cache-buster bumped to 4.42.1."
+    ]},
+  {
+    version:'4.42.0',date:'Sep 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature (untested, pending live verification): Bible Tools now has a Translation Comparison row beneath Cross-References. Pick a verse and see it in all 14 translations Pilgrim already loads, one stacked row each -- no AI involved. Use the Reorder button to move the translations you use most to the top; your order is remembered on this device.",
