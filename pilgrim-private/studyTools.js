@@ -13,12 +13,12 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.41.0';
+} from './utils.js?v=4.42.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.41.0';
-import { syncToGist } from './sync.js?v=4.41.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.41.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.41.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.42.0';
+import { syncToGist } from './sync.js?v=4.42.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.42.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.42.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2574,15 +2574,19 @@ function resInsertText(id){
 // ════════════════════════════════════════════════════════
 
 // ════════════════════════════════════════════════════════
-// SECTION 12b — BIBLE TOOLS (v4.40.0 — spec-bible-tools-v1.md, Release 1)
-// Cross-References list. Read-only lookups from data/crossrefs/<book#>.json
+// SECTION 12b — BIBLE TOOLS (v4.40.0 — spec-bible-tools-v1.md, Release 1; v4.42.0 Release 2)
+// Cross-References list + Translation Comparison (one verse, one row per loaded translation). Read-only lookups from data/crossrefs/<book#>.json
 // (OpenBible.info, via jsDelivr). NO AI call anywhere in this feature.
-// Nothing is stored: every variable below is in-memory only — no localStorage
-// keys, no ar.deep, no sync/backup impact.
+// Nothing is stored except ONE optional field, sett.cmpOrder (v4.42.0: the user's Translation
+// Comparison row order, inside the existing settings object). No new localStorage key, no
+// ar.deep, no sync/backup change. Everything else here is in-memory only.
 // ════════════════════════════════════════════════════════
-var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,toolOpen,open,focus,state}
+var _btCtx=null;    // open-sheet state: {ref,trans,sec,verses,tool('xref'|'cmp'|null),open,focus,state,cmpSel,cmpEdit}
 var _btText={};     // 'trans|citation' -> Promise<html> (verse text cache)
 var _btChap={};     // 'code|book|chapter' -> Promise<[{verse,text}]> (Bolls chapter cache)
+var _btApiStamps=[]; // bible-api.com request timestamps (sliding window; it allows ~15 calls / 30s)
+var _BT_TRANS=['esv','kjv','asv','web','ylt','darby','nkjv','net','amp','csb','nlt','msg','nasb','niv']; // default comparison order (matches the #f-trans list)
+var _BT_LABEL={darby:'Darby'};
 
 /** Resolves a book name (any spacing/case) to its 1-66 number, or 0. */
 function _btBookNum(name){return BOLLS_BOOKS[String(name).replace(/\s+/g,'').toLowerCase()]||0;}
@@ -2631,7 +2635,7 @@ async function openBibleTools(ref,trans,focusKey,verseNums){
   var sec=_btParseSection(ref);
   if(!sec){toast('Bible Tools works within one book — pick a chapter or verse range');return;}
   if(!online){toast('Bible Tools needs a connection');return;}
-  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,toolOpen:true,open:{},focus:focusKey||null,state:'loading',nums:verseNums||null};
+  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,tool:'xref',open:{},focus:focusKey||null,state:'loading',nums:verseNums||null,cmpSel:focusKey||null,cmpEdit:false};
   document.getElementById('bt-overlay').classList.add('on');
   _btRender();
   await _btLoad();
@@ -2678,8 +2682,8 @@ function _btRender(){
   var el=document.getElementById('bt-body');var x=_btCtx;if(!el||!x)return;
   var h='<div class="bt-sub">'+escHtml(x.ref)+' · '+escHtml(String(x.trans).toUpperCase())+'</div>';
   var withRefs=x.verses?x.verses.filter(function(d){return d.refs.length;}).length:0;
-  h+='<button class="bt-tool" onclick="btToggleTool()"><span>Cross-References</span><span class="bt-meta">'+(x.state==='ready'?withRefs+' verse'+(withRefs===1?'':'s'):'')+'</span><span class="bt-chev">'+(x.toolOpen?'▾':'▸')+'</span></button>';
-  if(x.toolOpen){
+  h+='<button class="bt-tool" onclick="btToggleTool(\'xref\')"><span>Cross-References</span><span class="bt-meta">'+(x.state==='ready'?withRefs+' verse'+(withRefs===1?'':'s'):'')+'</span><span class="bt-chev">'+(x.tool==='xref'?'▾':'▸')+'</span></button>';
+  if(x.tool==='xref'){
     h+='<div class="bt-list">';
     if(x.state==='loading')h+='<div class="bt-note"><div class="spin"></div>Loading cross-references…</div>';
     else if(x.state==='error')h+='<div class="bt-note">Could not load cross-references. Check your connection.<button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="btRetry()">Try again</button></div>';
@@ -2687,8 +2691,11 @@ function _btRender(){
     else h+=x.verses.map(function(d){return '<div class="bt-verse" id="bt-v-'+d.c+'-'+d.v+'">'+_btVerseHTML(d)+'</div>';}).join('');
     h+='</div>';
   }
+  h+='<button class="bt-tool" style="margin-top:8px" onclick="btToggleTool(\'cmp\')"><span>Translation Comparison</span><span class="bt-meta">'+_BT_TRANS.length+' translations</span><span class="bt-chev">'+(x.tool==='cmp'?'▾':'▸')+'</span></button>';
+  if(x.tool==='cmp')h+=_btCmpHTML();
   el.innerHTML=h;
-  if(x.toolOpen&&x.state==='ready')x.verses.forEach(function(d){if(x.open[d.c+':'+d.v])_btHydrate(d);});
+  if(x.tool==='xref'&&x.state==='ready')x.verses.forEach(function(d){if(x.open[d.c+':'+d.v])_btHydrate(d);});
+  if(x.tool==='cmp')_btCmpHydrate();
 }
 function _btVerseHTML(d){
   var x=_btCtx,k=d.c+':'+d.v,multi=x.sec.s[0]!==x.sec.e[0];
@@ -2715,15 +2722,26 @@ function _btHydrate(d){
     });
   });
 }
-function _btLoadText(cit){
-  var t=_btCtx.trans,key=t+'|'+cit;
+function _btLoadText(cit){return _btLoadTextFor(cit,_btCtx.trans);}
+/** Cached, formatted verse text for one citation in one translation. `alive` (optional) lets a queued request bail out once the row it was for is gone. */
+function _btLoadTextFor(cit,t,alive){
+  var key=t+'|'+cit;
   if(!_btText[key]){
-    _btText[key]=_btFetchText(cit,t).then(_btFormat).catch(function(e){delete _btText[key];throw e;});
+    _btText[key]=_btFetchText(cit,t,alive).then(_btFormat).catch(function(e){delete _btText[key];throw e;});
   }
   return _btText[key];
 }
+/** Waits for a free bible-api.com slot (max 12 calls per rolling 31s — the service allows ~15 per 30s). */
+async function _btApiSlot(){
+  for(;;){
+    var now=Date.now();
+    _btApiStamps=_btApiStamps.filter(function(s){return now-s<31000;});
+    if(_btApiStamps.length<12){_btApiStamps.push(now);return;}
+    await new Promise(function(r){setTimeout(r,_btApiStamps[0]+31000-now+50);});
+  }
+}
 /** Returns verse chunks [{label,text}] for one citation in the given translation. */
-async function _btFetchText(cit,trans){
+async function _btFetchText(cit,trans,alive){
   var code=BOLLS_TRANS[trans],pc=_btParseCitation(cit);
   if(trans!=='esv'&&code&&pc){
     // Bolls: one cached chapter fetch per chapter, sliced locally. Also covers cross-chapter
@@ -2737,6 +2755,10 @@ async function _btFetchText(cit,trans){
     if(!out.length)throw new Error('No text for '+cit);
     return out;
   }
+  if(trans!=='esv'){
+    await _btApiSlot();
+    if(alive&&!alive())throw new Error('stale');
+  }
   var raw=trans==='esv'?await getESV(cit):await getBibleAPI(cit,trans);
   if(!raw)throw new Error('Empty response for '+cit);
   var chunks=parseVerseChunks(raw);
@@ -2748,17 +2770,17 @@ function _btBollsChapter(code,book,c){
   if(!_btChap[k]){
     _btChap[k]=fetch('https://bolls.life/get-text/'+code+'/'+book+'/'+c+'/')
       .then(function(r){if(!r.ok)throw new Error('Bolls '+r.status);return r.json();})
-      .then(function(vs){return vs.map(function(v){return {verse:v.verse,text:String(v.text).replace(/<[^>]+>/g,'').trim()};});})
+      .then(function(vs){return vs.map(function(v){return {verse:v.verse,text:String(v.text).replace(/<sup[^>]*>.*?<\/sup>/gi,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()};});})
       .catch(function(e){delete _btChap[k];throw e;});
   }
   return _btChap[k];
 }
 function _btFormat(chunks){
-  if(chunks.length===1)return escHtml(chunks[0].text);
+  if(chunks.length===1)return escHtml(chunks[0].text.replace(/\s+/g,' ').trim());
   return chunks.map(function(ch){return (ch.label?'<sup>'+escHtml(ch.label)+'</sup>':'')+escHtml(ch.text);}).join(' ');
 }
 
-function btToggleTool(){if(!_btCtx)return;_btCtx.toolOpen=!_btCtx.toolOpen;_btRender();}
+function btToggleTool(t){if(!_btCtx)return;_btCtx.tool=(_btCtx.tool===t)?null:t;_btRender();}
 function btRetry(){_btLoad();}
 function btToggleVerse(k){
   var x=_btCtx;if(!x||!x.verses)return;
@@ -2767,6 +2789,78 @@ function btToggleVerse(k){
   var el=document.getElementById('bt-v-'+d.c+'-'+d.v);if(!el)return;
   el.innerHTML=_btVerseHTML(d);
   if(x.open[k])_btHydrate(d);
+}
+// ── Translation Comparison (v4.42.0) ──────────────────────────────────────
+/** Book name from a section reference ("1 John 3:1-5" -> "1 John"). */
+function _btBookName(ref){return String(ref).trim().replace(/\s+\d+(?::.*)?(?:[-–].*)?$/,'');}
+/** Verses the picker offers: the passage's verses plus any verse cross-refs know about, plus the current pick. */
+function _btCmpVerses(){
+  var x=_btCtx,m={};
+  function add(c,v){if(c>0&&v>0)m[c+':'+v]={c:c,v:v};}
+  if(x.nums)x.nums.nums.forEach(function(n){if(_btInSec(x.sec,x.nums.c,n))add(x.nums.c,n);});
+  if(x.verses)x.verses.forEach(function(d){add(d.c,d.v);});
+  if(x.sec.s[0]===x.sec.e[0]&&x.sec.e[1]!==9999&&x.sec.e[1]-x.sec.s[1]<200)for(var v=x.sec.s[1];v<=x.sec.e[1];v++)add(x.sec.s[0],v);
+  if(x.cmpSel){var pr=x.cmpSel.split(':');add(+pr[0],+pr[1]);}
+  var out=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.c-b.c||a.v-b.v;});
+  if(!x.cmpSel&&out.length)x.cmpSel=out[0].c+':'+out[0].v;
+  return out;
+}
+/** Saved order (sett.cmpOrder) validated against the known list; anything missing is appended so no translation can vanish. */
+function _btCmpOrder(){
+  var saved=Array.isArray(sett.cmpOrder)?sett.cmpOrder:[],seen={},out=[];
+  saved.concat(_BT_TRANS).forEach(function(t){if(_BT_TRANS.indexOf(t)>=0&&!seen[t]){seen[t]=1;out.push(t);}});
+  return out;
+}
+function _btTLabel(t){return _BT_LABEL[t]||t.toUpperCase();}
+function _btCmpHTML(){
+  var x=_btCtx,vs=_btCmpVerses(),multi=x.sec.s[0]!==x.sec.e[0];
+  var h='<div class="bt-list">';
+  if(!vs.length)return h+'<div class="bt-note">No verses found for this passage.</div></div>';
+  h+='<div class="bt-pickbar"><select class="bt-pick" onchange="btCmpPick(this.value)" aria-label="Verse to compare">'+vs.map(function(d){
+    var k=d.c+':'+d.v;return '<option value="'+k+'"'+(k===x.cmpSel?' selected':'')+'>'+(multi?d.c+':':'')+'Verse '+d.v+'</option>';
+  }).join('')+'</select><button class="btn btn-sm btn-ghost" onclick="btCmpEditToggle()">'+(x.cmpEdit?'Done':'Reorder')+'</button></div>';
+  var order=_btCmpOrder();
+  h+=order.map(function(t,i){
+    var mv=x.cmpEdit?'<span class="bt-mv"><button class="bt-mvb" '+(i===0?'disabled ':'')+'onclick="btCmpMove(\''+t+'\',-1)" aria-label="Move up">▲</button><button class="bt-mvb" '+(i===order.length-1?'disabled ':'')+'onclick="btCmpMove(\''+t+'\',1)" aria-label="Move down">▼</button></span>':'';
+    return '<div class="bt-cmp"><div class="bt-cmph"><span class="bt-cit">'+escHtml(_btTLabel(t))+'</span>'+(t===x.trans?'<span class="bt-tag">CURRENT</span>':'')+mv+'</div><div class="bt-text" id="bt-c-'+t+'">Loading…</div></div>';
+  }).join('');
+  return h+'</div>';
+}
+function _btCmpCit(){
+  var x=_btCtx;if(!x||!x.cmpSel)return '';
+  var pr=x.cmpSel.split(':');return _btBookName(x.ref)+' '+pr[0]+':'+pr[1];
+}
+function _btCmpHydrate(){
+  var x=_btCtx;if(!x||!x.cmpSel)return;
+  var cit=_btCmpCit(),sel=x.cmpSel;
+  _btCmpOrder().forEach(function(t){_btCmpLoadRow(t,cit,sel);});
+}
+function _btCmpLoadRow(t,cit,sel){
+  var x=_btCtx,el=document.getElementById('bt-c-'+t);if(!x||!el)return;
+  if(t==='ylt'&&x.sec.book<=39){el.innerHTML='<span class="bt-na">Not available for the Old Testament in this source (YLT covers the New Testament only).</span>';return;}
+  el.textContent='Loading…';
+  var alive=function(){return _btCtx===x&&x.cmpSel===sel&&x.tool==='cmp';};
+  _btLoadTextFor(cit,t,alive).then(function(html){
+    var e=document.getElementById('bt-c-'+t);if(e&&alive())e.innerHTML=html;
+  }).catch(function(err){
+    if(err&&err.message==='stale'){if(alive())_btCmpLoadRow(t,cit,sel);return;}
+    logError('Bible Tools Translation Comparison',err);
+    var e=document.getElementById('bt-c-'+t);
+    if(e&&alive())e.innerHTML='<span class="bt-na">Couldn\'t load this translation.</span> <button class="btn btn-sm btn-ghost" onclick="btCmpRetry(\''+t+'\')">Retry</button>';
+  });
+}
+function btCmpRetry(t){if(_btCtx&&_btCtx.cmpSel)_btCmpLoadRow(t,_btCmpCit(),_btCtx.cmpSel);}
+function btCmpPick(k){if(!_btCtx)return;_btCtx.cmpSel=k;_btRender();}
+function btCmpEditToggle(){if(!_btCtx)return;_btCtx.cmpEdit=!_btCtx.cmpEdit;_btRender();}
+/** Moves one translation up (-1) or down (+1) and saves the order in sett.cmpOrder (the only value Bible Tools stores). */
+function btCmpMove(t,dir){
+  if(!_btCtx)return;
+  var o=_btCmpOrder(),i=o.indexOf(t),j=i+dir;
+  if(i<0||j<0||j>=o.length)return;
+  o[i]=o[j];o[j]=t;
+  sett.cmpOrder=o;
+  try{localStorage.setItem(SK_SETT,JSON.stringify(sett));}catch(e){logError('Bible Tools order save',e);}
+  _btRender();
 }
 /** Study-screen entry point: the active reference's passage, in the translation currently selected there. */
 function openBibleToolsFromStudy(){
@@ -2787,8 +2881,9 @@ export {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
   getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
-  // S12b — Bible Tools (v4.40.0)
+  // S12b — Bible Tools (v4.40.0; Translation Comparison v4.42.0)
   openBibleTools, openBibleToolsFromStudy, btToggleTool, btToggleVerse, btRetry,
+  btCmpPick, btCmpEditToggle, btCmpMove, btCmpRetry,
   // S12 — Study Tools Panel
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,

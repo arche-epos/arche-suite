@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0 and AI Cross-References retired in v4.41.0 (Sep 28, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, and Translation Comparison added in v4.42.0 (Sep 28, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -143,6 +143,12 @@ that avoids the excluded list.
   chapter, one row per verse with a reference count; the tapped verse opens
   automatically. Tap any verse row to see its cross-references ranked by votes,
   labeled OT/NT, with the verse text in the translation selected on Read.
+- Compare one verse in every translation (no AI) → Bible Tools sheet >
+  **Translation Comparison** (below Cross-References; tap it to open). Pick a
+  verse from the dropdown (it starts on the verse you tapped in Read) and see it
+  in all 14 translations, one row each. **Reorder** lets you move the
+  translations you use most to the top with the up/down arrows; the order is
+  remembered on this device. YLT shows only for New Testament verses.
 
 ### Study — Notes tab
 - Take notes during a sermon/quiet time/small group → **Study > Notes**,
@@ -163,6 +169,10 @@ that avoids the excluded list.
   once the passage is loaded) > Cross-References. One row per verse with a
   count, tap a verse to expand, refs ranked by votes and labeled OT/NT, text in
   the translation selected for this study
+- Compare one verse across all 14 translations (no AI) → **Bible Tools** button
+  in the Scripture panel > **Translation Comparison**. Choose the verse from the
+  dropdown (starts on the first verse of the passage); **Reorder** puts your
+  most-used translations at the top; YLT covers the New Testament only
 - Run all the study tools at once → **Study Snapshot** (runs Word Study,
   Language & Structure, and Places & Geography on the exact
   passage, plus Historical and Cultural Context at the whole-book level)

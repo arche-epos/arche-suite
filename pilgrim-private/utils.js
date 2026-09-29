@@ -497,7 +497,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.41.0',date:'Sep 28, 2026',label:'Latest — untested',
+    version:'4.42.0',date:'Sep 28, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature (untested, pending live verification): Bible Tools now has a Translation Comparison row beneath Cross-References. Pick a verse and see it in all 14 translations Pilgrim already loads, one stacked row each -- no AI involved. Use the Reorder button to move the translations you use most to the top; your order is remembered on this device.",
+      "note: Young's Literal (YLT) is available for New Testament verses only in this source, so Old Testament verses show a short notice on that row.",
+      "fix: CSB verse text in Bible Tools no longer shows footnote markers (the little circled letters and bracketed numbers).",
+      "note: the only new stored value is your translation order, saved inside the existing settings; nothing removed from saved studies, sync, or backup. Cache-buster bumped to 4.42.0."
+    ]},
+  {
+    version:'4.41.0',date:'Sep 28, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the AI Cross-References tool is retired -- its button is removed from the Study Tools tab and it no longer runs in Study Snapshot (now five tools). Bible Tools > Cross-References replaces it. Cross-reference results you already saved on studies are untouched and still appear in exports.",
