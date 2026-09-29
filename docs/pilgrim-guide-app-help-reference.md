@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0 on Sep 28, 2026
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -137,6 +137,13 @@ that avoids the excluded list.
 - Move between chapters → Prev/Next Chapter buttons
 - Turn a passage I'm reading into a study → "Start a Study from this Passage"
   button (appears once text is loaded)
+- See cross-references for a verse (no AI — from a fixed dataset) → tap a verse
+  number, then the **Bible Tools** button in the Read player bar (it stays
+  greyed out until a verse is selected). Opens the Bible Tools sheet listing the
+  chapter, one row per verse with a reference count; the tapped verse opens
+  automatically. Tap any verse row to see its cross-references ranked by votes,
+  labeled OT/NT, with the verse text in the translation selected on Read. Top 20
+  shown, "Show all" for the rest.
 
 ### Study — Notes tab
 - Take notes during a sermon/quiet time/small group → **Study > Notes**,
@@ -152,6 +159,11 @@ that avoids the excluded list.
 - Get historical background (period, politics, author) → **Historical Context**
 - Get cultural background (customs, geography, daily life) → **Cultural Context**
 - Find related/thematic verses → **Cross-References**
+- Get a non-AI list of a passage's cross-references, verse by verse → **Bible
+  Tools** button in the Scripture panel (next to Copy, Paste, Save to Memory;
+  appears once the passage is loaded) > Cross-References. Same list as Read:
+  one row per verse with a count, tap a verse to expand, top 20 with "Show all",
+  text in the translation selected for this study
 - Run all the study tools at once → **Study Snapshot** (runs Word Study,
   Language & Structure, Cross-References, and Places & Geography on the exact
   passage, plus Historical and Cultural Context at the whole-book level)

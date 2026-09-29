@@ -29,31 +29,32 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.38.3';
+} from './utils.js?v=4.40.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.38.3';
+} from './storage.js?v=4.40.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.38.3';
+} from './media.js?v=4.40.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.38.3';
+} from './tts.js?v=4.40.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.38.3';
+} from './sync.js?v=4.40.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
+  openBibleTools,
   copyScrip, openPasteModal, confirmPaste, renderTransSpectrum, openTransDetail,
   populateDeep, toggleFnotes, toggleDeepScripture, toggleOutline,
   openResourcesModal, closeResPopout, showResScripture, showResMethod,
@@ -70,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.38.3';
+} from './studyTools.js?v=4.40.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.38.3';
+} from './memory.js?v=4.40.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2545,6 +2546,7 @@ function readSelectVerse(idx){
   var chunks=getReadVerseChunks();
   if(idx<0||idx>=chunks.length)return;
   _readSelectedIdx=idx;
+  var bt=document.getElementById('read-bibletools-btn');if(bt){bt.disabled=false;bt.style.color='var(--gold)';bt.style.borderColor='var(--gold)';}
   highlightReadVerse(idx);
 }
 /**
@@ -2650,7 +2652,24 @@ function readSetPlayerEnabled(enabled){
   ['read-skip-prev','read-playpause-btn','read-skip-next'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.disabled=!enabled;
   });
+  if(!enabled){var bt=document.getElementById('read-bibletools-btn');if(bt){bt.disabled=true;bt.style.color='var(--txt3)';bt.style.borderColor='var(--border)';}} // Bible Tools needs a selected verse (re-enabled by readSelectVerse)
   var mb=document.getElementById('read-save-mem-btn');if(mb)mb.style.display=enabled?'':'none'; // Save to Memory follows the same "passage loaded" state (v4.36.0)
+}
+/**
+ * Opens Bible Tools (Cross-References) from the Read tab. Chapter mode: the whole chapter,
+ * with the selected verse auto-expanded. Range mode: the typed range (cross-book ranges are
+ * declined by openBibleTools). Enabled only once a verse is selected.
+ */
+function openBibleToolsFromRead(){
+  if(!_readVerses.length||_readSelectedIdx==null){toast('Tap a verse number first');return;}
+  var focus=null,m=_readVerseRef(_readSelectedIdx).match(/(\d+):(\d+)$/);
+  if(m)focus=m[1]+':'+m[2];
+  var ref=_readReference,nums=null;
+  if(!_readRangeMode&&_readBook&&_readChapter){
+    ref=_readBook+' '+_readChapter;
+    nums={c:_readChapter,nums:_readVerses.map(function(v){return +v.num;})};
+  }
+  openBibleTools(ref,_readTranslation,focus,nums);
 }
 /**
  * Builds the full "Book Chapter:Verse" reference for one verse of the Read tab's loaded text.
@@ -4154,7 +4173,7 @@ export {
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, saveReadVerseToMemory, getReadText,
   memAutoFetchVerseText,
-  getReadVerseChunks, getReadStartIdx, readSelectVerse, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
+  getReadVerseChunks, getReadStartIdx, readSelectVerse, openBibleToolsFromRead, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,

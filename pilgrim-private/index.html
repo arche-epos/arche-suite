@@ -213,6 +213,22 @@ input[type="range"]{accent-color:var(--gold)}
 .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl) var(--rl) 0 0;padding:20px 16px;width:100%;max-width:480px;max-height:80vh;overflow-y:auto}
 .modal::-webkit-scrollbar{display:none}
 .modal-title{font-family:'EB Garamond',serif;font-size:20px;color:var(--txt1);margin-bottom:14px}
+.bt-sub{font-size:12px;color:var(--txt3);margin-bottom:12px}
+.bt-tool,.bt-vhead{width:100%;display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;color:var(--txt1);font-family:'EB Garamond',serif;padding:0 14px;min-height:48px;cursor:pointer;text-align:left}
+.bt-tool{background:var(--bg3);font-size:17px}
+.bt-vhead{background:none;font-size:16px;min-height:44px;margin-top:6px}
+.bt-vhead:disabled{opacity:.45;cursor:default}
+.bt-meta,.bt-count{margin-left:auto;font-size:12px;color:var(--txt3);font-family:'Crimson Pro',serif}
+.bt-chev{width:12px;color:var(--txt3);font-size:13px;text-align:center}
+.bt-list{margin-top:8px}
+.bt-note{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--txt3);font-style:italic;padding:10px 4px}
+.bt-refs{padding:2px 4px 6px 12px;border-left:2px solid var(--border);margin:4px 0 8px 10px}
+.bt-ref{padding:8px 0;border-bottom:1px solid var(--border)}
+.bt-ref:last-of-type{border-bottom:0}
+.bt-cit{font-family:'EB Garamond',serif;color:var(--gold);font-size:15px}
+.bt-tag{font-size:10px;letter-spacing:.06em;border:1px solid var(--border);border-radius:5px;padding:1px 5px;color:var(--txt3);margin-left:8px;vertical-align:1px}
+.bt-text{font-size:14px;line-height:1.6;color:var(--txt2);margin-top:4px}
+.bt-text sup{font-size:10px;color:var(--gold);margin-right:2px}
 .toast{position:fixed;top:calc(14px + var(--safe-t));left:50%;transform:translateX(-50%) translateY(-90px);background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);border-radius:50px;padding:9px 20px;font-size:14px;z-index:600;transition:transform .28s ease;white-space:nowrap;pointer-events:none;font-family:'Crimson Pro',serif}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .update-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:300;background:var(--bg3);border-bottom:1px solid var(--golddim);padding:10px 14px;padding-top:calc(10px + var(--safe-t));align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-family:'Crimson Pro',serif;font-size:13px;color:var(--txt1);text-align:center}
@@ -741,6 +757,7 @@ input[type="range"]{accent-color:var(--gold)}
     <button id="read-skip-prev" onclick="readSkipVerse(-1)" title="Previous verse" disabled style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:52px;width:52px;flex:0 0 52px;display:flex;align-items:center;justify-content:center;font-size:20px">⏮</button>
     <button id="read-playpause-btn" onclick="ttsToggleRead()" title="Play / Pause" disabled style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);padding:0;cursor:pointer;height:56px;width:56px;flex:0 0 56px;display:flex;align-items:center;justify-content:center"><svg id="read-playpause-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none" width="22" height="22"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>
     <button id="read-skip-next" onclick="readSkipVerse(1)" title="Next verse" disabled style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:52px;width:52px;flex:0 0 52px;display:flex;align-items:center;justify-content:center;font-size:20px">⏭</button>
+    <button id="read-bibletools-btn" onclick="openBibleToolsFromRead()" title="Bible Tools — tap a verse number first" disabled style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0 8px;cursor:pointer;height:52px;flex:0 0 auto;font-family:'Crimson Pro',serif;font-size:12px;line-height:1.2">Bible<br>Tools</button>
     <button id="read-repeat-btn" onclick="toggleTTSRepeat()" title="Repeat this reference" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:52px;width:52px;flex:0 0 52px;display:flex;align-items:center;justify-content:center;font-size:20px">🔁</button>
     <select id="read-speed-sel" onchange="setTTSRate(parseFloat(this.value))" title="Playback speed" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--txt2);font-family:'Crimson Pro',serif;font-size:14px;padding:0;height:52px;width:54px;flex:0 0 54px;cursor:pointer;text-align:center;text-align-last:center">
       <option value="0.5">0.5×</option>
@@ -844,6 +861,7 @@ input[type="range"]{accent-color:var(--gold)}
       <button class="btn btn-sm btn-ghost" onclick="copyScrip()">Copy</button>
       <button class="btn btn-sm btn-ghost" onclick="openPasteModal()">Paste</button>
       <button class="btn btn-sm btn-ghost" onclick="saveScrVerseToMemory()">Save to Memory</button>
+      <button class="btn btn-sm btn-ghost" onclick="openBibleToolsFromStudy()">Bible Tools</button>
       <button id="scr-skip-prev" onclick="scrSkipVerse(-1)" title="Previous verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏮</button>
       <button id="listen-scr-btn" onclick="ttsToggleScr()" style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;padding:0 12px;cursor:pointer;height:44px;display:flex;align-items:center;gap:5px;flex-shrink:0"><svg id="listen-scr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-scr-label">Listen</span></button>
       <button id="scr-skip-next" onclick="scrSkipVerse(1)" title="Next verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏭</button>
@@ -1527,6 +1545,14 @@ input[type="range"]{accent-color:var(--gold)}
   </div>
 </div>
 
+<!-- BIBLE TOOLS (v4.40.0) -->
+<div class="overlay" id="bt-overlay" onclick="if(event.target===this)closeOverlay('bt-overlay')">
+  <div class="modal" style="cursor:default">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div class="modal-title" style="margin-bottom:0">Bible Tools</div><button class="btn btn-sm btn-ghost" onclick="closeOverlay('bt-overlay')">Close</button></div>
+    <div id="bt-body"></div>
+  </div>
+</div>
+
 <!-- SCRIPTURE LOAD ERROR -->
 <div class="overlay" id="scr-error-overlay">
   <div class="modal" style="text-align:center">
@@ -1869,7 +1895,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.38.3"></script>
+<script type="module" src="app.js?v=4.40.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
