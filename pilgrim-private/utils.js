@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.43.1',date:'Sep 29, 2026',label:'Latest — untested',
+    version:'4.44.0',date:'Sep 30, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix (untested, pending live verification): Interlinear now shows the right Hebrew words for the English verse number you pick in the Old Testament. Before, a verse like Psalm 51:1 showed the Hebrew title words, and Joel 2:28-32, Malachi 4, and Genesis 31:55 showed neighbouring text, because the Hebrew Bible numbers some verses differently. Pilgrim now uses the Open Scriptures English-to-Hebrew verse map (Psalm titles, Joel, Malachi, Genesis 31-32, and about 40 other chapters).",
+      "feature: where the numbering differs, the rows are grouped under a small heading such as \"Hebrew 51:2\" (Psalm titles say \"Psalm title\"), so every word stays reachable and you can see which Hebrew verse it is from. Verses that match in English and Hebrew look exactly as before. A few verses are split between two English verses; those headings say so.",
+      "note: nothing new is stored (no setting, no change to saved studies, sync, or backup). New file versemap.js holds the verse map. Cache-buster bumped to 4.44.0."
+    ]},
+  {
+    version:'4.43.1',date:'Sep 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Interlinear's short English meaning for Hebrew words was poor for some of the most common words -- the direct-object marker and the word for \"all\" both showed just \"properly\" (Strong's opens many entries with that filler word). Filler is now skipped, so these show \"self\" and \"the whole\", \"from\" now shows \"a part of\", and so on.",

@@ -13,13 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.43.1';
+} from './utils.js?v=4.44.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.43.1';
-import { syncToGist } from './sync.js?v=4.43.1';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.43.1';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.43.1';
-import { decodeMorph, shortGloss } from './morph.js?v=4.43.1';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.44.0';
+import { syncToGist } from './sync.js?v=4.44.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.44.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.44.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.44.0';
+import { hebrewVerses } from './versemap.js?v=4.44.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2900,7 +2901,8 @@ function btCmpMove(t,dir){
  * number (mostly Hebrew prefix + pronoun forms) show but do not open.
  * Notes on the data: the transliteration is the dictionary form's (from Strong's), not the inflected
  * word's. OT gloss = short Strong's definition (OSHB has no gloss); Greek gloss = MACULA's, falling
- * back to the same short definition when MACULA leaves it blank. OT verse numbers follow the Hebrew text.
+ * back to the same short definition when MACULA leaves it blank. OT word data follows the Hebrew verse numbering; v4.44.0 maps the
+ * English verse the user picked to its Hebrew verse(s) with versemap.js (headings appear only where the numbering differs).
  */
 function _btIlxHTML(){
   var x=_btCtx,vs=_btCmpVerses(),multi=x.sec.s[0]!==x.sec.e[0];
@@ -2909,7 +2911,6 @@ function _btIlxHTML(){
   h+='<div class="bt-pickbar"><select class="bt-pick" onchange="btCmpPick(this.value)" aria-label="Verse for Interlinear">'+vs.map(function(d){
     var k=d.c+':'+d.v;return '<option value="'+k+'"'+(k===x.cmpSel?' selected':'')+'>'+(multi?d.c+':':'')+'Verse '+d.v+'</option>';
   }).join('')+'</select></div>';
-  if(x.sec.book<=39)h+='<div class="bt-na" style="margin:2px 2px 8px">Verse numbers follow the Hebrew text. In a few places (many Psalm titles, Joel, Malachi, Genesis 31–32 and others) they differ from English Bibles, so a verse can show neighbouring words.</div>';
   h+='<div id="bt-il-rows"><div class="bt-note"><div class="spin"></div>Loading words…</div></div></div>';
   return h;
 }
@@ -2922,22 +2923,38 @@ async function _btIlxHydrate(){
     var data=await getMaculaBook(book);
     var dict=await getStrongsDict(isOT?'hebrew':'greek');
     if(!alive())return;
-    var words=data[sel];
-    if(!words||!words.length){box.innerHTML='<div class="bt-note">No original-language words found for this verse.</div>';return;}
-    x.ilRows=words.map(function(w){
-      var def=w.strongs?dict[w.strongs]:null;
-      return {
-        word:w.word,
-        lemma:isOT?(def&&def.lemma)||'':(w.lemma||''),
-        translit:(def&&def.translit)||'',
-        strongs:w.strongs||'',
-        chip:decodeMorph(w.morph,isOT).chip,
-        gloss:w.gloss||shortGloss(def&&def.strongs_def),
-        rtl:isOT,
-        card:def?{translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||''}:null
-      };
+    // OT: the picker holds English verse numbers, but data/macula follows the Hebrew text, so translate through the
+    // verse map (Psalm titles, Joel 2-3, Malachi 3-4, ...). Verses that need it get a heading per Hebrew verse.
+    var sp=sel.split(':'),groups;
+    if(isOT){
+      var hv=hebrewVerses(book,+sp[0],+sp[1]);
+      groups=hv.verses.map(function(m){
+        var head=null;
+        if(hv.differs)head='Hebrew '+m.c+':'+m.v+(m.title?' · Psalm title':'')+(m.partial?' · shared with a neighbouring English verse':'');
+        return {words:data[m.c+':'+m.v]||[],head:head};
+      });
+    }else groups=[{words:data[sel]||[],head:null}];
+    var rows=[];
+    groups.forEach(function(g){
+      g.words.forEach(function(w,wi){
+        var def=w.strongs?dict[w.strongs]:null;
+        rows.push({
+          head:wi===0?g.head:null,
+          word:w.word,
+          lemma:isOT?(def&&def.lemma)||'':(w.lemma||''),
+          translit:(def&&def.translit)||'',
+          strongs:w.strongs||'',
+          chip:decodeMorph(w.morph,isOT).chip,
+          gloss:w.gloss||shortGloss(def&&def.strongs_def),
+          rtl:isOT,
+          card:def?{translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||''}:null
+        });
+      });
     });
-    box.innerHTML=x.ilRows.map(_btIlxRowHTML).join('');
+    if(!rows.length){box.innerHTML='<div class="bt-note">No original-language words found for this verse.</div>';return;}
+    x.ilRows=rows;
+    var note=(isOT&&groups.some(function(g){return g.head;}))?'<div class="bt-na" style="margin:2px 2px 8px">Hebrew and English Bibles number some verses differently. The headings show the Hebrew verse numbers for the words below.</div>':'';
+    box.innerHTML=note+rows.map(_btIlxRowHTML).join('');
   }catch(e){
     logError('Bible Tools Interlinear',e);
     if(alive())box.innerHTML='<div class="bt-note">Could not load the words for this verse. Check your connection.<button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="btIlxRetry()">Try again</button></div>';
@@ -2949,7 +2966,7 @@ function _btIlxRowHTML(r,i){
   if(r.lemma)meta.push('<span dir="'+dir+'" lang="'+lang+'">'+escHtml(r.lemma)+'</span>');
   if(r.translit)meta.push(escHtml(r.translit));
   if(r.strongs)meta.push(escHtml(r.strongs));
-  return '<div class="bt-ilr"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
+  return (r.head?'<div class="bt-ilhd">'+escHtml(r.head)+'</div>':'')+'<div class="bt-ilr"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
     +'<span class="bt-il1"><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-ilg">'+escHtml(r.gloss)+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
     +'<span class="bt-il2">'+(meta.length?'<span class="bt-ilm">'+meta.join(' · ')+'</span>':'')+'<span class="bt-chip">'+escHtml(r.chip)+'</span></span>'
     +'</button><div class="bt-ilcard" id="bt-ilc-'+i+'" hidden></div></div>';
