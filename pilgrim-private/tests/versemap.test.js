@@ -35,6 +35,7 @@ import(tmp).then((m) => {
   eq('Num 26:1 = Hebrew 25:19 + 26:1', h(4, 26, 1), ['25:19', '26:1']);
   eq('Ps 13:5 = half of Hebrew 13:6', h(19, 13, 5), ['13:6p']);
   eq('Ps 13:6 = half of Hebrew 13:6', h(19, 13, 6), ['13:6p']);
+  eq('Ps 13:6 differs (half verse gets a heading)', d(19, 13, 6), true);
   eq('1 Sam 20:42 = Hebrew 20:42 + 21:1', h(9, 20, 42), ['20:42', '21:1']);
 
   // Data checks against the real word files

@@ -497,7 +497,13 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.44.0',date:'Sep 30, 2026',label:'Latest — untested',
+    version:'4.44.1',date:'Sep 30, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: in Psalm 13:6 (and any other verse whose Hebrew verse number happens to match but is shared with its neighbour), Interlinear now shows the \"shared with a neighbouring English verse\" heading like the other split verses do. No stored data touched. Cache-buster bumped to 4.44.1."
+    ]},
+  {
+    version:'4.44.0',date:'Sep 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix (untested, pending live verification): Interlinear now shows the right Hebrew words for the English verse number you pick in the Old Testament. Before, a verse like Psalm 51:1 showed the Hebrew title words, and Joel 2:28-32, Malachi 4, and Genesis 31:55 showed neighbouring text, because the Hebrew Bible numbers some verses differently. Pilgrim now uses the Open Scriptures English-to-Hebrew verse map (Psalm titles, Joel, Malachi, Genesis 31-32, and about 40 other chapters).",

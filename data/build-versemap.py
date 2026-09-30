@@ -94,7 +94,7 @@ function _vmBuild(){
  * @param {number} c - English chapter.
  * @param {number} v - English verse.
  * @returns {{verses:{c:number,v:number,title:boolean,partial:boolean}[], differs:boolean}}
- *   verses in Hebrew order; differs is false when the English and Hebrew numbering are identical (one verse, same number).
+ *   verses in Hebrew order; differs is false when the English and Hebrew numbering are identical (one whole verse, same number).
  */
 function hebrewVerses(book, c, v){
   _vmBuild();
@@ -108,7 +108,7 @@ function hebrewVerses(book, c, v){
   var verses = list.map(function(m){
     return {c: m[0], v: m[1], title: book === 19 && _vmOrph[book + ':' + m[0] + ':' + m[1]] === 1 && m[1] === 1, partial: !!_vmPart[book + ':' + m[0] + ':' + m[1]]};
   });
-  var differs = verses.length !== 1 || verses[0].c !== c || verses[0].v !== v;
+  var differs = verses.length !== 1 || verses[0].c !== c || verses[0].v !== v || verses[0].partial;
   return {verses: verses, differs: differs};
 }
 
