@@ -5,33 +5,33 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.44.1';
+} from './utils.js?v=4.45.0';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.44.1';
+} from './storage.js?v=4.45.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.44.1';
+} from './sync.js?v=4.45.0';
 
 import {
   loadTTSSett, initTTSVoices, ttsSyncAfterResume
-} from './tts.js?v=4.44.1';
+} from './tts.js?v=4.45.0';
 
-import { mediaInit } from './media.js?v=4.44.1';
+import { mediaInit } from './media.js?v=4.45.0';
 
-import { memWireSync } from './memory.js?v=4.44.1';
+import { memWireSync } from './memory.js?v=4.45.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.44.1';
-import * as Storage from './storage.js?v=4.44.1';
-import * as TTS from './tts.js?v=4.44.1';
-import * as Sync from './sync.js?v=4.44.1';
-import * as StudyTools from './studyTools.js?v=4.44.1';
-import * as UI from './ui.js?v=4.44.1';
-import * as Media from './media.js?v=4.44.1';
-import * as Memory from './memory.js?v=4.44.1';
+import * as Utils from './utils.js?v=4.45.0';
+import * as Storage from './storage.js?v=4.45.0';
+import * as TTS from './tts.js?v=4.45.0';
+import * as Sync from './sync.js?v=4.45.0';
+import * as StudyTools from './studyTools.js?v=4.45.0';
+import * as UI from './ui.js?v=4.45.0';
+import * as Media from './media.js?v=4.45.0';
+import * as Memory from './memory.js?v=4.45.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -182,6 +182,16 @@ function startPilgrim() {
   if (vEl && CHANGELOG && CHANGELOG[0]) vEl.textContent = 'v' + CHANGELOG[0].version;
   var libVEl = document.getElementById('lib-version-display');
   if (libVEl && CHANGELOG && CHANGELOG[0]) libVEl.textContent = 'v' + CHANGELOG[0].version;
+  var aboutVEl = document.getElementById('about-version-display');
+  if (aboutVEl && CHANGELOG && CHANGELOG[0]) aboutVEl.textContent = 'v' + CHANGELOG[0].version;
+  // Tidy the URL after Settings > About > Force refresh / Reload (?fresh=<timestamp>); address bar only, no stored data.
+  try {
+    var _fu = new URL(window.location.href);
+    if (_fu.searchParams.has('fresh')) {
+      _fu.searchParams.delete('fresh');
+      history.replaceState(null, '', _fu.pathname + _fu.search + _fu.hash);
+    }
+  } catch (e) { /* cosmetic only */ }
   UI.checkForUpdate();
   UI.tourCleanupDemoData();
 }

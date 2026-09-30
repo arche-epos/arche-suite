@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.44.1',date:'Sep 30, 2026',label:'Latest — untested',
+    version:'4.45.0',date:'Sep 30, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: new About section in Settings (between Account and What’s New). It shows the version you are running, a Check for updates button that says “You’re on the latest” or “vX is available” with a Reload button (and shows a clear message instead of failing silently if it cannot reach the server), and a Force refresh button that clears cached app files and reloads, for when the app looks out of date.",
+      "feature: Data sources & credits, with links, for MACULA Greek (CC BY 4.0), the Open Scriptures Hebrew Bible including the verse map (CC BY 4.0), Strong’s Dictionaries (public domain text, CC BY-SA tagging) and OpenBible.info cross-references (CC BY).",
+      "note: nothing is stored or changed — Force refresh only clears service workers and cached app files, never studies, settings, sync, or backups. The Settings tour has a new About step. Cache-buster bumped to 4.45.0."
+    ]},
+  {
+    version:'4.44.1',date:'Sep 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: in Psalm 13:6 (and any other verse whose Hebrew verse number happens to match but is shared with its neighbour), Interlinear now shows the \"shared with a neighbouring English verse\" heading like the other split verses do. No stored data touched. Cache-buster bumped to 4.44.1."

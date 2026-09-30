@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -228,6 +228,15 @@ that avoids the excluded list.
 - Erase everything and start over → **Settings > Clear All Data** (destructive
   — confirm the user actually wants this before treating it as routine)
 - Switch to a different user/PIN → **Settings > Account > Switch User**
+- See which app version I'm on, or check whether a newer version is live →
+  **Settings > About** (shows the version; **Check for updates** says whether
+  the app is current or a newer version is available, with a Reload button)
+- The app looks out of date or is stuck on an old version → **Settings >
+  About > Force refresh** (clears cached app files and reloads; it does NOT
+  touch studies, settings, sync, or backups)
+- See data-source credits and licenses (MACULA Greek, Open Scriptures Hebrew
+  Bible, Strong's, OpenBible.info) → **Settings > About > Data sources &
+  credits**
 - Check whether AI tools, text extraction, sync, or the Bible API are working →
   **Settings > Diagnostics > Connection Status** (Test button per service)
 - Turn on a test mode for the feedback form → Settings > Diagnostics >

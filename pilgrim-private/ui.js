@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.44.1';
+} from './utils.js?v=4.45.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.44.1';
+} from './storage.js?v=4.45.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.44.1';
+} from './media.js?v=4.45.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.44.1';
+} from './tts.js?v=4.45.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.44.1';
+} from './sync.js?v=4.45.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.44.1';
+} from './studyTools.js?v=4.45.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.44.1';
+} from './memory.js?v=4.45.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3290,6 +3290,7 @@ var TOUR_B_STEPS=[
   {target:'#settings-sec-tags',title:'Tags',body:'Add, edit, or remove the tags you use to organize studies. Deleting a tag removes it from any existing studies too.'},
   {target:'#settings-sec-share',title:'Share Archē · Pilgrim',body:'Sharing sends the Public version link, not this Private tester build — your tester access is PIN-gated and limited to the approved list only.'},
   {target:'#settings-sec-backup',title:'Manual JSON Backup',body:'Your data syncs automatically, but since Pilgrim is in active beta development we recommend downloading a manual backup every so often — just in case. Tap Download Backup to save a copy to your device any time.'},
+  {target:'#settings-sec-about',title:'About',body:'See which version you are on, tap Check for updates to find out if a newer one is live, or Force refresh to clear cached app files if the app looks out of date. Force refresh never touches your studies or settings. Data-source credits are at the bottom.'},
   {target:'#settings-sec-changelog',title:'What\u2019s New',body:'The full history of changes to Arch\u0113 \u00b7 Pilgrim, newest first — tap to expand.'},
   {target:'#diag-settings-section',title:'Diagnostics',body:"Connection test buttons for AI tools, text extraction, sync, and the ESV API. Use the feedback form below to report a bug or issue directly — it files straight to the dev team."}
 ];
@@ -4131,6 +4132,102 @@ function dismissUpdateBanner(){
   if(b)b.classList.remove('on');
 }
 
+// ── Settings > About (v4.45.0) ──────────────────────────────────────────────
+// Manual "Check for updates" and "Force refresh". Neither reads nor writes any
+// localStorage key: the manual check ignores the Skip key (SK_UPDATE_SKIP) on
+// purpose so it always reports what is actually live, and Force refresh only
+// touches service workers and CacheStorage, then reloads via ?fresh=<timestamp>.
+var _aboutBusy=false;
+function _aboutSetStatus(kind,html){
+  var el=document.getElementById('about-update-status');
+  if(!el)return;
+  el.className='about-status'+(kind?' '+kind:'');
+  el.innerHTML=html;
+}
+/** Compares dotted version strings numerically: returns 1 if a>b, -1 if a<b, 0 if equal. */
+function _aboutVerCmp(a,b){
+  var x=String(a).split('.'),y=String(b).split('.'),n=Math.max(x.length,y.length);
+  for(var i=0;i<n;i++){
+    var p=parseInt(x[i],10)||0,q=parseInt(y[i],10)||0;
+    if(p>q)return 1;
+    if(p<q)return -1;
+  }
+  return 0;
+}
+/** Reloads on a brand-new URL (?fresh=<timestamp>, hash kept) so mobile browsers refetch index.html itself. */
+function _aboutGoFresh(){
+  try{
+    var u=new URL(window.location.href);
+    u.searchParams.set('fresh',String(Date.now()));
+    window.location.replace(u.toString());
+  }catch(e){window.location.reload();}
+}
+function aboutReload(){_aboutGoFresh();}
+/**
+ * "Check for updates" — fetches the live utils.js (no-store, cache-busted),
+ * reads the first CHANGELOG version with the same regex checkForUpdate() uses,
+ * and reports the result on screen. Unlike the background check it never fails
+ * silently: a network or parse failure is shown as "Couldn't check: <reason>".
+ */
+function checkAboutUpdate(){
+  if(_aboutBusy)return;
+  _aboutBusy=true;
+  var btn=document.getElementById('about-check-btn');
+  if(btn)btn.disabled=true;
+  _aboutSetStatus('','Checking…');
+  var current=(CHANGELOG&&CHANGELOG[0])?CHANGELOG[0].version:'';
+  fetch('./utils.js?t='+Date.now(),{cache:'no-store'})
+    .then(function(r){
+      if(!r.ok)throw new Error('server answered '+r.status);
+      return r.text();
+    })
+    .then(function(txt){
+      var m=txt.match(/CHANGELOG\s*=\s*\[\s*\{\s*version\s*:\s*'([^']+)'/);
+      if(!m)throw new Error('could not read the version from the live file');
+      var latest=m[1],cmp=_aboutVerCmp(latest,current);
+      if(cmp===0){
+        _aboutSetStatus('ok','You’re on the latest (v'+escHtml(current)+')');
+      }else if(cmp>0){
+        _aboutSetStatus('ok','v'+escHtml(latest)+' is available <button class="btn btn-primary btn-sm" onclick="aboutReload()">Reload</button>');
+      }else{
+        _aboutSetStatus('ok','You’re on v'+escHtml(current)+'; the live site still shows v'+escHtml(latest)+' (a new release can take a few minutes to publish).');
+      }
+    })
+    .catch(function(e){
+      _aboutSetStatus('err','Couldn’t check: '+escHtml(e&&e.message?e.message:'no connection?'));
+    })
+    .then(function(){
+      _aboutBusy=false;
+      if(btn)btn.disabled=false;
+    });
+}
+/**
+ * "Force refresh" — unregisters service workers, deletes every CacheStorage
+ * cache, then reloads via ?fresh=<timestamp>. Touches NO localStorage or
+ * IndexedDB data (studies, settings, sync, backups, transcripts all stay).
+ */
+function forceRefreshApp(){
+  if(_aboutBusy)return;
+  _aboutBusy=true;
+  var b1=document.getElementById('about-check-btn'),b2=document.getElementById('about-force-btn');
+  if(b1)b1.disabled=true;
+  if(b2)b2.disabled=true;
+  _aboutSetStatus('','Clearing cached app files…');
+  var swP=('serviceWorker' in navigator)
+    ?navigator.serviceWorker.getRegistrations().then(function(regs){
+        return Promise.all(regs.map(function(r){return r.unregister();}));
+      })
+    :Promise.resolve();
+  var cacheP=('caches' in window)
+    ?caches.keys().then(function(names){
+        return Promise.all(names.map(function(n){return caches.delete(n);}));
+      })
+    :Promise.resolve();
+  Promise.all([swP,cacheP])
+    .catch(function(){/* still reload — the ?fresh= URL alone bypasses most stale copies */})
+    .then(function(){_aboutGoFresh();});
+}
+
 // ════════════════════════════════════════════════════════
 
 // ── Export block ────────────────────────────────────────────────────────────
@@ -4198,6 +4295,7 @@ export {
   // S28-partial — Startup helpers
   updateWordCount, checkForUpdate,
   refreshForUpdate, dismissUpdateBanner,
+  checkAboutUpdate, forceRefreshApp, aboutReload,
   // Pilgrim Guide — App Help mode (added Sep 7 2026)
   closePilgrimGuide, pilgrimGuideSend,
   // Pilgrim Guide — Scripture Finder result actions (added Sep 8 2026, export

@@ -191,6 +191,8 @@ input[type="range"]{accent-color:var(--gold)}
 .scope-btn.on{background:var(--bg1);color:var(--gold);border:1px solid var(--golddim);box-shadow:0 1px 6px rgba(0,0,0,.4)}
 .sethead{font-family:'EB Garamond',serif;font-size:20px;color:var(--gold);margin-bottom:3px}
 .setsub{font-size:12px;color:var(--txt3);margin-bottom:13px;line-height:1.5}
+.about-status{min-height:18px;font-size:13px;color:var(--txt3);margin:8px 0 14px;line-height:1.5;font-family:'Crimson Pro',serif}.about-status.ok{color:var(--gold)}.about-status.err{color:var(--red,#c0665a)}.about-status button{margin-left:8px;vertical-align:middle}
+.about-credits{font-size:11px;color:var(--txt4);line-height:1.6}.about-credits p{margin:0 0 9px}.about-credits a{color:var(--gold);text-decoration:underline}
 .conntag{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-size:13px;color:var(--txt2)}
 .trans-tile{cursor:pointer;transition:border-color .15s,background .15s;-webkit-user-select:none;user-select:none}
 .trans-tile:active{background:var(--bg3)}
@@ -1275,6 +1277,22 @@ input[type="range"]{accent-color:var(--gold)}
       <button class="btn btn-sec btn-full" onclick="switchUser()">Switch User</button>
     </div>
     <div class="divider"></div>
+    <div style="margin-bottom:22px" id="settings-sec-about">
+      <div class="sethead">About</div>
+      <div class="setsub" style="margin-bottom:12px">Arch&#275; &middot; Pilgrim <strong id="about-version-display" style="color:var(--gold)"></strong></div>
+      <button id="about-check-btn" class="btn btn-ghost btn-full" onclick="checkAboutUpdate()">Check for updates</button>
+      <div id="about-update-status" class="about-status" role="status" aria-live="polite"></div>
+      <button id="about-force-btn" class="btn btn-ghost btn-full" onclick="forceRefreshApp()">Force refresh</button>
+      <div class="setsub" style="margin-top:6px;margin-bottom:16px">Clears cached app files only. Your studies and settings are not touched.</div>
+      <div style="font-size:12px;color:var(--txt3);margin-bottom:8px;font-family:'Crimson Pro',serif">Data sources &amp; credits</div>
+      <div class="about-credits">
+        <p>Greek New Testament words, glosses and morphology: <a href="https://github.com/Clear-Bible/macula-greek" target="_blank" rel="noopener">MACULA Greek Linguistic Datasets</a>, &copy; Biblica / Clear-Bible. Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+        <p>Hebrew Old Testament words, morphology and verse numbering: Original work of the Open Scriptures Hebrew Bible available at <a href="https://github.com/openscriptures/morphhb" target="_blank" rel="noopener">https://github.com/openscriptures/morphhb</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+        <p>Strong&#8217;s Hebrew &amp; Greek Dictionaries: <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener">Open Scriptures (openscriptures/strongs)</a>. The Strong&#8217;s text is public domain; the Open Scriptures tagging is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA</a>.</p>
+        <p>Cross-references: <a href="https://www.openbible.info/labs/cross-references/" target="_blank" rel="noopener">OpenBible.info Cross-References</a> (vote-weighted Treasury of Scripture Knowledge). Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY</a>.</p>
+      </div>
+    </div>
+    <div class="divider"></div>
     <div style="margin-bottom:22px" id="settings-sec-changelog">
       <div class="cl-section-hdr" onclick="clSectionToggle()">
         <div class="sethead">What&#8217;s New</div>
@@ -1912,7 +1930,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.44.1"></script>
+<script type="module" src="app.js?v=4.45.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
