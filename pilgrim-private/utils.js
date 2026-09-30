@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.0',date:'Sep 30, 2026',label:'Latest — untested',
+    version:'4.46.1',date:'Sep 30, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Word Study now works for the Old Testament. Its word list was empty for every OT passage (the filter that picks nouns, verbs, and adjectives only understood Greek tags, so every Hebrew and Aramaic word was filtered out). Numbers 9:15, for example, now lists its 14 content words with their Strong’s definitions.",
+      "fix: Word Study showed the first passage’s words on every other study until you reloaded the app — the session cache was keyed by tool only. It is now keyed by tool, scope, and passage. A failed load (for example, offline) is no longer remembered, so tapping Word Study again retries.",
+      "note: nothing stored or changed — no saved study, setting, sync, or backup data touched. Cache-buster bumped to 4.46.1."
+    ]},
+  {
+    version:'4.46.0',date:'Sep 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the AI commentary for Word Study is retired. The Word Study button on the Study Tools tab now shows only the source-dictionary facts (original word, Strong’s number, transliteration, full definition), with no AI call. Commentary you already saved on a study still appears under the facts, exactly as saved.",

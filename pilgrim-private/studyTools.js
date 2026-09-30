@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.46.0';
+} from './utils.js?v=4.46.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.0';
-import { syncToGist } from './sync.js?v=4.46.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.0';
-import { decodeMorph, shortGloss } from './morph.js?v=4.46.0';
-import { hebrewVerses } from './versemap.js?v=4.46.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.1';
+import { syncToGist } from './sync.js?v=4.46.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.1';
+import { decodeMorph, shortGloss } from './morph.js?v=4.46.1';
+import { hebrewVerses } from './versemap.js?v=4.46.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -431,8 +431,19 @@ var LEX_OCCURRENCE_TEXT_CAP=10;   // of up to 30 real refs from occurrences.json
 // conditionals), D/F/I/K/P/Q/R/S/X (pronoun classes), PREP (preposition), PRT (particle),
 // T (article), INJ (interjection) are excluded.
 var CONTENT_WORD_MORPH_PREFIXES=['A','ADV','ARAM','N','V'];
-/** True if a MACULA morph tag (e.g. "V-2ADP-GSF") belongs to a content-word class (§ above). */
-function _isContentWordMorph(morph){return CONTENT_WORD_MORPH_PREFIXES.indexOf((morph||'').split('-')[0])>-1;}
+/** True if a morph tag belongs to a content-word class (§ above). Greek (MACULA, e.g. "V-2ADP-GSF"): the class before the first dash.
+ *  Old Testament (OSHB Hebrew/Aramaic, e.g. "HTd/Ncmsa", "HVhc", "AVqp3ms"): tags are '/'-joined segments whose first
+ *  character is the language letter (H/A); a word is a content word if any segment is a Noun, Verb, Adjective or aDverb.
+ *  v4.46.0 fix: before this, every OT tag failed the Greek-style test, so Word Study's facts panel was empty for the whole OT. */
+function _isContentWordMorph(morph,isOT){
+  var m=String(morph||'');
+  if(isOT){
+    var segs=m.split('/');
+    if(segs.length&&segs[0])segs[0]=segs[0].slice(1); // drop the language letter (H = Hebrew, A = Aramaic)
+    return segs.some(function(s){var p=s.charAt(0);return p==='N'||p==='V'||p==='A'||p==='D';});
+  }
+  return CONTENT_WORD_MORPH_PREFIXES.indexOf(m.split('-')[0])>-1;
+}
 
 /**
  * Fetches and caches one grounding data file from the arche-suite repo's data/ folder
@@ -521,7 +532,7 @@ async function buildLexicalGround(bookNum,parsed,isBook){
     // particle) -- unfiltered here (allowedStrongs/lines stay permissive for the
     // verifyGroundedOutput backstop); the facts panel and prompt reference list each
     // filter to isContent===true words at their own call sites.
-    wordEntries.push({ref:e.ref,word:e.word,strongs:e.strongs,translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||'',isContent:_isContentWordMorph(e.morph)});
+    wordEntries.push({ref:e.ref,word:e.word,strongs:e.strongs,translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||'',isContent:_isContentWordMorph(e.morph,Number(bookNum)<=39)});
   }
   return {text:lines.join('\n'),allowedStrongs:Object.keys(seen),wordEntries:wordEntries};
 }
@@ -1588,7 +1599,10 @@ function renderAIPanelContent(ck){
   // it, and re-render. The aiActiveTab guard stops a fast tab-switch mid-fetch from
   // clobbering whatever tab the user has actually landed on by the time it resolves.
   var hasFactsPanel=TOOLS_WITH_FACTS_PANEL.indexOf(base)>-1;
-  var factsHtml=hasFactsPanel?(aiFactsResults[ck]!=null?aiFactsResults[ck]:'<div style="font-size:12px;color:var(--txt4);padding:2px 0 10px">Loading source data…</div>'):'';
+  // v4.46.0 fix: the session cache is keyed by tool+scope AND the reference. It used to be keyed by tool+scope only,
+  // so after opening Word Study on one study, every other study showed the FIRST study's words until a reload.
+  var fkey=ck+'|'+((ar&&ar.reference)||'');
+  var factsHtml=hasFactsPanel?(aiFactsResults[fkey]!=null?aiFactsResults[fkey]:'<div style="font-size:12px;color:var(--txt4);padding:2px 0 10px">Loading source data…</div>'):'';
   // v4.46.0: notes for the retired tools. A saved Word Study/Language & Structure result is shown
   // exactly as saved, with a one-line label; a Word Study panel with nothing saved and no source
   // data (offline, or no tagged words) says so instead of looking empty.
@@ -1596,16 +1610,18 @@ function renderAIPanelContent(ck){
   var retiredNote='';
   if(base==='lexical'&&content)retiredNote='<div style="'+_noteStyle+'">Saved AI commentary from before Word Study became source-data only. It is kept exactly as you saved it.</div>';
   else if(base==='grammar')retiredNote='<div style="'+_noteStyle+'">Saved result. Language &amp; Structure has been retired — Bible Tools &gt; Interlinear shows word-by-word parsing for any verse.</div>';
-  else if(hasFactsPanel&&aiFactsResults[ck]===''&&!content)retiredNote='<div style="'+_noteStyle+'">No source-dictionary data was found for this reference, or it could not load. Check your connection and try again.</div>';
+  else if(hasFactsPanel&&aiFactsResults[fkey]===''&&!content)retiredNote='<div style="'+_noteStyle+'">No source-dictionary data was found for this reference, or it could not load. Check your connection and try again.</div>';
   contentEl.innerHTML='<div>'+(factsHtml&&typeof DOMPurify!=='undefined'?DOMPurify.sanitize(factsHtml):factsHtml)+retiredNote+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+'</div>';
-  if(hasFactsPanel&&aiFactsResults[ck]==null&&ar&&ar.reference){
+  if(hasFactsPanel&&aiFactsResults[fkey]==null&&ar&&ar.reference){
     var scope=ck.endsWith('_book')?'book':'passage';
     buildFactsHtmlForTool(base,ar.reference,scope).then(function(fh){
-      aiFactsResults[ck]=fh||'';
+      aiFactsResults[fkey]=fh||'';
       if(aiActiveTab===ck)renderAIPanelContent(ck);
     }).catch(function(){
-      aiFactsResults[ck]='';
+      // Show the "could not load" note once, then forget the failure so the next tap retries (a failed fetch is not cached).
+      aiFactsResults[fkey]='';
       if(aiActiveTab===ck)renderAIPanelContent(ck);
+      delete aiFactsResults[fkey];
     });
   }
 }
