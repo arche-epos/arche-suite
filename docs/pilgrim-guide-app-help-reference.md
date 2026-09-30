@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -172,8 +172,15 @@ that avoids the excluded list.
 - Attach a photo or document to a study → "Add Photo or Document" button, Notes tab
 
 ### Study — Study Tools tab
-- Get Greek/Hebrew/English word meaning for the passage → **Word Study** AI tool
-- Get grammar/syntax help → **Language & Structure** AI tool
+- Get Greek/Hebrew/English word meaning for the passage → **Word Study** (no AI
+  as of v4.46.0 — the button shows the source-dictionary facts: original word,
+  Strong's number, transliteration, full definition; commentary saved on older
+  studies still appears under the facts, unchanged). For one word or a Strong's
+  number, use the Word Study search
+- Get grammar/syntax help → the AI **Language & Structure** tool was retired in
+  v4.46.0. Use **Bible Tools > Interlinear** for word-by-word parsing of any
+  verse. Results saved on older studies still appear as a "Lang & Structure"
+  tab in the results panel, and still export
 - Get historical background (period, politics, author) → **Historical Context**
 - Get cultural background (customs, geography, daily life) → **Cultural Context**
 - Find related/thematic verses / cross-references (no AI — from a fixed dataset;
@@ -192,11 +199,11 @@ that avoids the excluded list.
   Comparison). One row per word: Greek/Hebrew word, meaning, dictionary form,
   transliteration, Strong's number, grammar chip; tap a row for the dictionary
   entry. Old Testament verses whose Hebrew numbering differs show headings
-  such as "Hebrew 51:2". Language & Structure (AI) still exists; Interlinear
-  covers the same parsing from fixed data
-- Run all the study tools at once → **Study Snapshot** (runs Word Study,
-  Language & Structure, and Places & Geography on the exact
-  passage, plus Historical and Cultural Context at the whole-book level)
+  such as "Hebrew 51:2". Interlinear replaced the old AI Language & Structure
+  tool with parsing from fixed data
+- Run the AI tools at once → **Study Snapshot** (as of v4.46.0 it runs Places &
+  Geography on the exact passage, plus Historical and Cultural Context at the
+  whole-book level; Word Study and Language & Structure no longer run in it)
 - Outline a passage or book → **Passage/Book Outline**
 - Write my own takeaways (AI-free space) → **My Conclusions**
 

@@ -497,7 +497,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.45.0',date:'Sep 30, 2026',label:'Latest — untested',
+    version:'4.46.0',date:'Sep 30, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the AI commentary for Word Study is retired. The Word Study button on the Study Tools tab now shows only the source-dictionary facts (original word, Strong’s number, transliteration, full definition), with no AI call. Commentary you already saved on a study still appears under the facts, exactly as saved.",
+      "change: the AI Language & Structure tool is retired — its button is removed from the Study Tools tab. Bible Tools > Interlinear replaces it with word-by-word parsing from fixed data. A Language & Structure result you already saved is untouched: it still shows as a tab in the results panel and still appears in exports.",
+      "change: Study Snapshot now runs three tools (Places & Geography for the passage, Historical and Cultural Context for the book). Existing Snapshots are untouched. Go Deeper and Continue no longer appear on the retired tools’ saved results, so nothing new is written to them.",
+      "note: nothing is deleted or rewritten — saved Word Study and Language & Structure results stay exactly as they were in your studies, sync, backup, and exports. No new stored settings. The Settings tour and help reference are updated. Cache-buster bumped to 4.46.0."
+    ]},
+  {
+    version:'4.45.0',date:'Sep 30, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: new About section in Settings (between Account and What’s New). It shows the version you are running, a Check for updates button that says “You’re on the latest” or “vX is available” with a Reload button (and shows a clear message instead of failing silently if it cannot reach the server), and a Force refresh button that clears cached app files and reloads, for when the app looks out of date.",

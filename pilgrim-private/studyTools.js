@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.45.0';
+} from './utils.js?v=4.46.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.45.0';
-import { syncToGist } from './sync.js?v=4.45.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.45.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.45.0';
-import { decodeMorph, shortGloss } from './morph.js?v=4.45.0';
-import { hebrewVerses } from './versemap.js?v=4.45.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.0';
+import { syncToGist } from './sync.js?v=4.46.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.46.0';
+import { hebrewVerses } from './versemap.js?v=4.46.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -51,6 +51,12 @@ export var aiActiveTab    = null;
 // as its facts panel gets built (grammar/crossrefs are next per the spec's build order).
 export var aiFactsResults = {};
 var TOOLS_WITH_FACTS_PANEL = ['lexical'];
+// v4.46.0: AI commentary retired for these tools. Word Study now shows only its source-data facts panel
+// (no /groq call, nothing written to ar.deep); Language & Structure's button is gone (Bible Tools >
+// Interlinear replaces it). Anything already saved in ar.deep.lexical/_book and ar.deep.grammar/_book is
+// left exactly as saved: still shown as a tab, still exported/synced/backed up. This list only stops
+// NEW commentary from being requested (Go Deeper / Continue are hidden for these tabs).
+var RETIRED_AI_TOOLS = ['lexical', 'grammar'];
 var _snapshotRunning = false;
 var _snapshotCancelled = false;
 var _snapshotAbortControllers = {}; // tool -> AbortController, one per in-flight parallel request
@@ -840,11 +846,12 @@ function populateDeep(){
   var snapSub=document.getElementById('snapshot-sub');
   if(snapSub){
     var _sd=ar&&ar.deep;
-    // All 5 snapshot tools must be present: lexical+grammar+geography (passage) + historical+cultural (book)
-    var _allReady=_sd&&_sd.lexical&&_sd.grammar&&_sd.geography&&_sd.historical_book&&_sd.cultural_book;
+    // Ready = the three remaining snapshot tools are present: geography (passage) + historical+cultural (book).
+    // v4.46.0: Word Study and Language & Structure no longer run in the Snapshot (retired AI commentary).
+    var _allReady=_sd&&_sd.geography&&_sd.historical_book&&_sd.cultural_book;
     if(_snapshotRunning){/* leave as-is */}
     else if(_allReady){snapSub.textContent='All tools ready \u2014 tap to refresh';}
-    else{snapSub.textContent='Word Study \u00b7 Language & Structure \u00b7 Places & Geography + Historical \u00b7 Cultural (book)';}
+    else{snapSub.textContent='Places & Geography + Historical \u00b7 Cultural (book)';}
   }
   // Scripture collapsible
   var scrEl=document.getElementById('d-scrtext');
@@ -1198,6 +1205,14 @@ async function runTool(tool){
   var ar=activeRef();
   if(!ar||!ar.reference){toast('Add a scripture reference first');return;}
   var ck=studyScope==='book'?tool+'_book':tool;
+  // v4.46.0: retired AI tools never call the model or write to the study. Word Study opens its
+  // source-data facts panel (plus any commentary already saved on this study, unchanged).
+  if(tool==='lexical'){
+    var _savedLex=ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'?ar.deep[ck]:'';
+    showAIPanel('lexical',_savedLex);
+    return;
+  }
+  if(tool==='grammar'){toast('Language & Structure has been retired — see Bible Tools > Interlinear');return;}
   if(ar.deep&&ar.deep[ck]&&ar.deep[ck]!=='__shared__'){showAIPanel(tool,ar.deep[ck]);return;}
   if(!online){toast('AI tools require internet');return;}
   var btn=document.getElementById('btn-'+tool);btn.classList.add('busy');
@@ -1231,14 +1246,14 @@ async function runTool(tool){
 // ════════════════════════════════════════════════════════
 
 // SECTION 13 — STUDY SNAPSHOT
-// Runs all six AI tools in sequence for the active study.
-// Results are cached and displayed in the 2×3 Snapshot grid.
+// Runs the remaining AI tools (Places & Geography, Historical, Cultural) for the active study.
+// Results are cached; saved results appear as tabs in the AI results panel.
 // ════════════════════════════════════════════════════════
 var _snapshotRunning=false;var _snapshotLastRun=null;
 // tool -> {start:timestamp, intervalId} — drives the live elapsed-time counter per row
 var _snapRowTimers={};
-// Fixed ordering of all 6 snapshot tools — used by the progress modal to identify rows
-var SNAPSHOT_TOOL_ORDER=['lexical','grammar','geography','historical','cultural']; // crossrefs retired from the snapshot in v4.41.0 (replaced by Bible Tools)
+// Fixed ordering of the snapshot tools — used by the progress modal to identify rows
+var SNAPSHOT_TOOL_ORDER=['geography','historical','cultural']; // crossrefs retired in v4.41.0 (replaced by Bible Tools); lexical + grammar retired in v4.46.0 (Word Study is source-data only, Interlinear replaces Language & Structure)
 /**
  * Entry point for the Study Snapshot button.
  * On mobile (≤900px), opens the snapshot confirmation overlay before running.
@@ -1409,7 +1424,7 @@ async function runSnapshot(){
   var btn=document.getElementById('btn-snapshot');
   var sub=document.getElementById('snapshot-sub');
   if(btn){btn.style.opacity='.6';btn.style.pointerEvents='none';}
-  var passageTools=['lexical','grammar','geography'];
+  var passageTools=['geography']; // v4.46.0: lexical + grammar retired from the snapshot
   var bookTools=['historical','cultural'];
   var all=passageTools.map(function(t){return {tool:t,scope:'passage'};}).concat(bookTools.map(function(t){return {tool:t,scope:'book'};}));
   openSnapshotProgressModal(all);
@@ -1574,7 +1589,15 @@ function renderAIPanelContent(ck){
   // clobbering whatever tab the user has actually landed on by the time it resolves.
   var hasFactsPanel=TOOLS_WITH_FACTS_PANEL.indexOf(base)>-1;
   var factsHtml=hasFactsPanel?(aiFactsResults[ck]!=null?aiFactsResults[ck]:'<div style="font-size:12px;color:var(--txt4);padding:2px 0 10px">Loading source data…</div>'):'';
-  contentEl.innerHTML='<div>'+(factsHtml&&typeof DOMPurify!=='undefined'?DOMPurify.sanitize(factsHtml):factsHtml)+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+'</div>';
+  // v4.46.0: notes for the retired tools. A saved Word Study/Language & Structure result is shown
+  // exactly as saved, with a one-line label; a Word Study panel with nothing saved and no source
+  // data (offline, or no tagged words) says so instead of looking empty.
+  var _noteStyle='font-size:11px;color:var(--txt4);font-style:italic;margin:6px 0 10px;line-height:1.5';
+  var retiredNote='';
+  if(base==='lexical'&&content)retiredNote='<div style="'+_noteStyle+'">Saved AI commentary from before Word Study became source-data only. It is kept exactly as you saved it.</div>';
+  else if(base==='grammar')retiredNote='<div style="'+_noteStyle+'">Saved result. Language &amp; Structure has been retired — Bible Tools &gt; Interlinear shows word-by-word parsing for any verse.</div>';
+  else if(hasFactsPanel&&aiFactsResults[ck]===''&&!content)retiredNote='<div style="'+_noteStyle+'">No source-dictionary data was found for this reference, or it could not load. Check your connection and try again.</div>';
+  contentEl.innerHTML='<div>'+(factsHtml&&typeof DOMPurify!=='undefined'?DOMPurify.sanitize(factsHtml):factsHtml)+retiredNote+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+'</div>';
   if(hasFactsPanel&&aiFactsResults[ck]==null&&ar&&ar.reference){
     var scope=ck.endsWith('_book')?'book':'passage';
     buildFactsHtmlForTool(base,ar.reference,scope).then(function(fh){
@@ -1619,13 +1642,13 @@ var DEEP_PRIORITIES={
  * Shows or hides the "Go Deeper" button row based on whether the active AI tab's
  * tool has deep-priorities defined (all six tools, any scope, since Aug 25 2026).
  */
-function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(!row)return;var base=aiActiveTab?aiActiveTab.replace('_book',''):'';row.style.display=(base&&DEEP_PRIORITIES[base])?'block':'none';var lbl=document.getElementById('expand-btn-label');if(lbl)lbl.textContent='Go Deeper \u2014 full scholarly detail';}
+function updateExpandBtn(){var row=document.getElementById('expand-btn-row');if(!row)return;var base=aiActiveTab?aiActiveTab.replace('_book',''):'';row.style.display=(base&&DEEP_PRIORITIES[base]&&RETIRED_AI_TOOLS.indexOf(base)<0)?'block':'none';var lbl=document.getElementById('expand-btn-label');if(lbl)lbl.textContent='Go Deeper \u2014 full scholarly detail';}
 /**
  * Shows or hides the "Continue" button row based on whether the active AI tab's
  * result was cut off by the model's max_tokens cap (finish_reason==='length').
  * Applies to all six AI Study Tools, any scope.
  */
-function updateContinueBtn(){var row=document.getElementById('continue-btn-row');if(!row)return;row.style.display=(aiActiveTab&&_truncatedTabs[aiActiveTab])?'block':'none';}
+function updateContinueBtn(){var row=document.getElementById('continue-btn-row');if(!row)return;row.style.display=(aiActiveTab&&_truncatedTabs[aiActiveTab]&&RETIRED_AI_TOOLS.indexOf(aiActiveTab.replace('_book',''))<0)?'block':'none';}
 /**
  * "Go Deeper" — appends genuinely new, full-scholarly-depth content to the current
  * (now plain-language-first) AI result using a follow-up Groq prompt. Since Aug 25

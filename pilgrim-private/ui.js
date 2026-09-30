@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.45.0';
+} from './utils.js?v=4.46.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.45.0';
+} from './storage.js?v=4.46.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.45.0';
+} from './media.js?v=4.46.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.45.0';
+} from './tts.js?v=4.46.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.45.0';
+} from './sync.js?v=4.46.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.45.0';
+} from './studyTools.js?v=4.46.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.45.0';
+} from './memory.js?v=4.46.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3272,9 +3272,9 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay .modal',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, scholarly notes, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical,#btn-grammar,#btn-historical,#btn-cultural,#btn-geography',title:'Five AI Research Tools',body:"Word Study (word meanings), Language & Structure (grammar), Historical Context, Cultural Context, and Places & Geography. Each button's subtitle explains what it covers — tap any one to run it."},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical,#btn-historical,#btn-cultural,#btn-geography',title:'Four Study Tools',body:"Word Study (word meanings straight from the source dictionary), Historical Context, Cultural Context, and Places & Geography (these three are AI-generated). Each button's subtitle explains what it covers — tap any one to open it. For word-by-word grammar, use Bible Tools > Interlinear."},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all five tools at once — three analyze this specific passage (Word Study, Language & Structure, and Places & Geography) and two study the entire book (Historical Context and Cultural Context).'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all three AI tools at once — Places & Geography analyzes this specific passage, and Historical Context and Cultural Context study the entire book.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#outline-collapsible',title:'Passage / Book Outline',body:'Write a structural outline of the passage or book here — your own organization, not AI-generated.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#d-conclusions-editor',title:'My Conclusions',body:'This space is entirely yours — no AI involved. Record your own theological conclusions, insights, and application.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'[onclick*="openExportModal"]',title:'Export Study to PDF',body:'Export the whole study — scripture, notes, outline, resources, conclusions, and any AI tool results — to a shareable PDF.'},
