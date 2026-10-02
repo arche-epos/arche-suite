@@ -497,7 +497,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.2',date:'Oct 1, 2026',label:'Latest — untested',
+    version:'4.46.3',date:'Oct 2, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Look Up Word no longer makes an AI call. The short AI \u201cExplanation\u201d paragraph under a looked-up word is retired, so every result is now fixed Strong’s dictionary data: original word, transliteration, definition, derivation, KJV renderings, and where it appears in Scripture with KJV text.",
+      "note: words you already saved keep their Explanation exactly as saved — nothing is deleted or rewritten. New saves simply have no Explanation. No setting, sync, or backup format changed. Tour text and help reference updated. Cache-buster bumped to 4.46.3."
+    ]},
+  {
+    version:'4.46.2',date:'Oct 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Word Study now shows the right Hebrew words for Old Testament passages whose English and Hebrew verse numbers differ (for example Psalm 51:1-3, which has a Hebrew title verse, or Joel 2:28-32, which is Joel 3 in the Hebrew). It now uses the same verse map as Interlinear. Rows are still labeled with the English verse you asked for.",

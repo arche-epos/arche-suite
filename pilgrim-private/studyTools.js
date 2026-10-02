@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.46.2';
+} from './utils.js?v=4.46.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.2';
-import { syncToGist } from './sync.js?v=4.46.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.2';
-import { decodeMorph, shortGloss } from './morph.js?v=4.46.2';
-import { hebrewVerses } from './versemap.js?v=4.46.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.3';
+import { syncToGist } from './sync.js?v=4.46.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.3';
+import { decodeMorph, shortGloss } from './morph.js?v=4.46.3';
+import { hebrewVerses } from './versemap.js?v=4.46.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2295,19 +2295,8 @@ async function _lexFullLookup(query,btn,res,bar){
     }));
     var occurrences=toFetch.map(function(ref,i){return {ref:ref,text:fetched[i]};})
       .concat(refs.slice(LEX_OCCURRENCE_TEXT_CAP).map(function(ref){return {ref:ref,text:''};}));
-    // One short, tightly-grounded AI paragraph explaining the real definition data below —
-    // never asked to identify the word, number, or definition itself (all real/deterministic
-    // above); verified afterward against this single word's own data before rendering.
-    var explainPrompt='You are a biblical lexicographer. Explain the following REAL, verified dictionary data about '+sn+' ('+(entry.lemma||'')+', '+(entry.translit||'')+') in one accessible paragraph (120-180 words) for a Bible study student with no Greek/Hebrew training. Base your explanation ONLY on the data below. Do not introduce a different Strong\'s number or original word, do not state a definition beyond what\'s given, and do not attribute this data to a named lexicon (e.g. Thayer\'s, BDB) — it is Strong\'s own dictionary text, supplied directly.\n\n--- VERIFIED DATA ---\nStrong\'s definition: '+(entry.strongs_def||'(none)')+'\nDerivation: '+(entry.derivation||'(none)')+'\nKJV renderings: '+(entry.kjv_def||'(none)')+'\n--- END VERIFIED DATA ---';
-    var explanation='';
-    try{
-      var er=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'lexicon'},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',max_tokens:400,messages:[{role:'system',content:'Reasoning: low'},{role:'user',content:explainPrompt}],frequency_penalty:0.3})});
-      if(er.ok){
-        var ed=await er.json();
-        explanation=(ed.choices&&ed.choices[0]&&ed.choices[0].message&&ed.choices[0].message.content||'').trim();
-        explanation=verifyGroundedOutput('lexical',explanation,{allowedStrongs:[sn],allowedWords:entry.lemma?[entry.lemma]:[]},sn);
-      }
-    }catch(_e){/* explanation is a nice-to-have on top of the real dictionary data above — a failed call here still renders the rest */}
+    // v4.46.3: no AI call here any more. Everything below is fixed dictionary + occurrence data; the old
+    // AI "Explanation" paragraph was the last AI prose in Look Up Word and has been retired.
     var lex={
       strongsNumber:sn,
       testament:dictName==='greek'?'NT':'OT',
@@ -2317,7 +2306,7 @@ async function _lexFullLookup(query,btn,res,bar){
       rootWord:entry.derivation||'',
       primaryDefinition:entry.kjv_def||'',
       strongsDefinition:entry.strongs_def||'',
-      scholarlyEntry:explanation,
+      scholarlyEntry:'', // retired v4.46.3; renderLexiconEntry skips an empty one, and Explanations on already-saved words still render
       occurrences:occurrences
     };
     var html=renderLexiconEntry(lex,query);
@@ -2402,7 +2391,7 @@ function renderLexiconEntry(lex,query){
     });
     h+='</div>';
   }
-  h+='<div class="lex-footer">Strong\'s number, definition, and occurrences are sourced data. The explanation paragraph above is AI-written from that data \u2014 verify against primary sources. All theological conclusions are yours.</div>';
+  h+='<div class="lex-footer">Strong\'s number, definition, and occurrences are sourced data.'+(lex.scholarlyEntry?' The explanation paragraph above is AI-written from that data \u2014 verify against primary sources.':'')+' All theological conclusions are yours.</div>';
   return h;
 }
 

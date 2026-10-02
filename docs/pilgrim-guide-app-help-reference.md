@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026); Word Study now maps Old Testament English verse numbers to the Hebrew verses (as Interlinear does) and Go Deeper/Continue are blocked on the retired Cross-References results in v4.46.2 (Oct 1, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026); Word Study now maps Old Testament English verse numbers to the Hebrew verses (as Interlinear does) and Go Deeper/Continue are blocked on the retired Cross-References results in v4.46.2 (Oct 1, 2026); Look Up Word's AI Explanation paragraph retired in v4.46.3 (Oct 2, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -260,7 +260,9 @@ that avoids the excluded list.
 ### Look Up Word (word lookup — available from several places)
 - Look up a word or Strong's number (e.g. "logos", "G3056", "H1254") →
   "Look Up Word" button, opened from Library > Words, Study > Notes, or globally.
-  Results can be saved to the Words list.
+  Results are fixed Strong's dictionary data (no AI as of v4.46.3: original word,
+  definition, KJV renderings, where it appears). Results can be saved to the Words list;
+  words saved earlier keep any Explanation they already had.
 
 ---
 
