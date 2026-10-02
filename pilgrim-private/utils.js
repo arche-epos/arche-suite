@@ -497,10 +497,19 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.1',date:'Sep 30, 2026',label:'Latest — untested',
+    version:'4.46.2',date:'Oct 1, 2026',label:'Latest — untested',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      "fix: Word Study now works for the Old Testament. Its word list was empty for every OT passage (the filter that picks nouns, verbs, and adjectives only understood Greek tags, so every Hebrew and Aramaic word was filtered out). Numbers 9:15, for example, now lists its 14 content words with their Strong’s definitions.",
+      "fix: Word Study now shows the right Hebrew words for Old Testament passages whose English and Hebrew verse numbers differ (for example Psalm 51:1-3, which has a Hebrew title verse, or Joel 2:28-32, which is Joel 3 in the Hebrew). It now uses the same verse map as Interlinear. Rows are still labeled with the English verse you asked for.",
+      "fix: Go Deeper and Continue can no longer write new AI text to a saved Cross-References result, the same protection Word Study and Language & Structure got in v4.46.0. Saved results still show, export, sync, and back up exactly as before.",
+      "fix: corrected the v4.46.1 note below. Numbers 9:15 lists 12 unique content words (14 counts repeats).",
+      "note: nothing stored or changed — no saved study, setting, sync, or backup data touched. Cache-buster bumped to 4.46.2."
+    ]},
+  {
+    version:'4.46.1',date:'Sep 30, 2026',label:'',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Word Study now works for the Old Testament. Its word list was empty for every OT passage (the filter that picks nouns, verbs, and adjectives only understood Greek tags, so every Hebrew and Aramaic word was filtered out). Numbers 9:15, for example, now lists its 12 unique content words with their Strong’s definitions.",
       "fix: Word Study showed the first passage’s words on every other study until you reloaded the app — the session cache was keyed by tool only. It is now keyed by tool, scope, and passage. A failed load (for example, offline) is no longer remembered, so tapping Word Study again retries.",
       "note: nothing stored or changed — no saved study, setting, sync, or backup data touched. Cache-buster bumped to 4.46.1."
     ]},

@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.46.1';
+} from './utils.js?v=4.46.2';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.1';
-import { syncToGist } from './sync.js?v=4.46.1';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.1';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.1';
-import { decodeMorph, shortGloss } from './morph.js?v=4.46.1';
-import { hebrewVerses } from './versemap.js?v=4.46.1';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.2';
+import { syncToGist } from './sync.js?v=4.46.2';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.2';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.2';
+import { decodeMorph, shortGloss } from './morph.js?v=4.46.2';
+import { hebrewVerses } from './versemap.js?v=4.46.2';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -56,7 +56,7 @@ var TOOLS_WITH_FACTS_PANEL = ['lexical'];
 // Interlinear replaces it). Anything already saved in ar.deep.lexical/_book and ar.deep.grammar/_book is
 // left exactly as saved: still shown as a tab, still exported/synced/backed up. This list only stops
 // NEW commentary from being requested (Go Deeper / Continue are hidden for these tabs).
-var RETIRED_AI_TOOLS = ['lexical', 'grammar'];
+var RETIRED_AI_TOOLS = ['lexical', 'grammar', 'crossrefs']; // crossrefs added to the guard in v4.46.2 (retired in v4.41.0)
 var _snapshotRunning = false;
 var _snapshotCancelled = false;
 var _snapshotAbortControllers = {}; // tool -> AbortController, one per in-flight parallel request
@@ -495,6 +495,32 @@ function sliceBookData(bookData,parsed){
 }
 
 /**
+ * Like sliceBookData, but for data/macula, which follows the ORIGINAL-language verse numbering.
+ * New Testament: identical to sliceBookData. Old Testament passages are given in English numbering
+ * (Psalm 51:1-3, Joel 2:28-32), so each English verse is translated through the verse map to the
+ * Hebrew verse(s) that hold its words (v4.46.2). Each entry's chapter/verse is the Hebrew key (what
+ * the data is filed under); ref is the English verse the reader asked for, used as the display label.
+ * @returns {Array<{chapter:number, verse:number, ref:string, data:*}>}
+ */
+function sliceMaculaData(bookData,parsed,bookNum){
+  if(!parsed||Number(bookNum)>39){
+    return sliceBookData(bookData,parsed).map(function(ve){ve.ref=ve.chapter+':'+ve.verse;return ve;});
+  }
+  var out=[],seen={};
+  var first=parsed.startVerse||1;
+  var last=Math.min(parsed.endVerse||parsed.startVerse||176,176); // 176 = longest OT chapter (Psalm 119)
+  for(var v=first;v<=last;v++){
+    hebrewVerses(Number(bookNum),parsed.chapter,v).verses.forEach(function(m){
+      var key=m.c+':'+m.v;
+      if(seen[key]||!bookData[key])return;
+      seen[key]=true;
+      out.push({chapter:m.c,verse:m.v,ref:parsed.chapter+':'+v,data:bookData[key]});
+    });
+  }
+  return out;
+}
+
+/**
  * Builds the Word Study (lexical) ground-truth block: distinct words in scope, each
  * with its real Strong's number and dictionary definition. Deduplicates by Strong's
  * number (first occurrence's word form kept) — a passage repeating a word doesn't need
@@ -503,13 +529,13 @@ function sliceBookData(bookData,parsed){
  */
 async function buildLexicalGround(bookNum,parsed,isBook){
   var bookData=await getMaculaBook(bookNum);
-  var verses=sliceBookData(bookData,isBook?null:parsed);
+  var verses=sliceMaculaData(bookData,isBook?null:parsed,bookNum);
   var seen={},entries=[];
   verses.forEach(function(ve){
     ve.data.forEach(function(w){
       if(!w.strongs||seen[w.strongs])return;
       seen[w.strongs]=true;
-      entries.push({ref:ve.chapter+':'+ve.verse,word:w.word,strongs:w.strongs,morph:w.morph||''});
+      entries.push({ref:ve.ref,word:w.word,strongs:w.strongs,morph:w.morph||''});
     });
   });
   if(isBook&&entries.length>GROUND_BOOK_WORD_CAP)entries=entries.slice(0,GROUND_BOOK_WORD_CAP);
@@ -1680,6 +1706,7 @@ async function expandCurrentTool(){
   if(!aiActiveTab)return;
   var base=aiActiveTab.replace('_book','');
   if(!DEEP_PRIORITIES[base])return;
+  if(RETIRED_AI_TOOLS.indexOf(base)>=0)return; // retired tools never get new AI text (v4.46.2)
   var ar=activeRef();if(!ar)return;
   var existing=aiPanelResults[aiActiveTab]||(ar.deep&&ar.deep[aiActiveTab])||'';
   if(!existing){toast('Run the tool first');return;}
@@ -1714,6 +1741,7 @@ async function continueCurrentTool(){
   var ar=activeRef();if(!ar)return;
   var ck=aiActiveTab;
   var base=ck.replace('_book','');
+  if(RETIRED_AI_TOOLS.indexOf(base)>=0)return; // retired tools never get new AI text (v4.46.2)
   var scope=ck.endsWith('_book')?'book':'passage';
   var existing=aiPanelResults[ck]||(ar.deep&&ar.deep[ck])||'';
   if(!existing){toast('Run the tool first');return;}

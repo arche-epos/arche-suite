@@ -1,7 +1,7 @@
 # Pilgrim Guide — App Reference & Intent Guide (v3.1)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026)
+**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026); Word Study now maps Old Testament English verse numbers to the Hebrew verses (as Interlinear does) and Go Deeper/Continue are blocked on the retired Cross-References results in v4.46.2 (Oct 1, 2026)
 **v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
 envelope (see "Response format" below) instead of plain prose — this is what
 lets the client run AI-proposed references through real verification before
@@ -175,7 +175,9 @@ that avoids the excluded list.
 - Get Greek/Hebrew/English word meaning for the passage → **Word Study** (no AI
   as of v4.46.0 — the button shows the source-dictionary facts: original word,
   Strong's number, transliteration, full definition; commentary saved on older
-  studies still appears under the facts, unchanged). For one word or a Strong's
+  studies still appears under the facts, unchanged; for Old Testament passages it uses the
+  same English-to-Hebrew verse map as Interlinear, so Psalm titles and Joel 2-3 show the right
+  words). For one word or a Strong's
   number, use the Word Study search
 - Get grammar/syntax help → the AI **Language & Structure** tool was retired in
   v4.46.0. Use **Bible Tools > Interlinear** for word-by-word parsing of any

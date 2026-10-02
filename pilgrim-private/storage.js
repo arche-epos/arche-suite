@@ -14,8 +14,8 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.46.1';
-import { mediaDeleteStudy, trRefresh } from './media.js?v=4.46.1';
+} from './utils.js?v=4.46.2';
+import { mediaDeleteStudy, trRefresh } from './media.js?v=4.46.2';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
