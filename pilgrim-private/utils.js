@@ -497,7 +497,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.3',date:'Oct 2, 2026',label:'Latest — untested',
+    version:'4.46.4',date:'Oct 2, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the Study tour has a new Bible Tools step (Cross-References, Translation Comparison, Interlinear), and its Study Tools wording now matches what is AI and what is source data.",
+      "fix: the Look Up Word tour step said you could search any Greek or Hebrew term; it takes an English word or a Strong’s number. The first-run welcome card no longer lists grammar and cross-references as AI tools.",
+      "note: text only. Nothing stored or changed. Cache-buster bumped to 4.46.4."
+    ]},
+  {
+    version:'4.46.3',date:'Oct 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Look Up Word no longer makes an AI call. The short AI \u201cExplanation\u201d paragraph under a looked-up word is retired, so every result is now fixed Strong’s dictionary data: original word, transliteration, definition, derivation, KJV renderings, and where it appears in Scripture with KJV text.",

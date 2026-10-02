@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.46.3';
+} from './utils.js?v=4.46.4';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.46.3';
+} from './storage.js?v=4.46.4';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.46.3';
+} from './media.js?v=4.46.4';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.46.3';
+} from './tts.js?v=4.46.4';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.46.3';
+} from './sync.js?v=4.46.4';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.46.3';
+} from './studyTools.js?v=4.46.4';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.46.3';
+} from './memory.js?v=4.46.4';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3266,12 +3266,13 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');bpOpen();},target:'#bp-overlay .bp-sheet',title:'Reference Picker',body:'Choose Old or New Testament → Book → Chapter → Verse — the reference fills in automatically. Tap Load Scripture to pull the passage.'},
   {screen:'study',before:function(){switchStudyTab('notes');closeOverlay('bp-overlay');var r=makeRef('secondary');r.reference='Romans 8:28';cur.refs.push(r);switchRef(cur.refs.length-1);fetchScr();},target:'.ref-pill-add',title:'Add Another Passage',body:"Tap + Add Passage to study multiple passages in one study. We've added a second one — Romans 8:28 — to show how it works."},
   {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'#scrpanel',title:'Read the Passage',body:'This is where the loaded scripture text appears for you to read.'},
+  {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'button[onclick*="openBibleToolsFromStudy"]',title:'Bible Tools',body:'Tap Bible Tools to look into this passage with fixed data, no AI: Cross-References (related verses), Translation Comparison, and Interlinear (every Greek or Hebrew word with its meaning and parsing).'},
   {screen:'study',before:function(){switchStudyTab('notes');if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
-  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word (top of the Notes card) to search any Greek or Hebrew term. Results include Strong’s number, definition, transliteration, KJV usage, and where it appears in Scripture. Save to this study or your Words library.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word (top of the Notes card) and type an English word or a Strong’s number (like G26 or H430). Results include Strong’s number, definition, transliteration, KJV usage, and where it appears in Scripture. Save to this study or your Words library.'},
   {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay .modal',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
-  {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper into your journey, digging into the text with AI-assisted research.'},
+  {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper: word meanings straight from the source dictionary, plus AI-written background on history, culture, and places.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-lexical,#btn-historical,#btn-cultural,#btn-geography',title:'Four Study Tools',body:"Word Study (word meanings straight from the source dictionary), Historical Context, Cultural Context, and Places & Geography (these three are AI-generated). Each button's subtitle explains what it covers — tap any one to open it. For word-by-word grammar, use Bible Tools > Interlinear."},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#scope-passage,#scope-book',title:'This Passage vs. Whole Book',body:'Toggle the scope before running a tool — This Passage studies just the loaded verses; Whole Book studies the entire book they belong to.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:'#btn-snapshot',title:'Study Snapshot',body:'Runs all three AI tools at once — Places & Geography analyzes this specific passage, and Historical Context and Cultural Context study the entire book.'},
