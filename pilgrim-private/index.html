@@ -261,7 +261,8 @@ input[type="range"]{accent-color:var(--gold)}
 .update-banner button.primary{background:var(--gold);color:var(--bg0);border-color:var(--gold);font-weight:600}
 .tour-overlay{display:none;position:fixed;inset:0;z-index:870}
 .tour-overlay.on{display:block}
-.tour-spotlight{position:fixed;z-index:870;border-radius:8px;box-shadow:0 0 0 9999px rgba(11,9,7,.78);transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}
+.tour-spotlight{position:fixed;z-index:870;border-radius:8px;box-shadow:0 0 0 9999px rgba(11,9,7,.55);transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}
+.tour-spotlight.nofocus{box-shadow:0 0 0 9999px rgba(11,9,7,.15)}
 .tour-bubble{position:fixed;z-index:880;background:var(--bg2);border:1px solid var(--golddim);border-radius:var(--rl);padding:16px;width:300px;max-width:calc(100vw - 32px);box-shadow:0 8px 32px rgba(0,0,0,.5);transition:top .25s ease,left .25s ease}
 .tour-bubble-title{font-family:'EB Garamond',serif;font-size:17px;color:var(--gold);margin-bottom:6px}
 .tour-bubble-body{font-size:14px;line-height:1.5;color:var(--txt2);margin-bottom:12px}
@@ -1926,7 +1927,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.46.4"></script>
+<script type="module" src="app.js?v=4.46.5"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

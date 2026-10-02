@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.46.4';
+} from './utils.js?v=4.46.5';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.4';
-import { syncToGist } from './sync.js?v=4.46.4';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.4';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.4';
-import { decodeMorph, shortGloss } from './morph.js?v=4.46.4';
-import { hebrewVerses } from './versemap.js?v=4.46.4';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.5';
+import { syncToGist } from './sync.js?v=4.46.5';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.5';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.5';
+import { decodeMorph, shortGloss } from './morph.js?v=4.46.5';
+import { hebrewVerses } from './versemap.js?v=4.46.5';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.

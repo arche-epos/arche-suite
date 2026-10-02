@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.46.4';
+} from './utils.js?v=4.46.5';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.46.4';
+} from './storage.js?v=4.46.5';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.46.4';
+} from './media.js?v=4.46.5';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.46.4';
+} from './tts.js?v=4.46.5';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.46.4';
+} from './sync.js?v=4.46.5';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.46.4';
+} from './studyTools.js?v=4.46.5';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.46.4';
+} from './memory.js?v=4.46.5';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3066,6 +3066,7 @@ function tourPositionSpotlight(rect){
   }else{
     sp.style.top='50%';sp.style.left='50%';sp.style.width='0px';sp.style.height='0px';
   }
+  sp.classList.toggle('nofocus',!rect); // no target: dim only lightly so the page behind stays readable
 }
 /**
  * Positions the message bubble near a target rect — on whichever side (below
@@ -3080,8 +3081,9 @@ function tourPositionBubble(rect){
   var vw=window.innerWidth,vh=window.innerHeight;
   var bw=b.offsetWidth||300,bh=b.offsetHeight||180;
   if(!rect){
-    b.style.top=Math.max(16,(vh/2-bh/2))+'px';
-    b.style.left=Math.max(16,(vw/2-bw/2))+'px';
+    // no target: sit near the bottom (not dead center) so the page being described stays visible above the bubble
+    b.style.top=Math.max(16,vh-bh-24)+'px';
+    b.style.left=Math.max(16,(vw-bw)/2)+'px';
     return;
   }
   var spaceBelow=vh-rect.top-rect.height,spaceAbove=rect.top;
@@ -3254,9 +3256,10 @@ function tourCleanupDemoData(){
 
 // ── TOUR A — "CREATE YOUR FIRST STUDY" ───────────────────────────────────
 var TOUR_A_STEPS=[
-  {screen:'library',target:'.botnav',title:'Getting Around',body:'On mobile the navigation bar runs along the bottom of the screen. On desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
-  {screen:'library',target:'#lib-tab-studies,#lib-tab-words',title:'Studies & Words',body:"The Studies tab holds every Bible study you create. The Words tab holds every word you've looked up and saved, across all of your studies."},
-  {screen:'library',target:'.fab-wrap',title:'Start a New Study',body:'Tap here on Library to choose New Study or Pilgrim Guide. On every other screen, this same button skips straight to Pilgrim Guide — the tooltip always tells you which one it\'ll do.'},
+  {screen:'library',target:'.botnav',title:'Getting Around',body:'On a phone or tablet the navigation bar runs along the top of the screen. On a desktop it becomes a sidebar on the left. Tap any section — Library, Read, Study, Progress, or Settings — to switch screens.'},
+  {screen:'library',target:'#lib-tab-studies,#lib-tab-words,#lib-tab-memory',title:'Studies, Words & Memory',body:"Studies holds every Bible study you create. Words holds every word you've looked up and saved, across all of your studies. Memory holds the verses you're learning by heart, with spaced-recall quizzes."},
+  {screen:'library',target:'.studycard-new,.empty button[onclick="newStudy()"]',title:'Start a New Study',body:'Tap the New Study card to begin a study. You\'ll pick a template next.'},
+  {screen:'library',target:'.fab-wrap',title:'The Round Button',body:'On Library this button offers New Study or Pilgrim Guide. On every other screen it skips straight to Pilgrim Guide — the tooltip always tells you which one it\'ll do.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
   {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
   {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-date,#f-teacher',title:'Date & Teacher',body:"Today's date fills in automatically. Add who taught or preached — we've filled in an example name."},

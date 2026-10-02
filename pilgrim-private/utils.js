@@ -497,7 +497,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.4',date:'Oct 2, 2026',label:'Latest — untested',
+    version:'4.46.5',date:'Oct 2, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the Study tour is easier to see. The dimming behind each step is lighter, and steps with nothing to highlight (like the new study’s Notes screen) barely dim the page, with the tip box sitting near the bottom so the screen above stays readable.",
+      "change: the tour’s Library step now covers the Memory tab along with Studies and Words.",
+      "fix: the first tour step said the navigation bar is at the bottom; it is along the top on phones and tablets (a sidebar on desktop).",
+      "fix: the Start a New Study step now highlights the New Study card in the Library; the round button has its own step right after.",
+      "note: text and look only. Nothing stored or changed. Cache-buster bumped to 4.46.5."
+    ]},
+  {
+    version:'4.46.4',date:'Oct 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the Study tour has a new Bible Tools step (Cross-References, Translation Comparison, Interlinear), and its Study Tools wording now matches what is AI and what is source data.",

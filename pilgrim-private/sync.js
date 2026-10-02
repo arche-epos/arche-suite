@@ -13,10 +13,10 @@ import {
   sett, TAGS, setTags,
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent
-} from './utils.js?v=4.46.4';
+} from './utils.js?v=4.46.5';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.46.4';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.46.4';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.46.5';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.46.5';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
