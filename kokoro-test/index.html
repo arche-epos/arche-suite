@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kokoro TTS Test</title>
+<style>
+  :root { --bg:#14161a; --card:#1e2128; --fg:#e8eaed; --mut:#9aa0a6; --acc:#7aa2f7; --ok:#7ee787; --bad:#ff7b72; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui,sans-serif; max-width:640px; margin-inline:auto; }
+  h1 { font-size:1.2rem; margin:0 0 4px; }
+  .sub { color:var(--mut); font-size:.85rem; margin-bottom:14px; }
+  label { display:block; font-size:.8rem; color:var(--mut); margin:12px 0 4px; }
+  textarea, select, button { width:100%; font:inherit; color:var(--fg); background:var(--card); border:1px solid #333a45; border-radius:8px; padding:10px; }
+  textarea { min-height:140px; resize:vertical; }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  button { background:var(--acc); color:#0b1020; font-weight:600; border:0; cursor:pointer; }
+  button.sec { background:var(--card); color:var(--fg); border:1px solid #333a45; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .card { background:var(--card); border-radius:8px; padding:10px 12px; margin-top:14px; font-size:.9rem; }
+  .card h2 { font-size:.8rem; color:var(--mut); margin:0 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:3px 0; } td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  #bar { height:6px; background:#2a2f38; border-radius:3px; overflow:hidden; margin-top:8px; }
+  #barFill { height:100%; width:0; background:var(--acc); transition:width .2s; }
+  #log { white-space:pre-wrap; font:.75rem/1.35 ui-monospace,monospace; color:var(--mut); max-height:140px; overflow:auto; }
+</style>
+</head>
+<body>
+<h1>Kokoro TTS Test</h1>
+<div class="sub">Standalone test. Runs the model in this browser. Nothing is saved to localStorage.</div>
+
+<div class="card"><h2>Environment</h2>
+  <table>
+    <tr><td>WebGPU available</td><td id="envGpu">checking…</td></tr>
+    <tr><td>Backend in use</td><td id="envBackend">not loaded</td></tr>
+  </table>
+</div>
+
+<label for="mode">Mode</label>
+<select id="mode">
+  <option value="wasm|q8">WASM, q8 (~90 MB, smallest)</option>
+  <option value="webgpu|fp32">WebGPU, fp32 (~330 MB)</option>
+  <option value="webgpu|q8">WebGPU, q8 (experimental)</option>
+</select>
+
+<label for="voice">Voice</label>
+<select id="voice"><option value="af_heart">Heart (US female)</option></select>
+
+<label for="speed">Speed</label>
+<select id="speed">
+  <option value="0.9">0.9x</option>
+  <option value="1" selected>1.0x</option>
+  <option value="1.1">1.1x</option>
+  <option value="1.25">1.25x</option>
+</select>
+
+<label for="text">Text</label>
+<textarea id="text">In the beginning was the Word, and the Word was with God, and the Word was God. The same was in the beginning with God. All things were made by him; and without him was not any thing made that was made.</textarea>
+
+<div class="row" style="margin-top:12px">
+  <button id="play">Play</button>
+  <button id="stop" class="sec" disabled>Stop</button>
+</div>
+<div id="bar"><div id="barFill"></div></div>
+
+<div class="card"><h2>Timing</h2>
+  <table>
+    <tr><td>Status</td><td id="tStatus">idle</td></tr>
+    <tr><td>Model load (download + init)</td><td id="tLoad">–</td></tr>
+    <tr><td>Time to first audio</td><td id="tFirst">–</td></tr>
+    <tr><td>Total generation time</td><td id="tGen">–</td></tr>
+    <tr><td>Audio length</td><td id="tAudio">–</td></tr>
+    <tr><td>Real-time factor (lower is faster; &lt;1.0 keeps up)</td><td id="tRtf">–</td></tr>
+  </table>
+</div>
+
+<div class="card"><h2>Log</h2><div id="log"></div></div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const logEl = $('log');
+const log = m => { logEl.textContent += m + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+const fmt = s => s.toFixed(2) + ' s';
+
+// Environment
+const hasGpu = !!navigator.gpu;
+$('envGpu').textContent = hasGpu ? 'yes' : 'no';
+$('envGpu').className = hasGpu ? 'ok' : 'bad';
+if (!hasGpu) { [...$('mode').options].forEach(o => { if (o.value.startsWith('webgpu')) o.disabled = true; }); }
+
+let KokoroTTS = null, tts = null, loadedMode = null;
+let ctx = null, playing = false, stopFlag = false, sources = [];
+
+async function importKokoro() {
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm',
+    'https://esm.sh/kokoro-js@1.2.1'
+  ];
+  for (const u of urls) {
+    try { log('Importing ' + u); const m = await import(u); log('Import OK'); return m.KokoroTTS; }
+    catch (e) { log('Import failed: ' + (e && e.message || e)); }
+  }
+  throw new Error('Could not import kokoro-js from any CDN');
+}
+
+async function ensureModel(mode) {
+  if (tts && loadedMode === mode) return;
+  const [device, dtype] = mode.split('|');
+  $('tStatus').textContent = 'loading model…';
+  $('barFill').style.width = '0%';
+  const t0 = performance.now();
+  if (!KokoroTTS) KokoroTTS = await importKokoro();
+  const files = {};
+  tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+    dtype, device,
+    progress_callback: p => {
+      if (p.status === 'progress' && p.file) {
+        files[p.file] = { l: p.loaded, t: p.total };
+        let l = 0, t = 0; for (const k in files) { l += files[k].l; t += files[k].t; }
+        if (t) { const pct = 100 * l / t; $('barFill').style.width = pct.toFixed(0) + '%';
+          $('tStatus').textContent = 'downloading ' + (l/1048576).toFixed(0) + ' / ' + (t/1048576).toFixed(0) + ' MB'; }
+      }
+    }
+  });
+  loadedMode = mode;
+  $('tLoad').textContent = fmt((performance.now() - t0) / 1000);
+  $('envBackend').textContent = device + ' / ' + dtype;
+  $('barFill').style.width = '100%';
+  log('Model ready: ' + device + '/' + dtype);
+  // Populate voices once
+  const sel = $('voice');
+  if (!sel.dataset.filled) {
+    const cur = sel.value; sel.innerHTML = '';
+    for (const [id, v] of Object.entries(tts.voices)) {
+      const o = document.createElement('option');
+      o.value = id; o.textContent = `${v.name} (${v.language === 'en-gb' ? 'UK' : 'US'} ${v.gender.toLowerCase()}, grade ${v.overallGrade})`;
+      sel.appendChild(o);
+    }
+    sel.value = cur; sel.dataset.filled = '1';
+  }
+}
+
+function schedule(audio, startAt) {
+  const buf = ctx.createBuffer(1, audio.audio.length, audio.sampling_rate);
+  buf.copyToChannel(audio.audio, 0);
+  const src = ctx.createBufferSource();
+  src.buffer = buf; src.connect(ctx.destination);
+  const when = Math.max(startAt, ctx.currentTime + 0.02);
+  src.start(when);
+  sources.push(src);
+  return { end: when + buf.duration, dur: buf.duration };
+}
+
+function setPlaying(on) {
+  playing = on;
+  $('play').disabled = on; $('stop').disabled = !on;
+  ['mode','voice','speed','text'].forEach(id => $(id).disabled = on);
+}
+
+$('play').onclick = async () => {
+  const text = $('text').value.trim();
+  if (!text) return;
+  stopFlag = false; setPlaying(true);
+  ['tFirst','tGen','tAudio','tRtf'].forEach(id => $(id).textContent = '–');
+  $('tStatus').className = ''; $('tRtf').className = '';
+  try {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    await ensureModel($('mode').value);
+    $('barFill').style.width = '0%';
+    $('tStatus').textContent = 'generating…';
+    const t0 = performance.now();
+    let first = null, audioSecs = 0, cursor = ctx.currentTime, n = 0;
+    const stream = tts.stream(text, { voice: $('voice').value, speed: parseFloat($('speed').value) });
+    for await (const chunk of stream) {
+      if (stopFlag) break;
+      n++;
+      const el = (performance.now() - t0) / 1000;
+      if (first === null) { first = el; $('tFirst').textContent = fmt(first); }
+      const s = schedule(chunk.audio, cursor);
+      cursor = s.end; audioSecs += s.dur;
+      log(`chunk ${n}: gen done at ${fmt(el)}, audio ${fmt(s.dur)}`);
+      $('tStatus').textContent = 'playing (generated ' + n + ' chunk' + (n > 1 ? 's' : '') + ')';
+    }
+    const gen = (performance.now() - t0) / 1000;
+    if (!stopFlag) {
+      $('tGen').textContent = fmt(gen);
+      $('tAudio').textContent = fmt(audioSecs);
+      const rtf = gen / audioSecs;
+      $('tRtf').textContent = rtf.toFixed(2) + (rtf < 1 ? '  ✓' : '  ✗');
+      $('tRtf').className = rtf < 1 ? 'ok' : 'bad';
+      // wait for playback to finish
+      const wait = Math.max(0, cursor - ctx.currentTime);
+      $('tStatus').textContent = 'playing…';
+      await new Promise(r => { const iv = setInterval(() => { if (stopFlag || ctx.currentTime >= cursor) { clearInterval(iv); r(); } }, 150); });
+    }
+    $('tStatus').textContent = stopFlag ? 'stopped' : 'done';
+  } catch (e) {
+    console.error(e); log('ERROR: ' + (e && e.message || e));
+    $('tStatus').textContent = 'error (see log)'; $('tStatus').className = 'bad';
+  } finally { setPlaying(false); }
+};
+
+$('stop').onclick = () => {
+  stopFlag = true;
+  sources.forEach(s => { try { s.stop(); } catch {} });
+  sources = [];
+};
+</script>
+</body>
+</html>
