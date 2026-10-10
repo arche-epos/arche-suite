@@ -92,7 +92,7 @@ $('envGpu').textContent = hasGpu ? 'yes' : 'no';
 $('envGpu').className = hasGpu ? 'ok' : 'bad';
 if (!hasGpu) { [...$('mode').options].forEach(o => { if (o.value.startsWith('webgpu')) o.disabled = true; }); }
 
-let KokoroTTS = null, tts = null, loadedMode = null;
+let KokoroTTS = null, TextSplitterStream = null, tts = null, loadedMode = null;
 let ctx = null, playing = false, stopFlag = false, sources = [];
 
 async function importKokoro() {
@@ -101,7 +101,7 @@ async function importKokoro() {
     'https://esm.sh/kokoro-js@1.2.1'
   ];
   for (const u of urls) {
-    try { log('Importing ' + u); const m = await import(u); log('Import OK'); return m.KokoroTTS; }
+    try { log('Importing ' + u); const m = await import(u); log('Import OK'); return m; }
     catch (e) { log('Import failed: ' + (e && e.message || e)); }
   }
   throw new Error('Could not import kokoro-js from any CDN');
@@ -113,7 +113,7 @@ async function ensureModel(mode) {
   $('tStatus').textContent = 'loading model…';
   $('barFill').style.width = '0%';
   const t0 = performance.now();
-  if (!KokoroTTS) KokoroTTS = await importKokoro();
+  if (!KokoroTTS) { const m = await importKokoro(); KokoroTTS = m.KokoroTTS; TextSplitterStream = m.TextSplitterStream; }
   const files = {};
   tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
     dtype, device,
@@ -175,7 +175,10 @@ $('play').onclick = async () => {
     $('tStatus').textContent = 'generating…';
     const t0 = performance.now();
     let first = null, audioSecs = 0, cursor = ctx.currentTime, n = 0;
-    const stream = tts.stream(text, { voice: $('voice').value, speed: parseFloat($('speed').value) });
+    const splitter = new TextSplitterStream();
+    splitter.push(text);
+    splitter.close(); // required, otherwise the last sentence is never emitted
+    const stream = tts.stream(splitter, { voice: $('voice').value, speed: parseFloat($('speed').value) });
     for await (const chunk of stream) {
       if (stopFlag) break;
       n++;
