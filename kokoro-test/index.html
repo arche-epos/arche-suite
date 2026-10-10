@@ -31,7 +31,7 @@
 </head>
 <body>
 <h1>Kokoro TTS Test</h1>
-<div class="sub">Standalone test. Runs the model in this browser. Nothing is saved to localStorage.</div>
+<div class="sub">v1.2 &middot; Standalone test. Runs the model in this browser. Nothing is saved to localStorage.</div>
 
 <div class="card"><h2>Environment</h2>
   <table>
@@ -92,7 +92,7 @@ $('envGpu').textContent = hasGpu ? 'yes' : 'no';
 $('envGpu').className = hasGpu ? 'ok' : 'bad';
 if (!hasGpu) { [...$('mode').options].forEach(o => { if (o.value.startsWith('webgpu')) o.disabled = true; }); }
 
-let KokoroTTS = null, TextSplitterStream = null, tts = null, loadedMode = null;
+let KokoroTTS = null, tts = null, loadedMode = null;
 let ctx = null, playing = false, stopFlag = false, sources = [];
 
 async function importKokoro() {
@@ -113,7 +113,7 @@ async function ensureModel(mode) {
   $('tStatus').textContent = 'loading model…';
   $('barFill').style.width = '0%';
   const t0 = performance.now();
-  if (!KokoroTTS) { const m = await importKokoro(); KokoroTTS = m.KokoroTTS; TextSplitterStream = m.TextSplitterStream; }
+  if (!KokoroTTS) { const m = await importKokoro(); KokoroTTS = m.KokoroTTS; }
   const files = {};
   tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
     dtype, device,
@@ -175,19 +175,19 @@ $('play').onclick = async () => {
     $('tStatus').textContent = 'generating…';
     const t0 = performance.now();
     let first = null, audioSecs = 0, cursor = ctx.currentTime, n = 0;
-    const splitter = new TextSplitterStream();
-    splitter.push(text);
-    splitter.close(); // required, otherwise the last sentence is never emitted
-    const stream = tts.stream(splitter, { voice: $('voice').value, speed: parseFloat($('speed').value) });
-    for await (const chunk of stream) {
+    const sentences = text.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+    log('Sentences to generate: ' + sentences.length);
+    for (const sentence of sentences) {
       if (stopFlag) break;
       n++;
+      const audio = await tts.generate(sentence, { voice: $('voice').value, speed: parseFloat($('speed').value) });
+      if (stopFlag) break;
       const el = (performance.now() - t0) / 1000;
       if (first === null) { first = el; $('tFirst').textContent = fmt(first); }
-      const s = schedule(chunk.audio, cursor);
+      const s = schedule(audio, cursor);
       cursor = s.end; audioSecs += s.dur;
-      log(`chunk ${n}: gen done at ${fmt(el)}, audio ${fmt(s.dur)}`);
-      $('tStatus').textContent = 'playing (generated ' + n + ' chunk' + (n > 1 ? 's' : '') + ')';
+      log(`chunk ${n}/${sentences.length}: gen done at ${fmt(el)}, audio ${fmt(s.dur)}`);
+      $('tStatus').textContent = 'playing (generated ' + n + '/' + sentences.length + ')';
     }
     const gen = (performance.now() - t0) / 1000;
     if (!stopFlag) {
