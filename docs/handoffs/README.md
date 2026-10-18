@@ -49,6 +49,7 @@ Full content preserved where recoverable; summary stubs otherwise.
 | session-handoff-sep30-2026-retire-ai-word-study-language-structure.md | Sep 30 | Retired AI Word Study + Language & Structure (v4.46.0/1) | **Full** |
 | session-handoff-oct01-2026-ot-verse-map-wordstudy-v4-46-2.md | Oct 1 | OT verse map in Word Study (v4.46.2) | **Full** |
 | session-handoff-oct02-2026-lookup-word-no-ai-v4-46-3.md | Oct 2 | Look Up Word AI retired (v4.46.3) | **Full** |
+| session-handoff-oct18-2026-health-check-refresh-plan.md | Oct 18 | Doc health check + refresh plan (executed in the next Oct 18 chat) | **Full** |
 
 ---
 **Going forward:** Current handoff stays in Project Knowledge.
