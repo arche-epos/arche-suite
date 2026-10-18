@@ -3,13 +3,17 @@
 ### Projects: Arché Study Tools (Pilgrim + Scribe) · Waypoint · DPS Daily Planner
 *Consolidated: April 23, 2026 — synthesized from all handoff docs, known-issues files, and Worker v2.0 spec through Waypoint v2.1.5*
 
-**Doc Version: v3.7.11** | *Last updated: September 20, 2026*
+**Doc Version: v3.7.15** | *Last updated: October 18, 2026*
 
 > **Versioning scheme:** Filename (`v3`) only changes on full structural overhaul. Internal version follows semver: Minor bump (3.1→3.2) = new sections or major SOP changes; Patch bump (3.x.0→3.x.1) = corrections or small additions. Update the changelog below on every edit.
 
 ### Document Changelog
 | Version | Date | Summary |
 |---|---|---|
+| v3.7.15 | Oct 18, 2026 | **Documentation health refresh** (`spec-doc-health-refresh-v1.md`; docs only, no code). **P1 registry re-baselined against live clones (Oct 18):** Pilgrim Private v4.35.1 → **v4.46.5**; pilgrim-admin v1.6.0 → **v1.13.0**; Pilgrim Public → **temporary maintenance page since Sep 23, 2026** (restore TBD, Boss's call); Scribe v2.1 and Codex v3.6.4 confirmed; DPS v32.48.0 → **v33.8.0**; DPS Supervisors row replaced by a **retired** row (supervisors.html, leads.html, migration-tool.html retired Sep 30, 2026, no users; mobile.html On Hold, stays in `archive/`). **Added rows:** Mentor, kokoro-test, prayer/teacher/worship placeholders, and unverified placeholder rows for Joseph, Brew Log, ARK Map Tool, Gmail Cleaner (versions/URLs to be confirmed by Boss). **Part 2 header** fixed (was Pilgrim-Private v4.9.73). **Part 4 (DPS) trimmed** to a current-state block with pointers (internal-only, single user, `LOCAL_ONLY=true` since v33.4.0, 15-day flow replaced by the training-outline rebuild); kept D5/D6/D9/D11/D13/D14 after checking them against live `DPS.html` v33.8.0; removed stale D1–D4, D7, D8, D10, D12 and closed BUG-02/04/05/08. `DPS_HANDOFF_MASTER.md` regen is still a separate pending job. **Filename and internal version are now in lockstep (v3-7-15).** Handoffs dated Sep 20 – Oct 2 moved to `docs/handoffs/` (README index updated); PK keeps only the newest handoff. Repo copy brought from v3.7.11 to v3.7.15; the public copy also generalises the PILGRIM_USERS PIN example in A8. |
+| v3.7.14 | Sep 28, 2026 | **GitHub push access method changed — GitHub App promoted to primary, Dev PAT demoted to fallback.** Confirmed this session: raw authenticated writes to `api.github.com` (Dev PAT + Git Data API) are BLOCKED by the Claude Code harness's network proxy ("Write access to this GitHub API path is not permitted through this proxy"); the sanctioned replacement is the "Claude" GitHub App (github.com/apps/claude) + `add_repo(access:"push")` + ordinary `git commit`/`git push` — proven working, v4.39.0 pushed to `main`, commit `0589607`, byte-verified. Also confirmed `arche-epos` is Boss's PERSONAL GitHub account, not an organization (github.com/settings/organizations screenshot showed no org memberships) — corrected P5 External Accounts and the install/management URL to https://github.com/settings/installations. Also confirmed branch deletion (`git push origin --delete`) is blocked in this harness even with working push access — added as a new Capability matrix row; Boss deletes stray branches manually via the GitHub web UI. Dev PAT + Git Data API flow is kept documented as fallback only per Boss's explicit decision, for a future session on a different backend. `Gizmo5332/*` and `jcaldwelldmp/Daily-Planner` confirmed to stay manual-deploy-only by design, no GitHub App extension there. `SESSION-BOOT.md` and `ways-of-working.md` updated to match. |
+| v3.7.13 | Sep 21, 2026 | **Two doc-audit open decisions resolved by Boss.** (1) Direct-to-`main` pushes confirmed OK — "Yes, you can (and we always have)"; SESSION-BOOT.md updated. (2) Personal-context files (`jc-business-spec-v1.md`, `jesse-caldwell-context-v1.md`, `ryan-swppp-kb-may30.md`) confirmed still accurate — "not worked on in a while, but still relevant," no changes needed. `session-handoff-sep20-2026-v4-35-1-deploy-and-doc-audit.md` identified as superseded by the Sep 20 evening handoff — archive to `docs/handoffs/` and delete from PK. |
+| v3.7.12 | Sep 21, 2026 | **Proxy secret rotated.** Boss rotated `GITHUB_PROXY_SECRET` in Cloudflare (`github-proxy`) and Keeper. New value recorded in P5 below (Project Knowledge copy only); old (exposed) value is dead and must not be reused. Doc-audit follow-up work (Pass A/B/C uploads, Pass C remainder, Pass D) still pending — see `session-handoff-sep20-2026-doc-audit-passes-b-c.md`. |
 | v3.7.11 | Sep 20, 2026 | **Documentation audit Pass B.** Added `SESSION-BOOT.md` as P0 Step 0 (with preflight). Corrected P0 filename (`MASTER_KNOWLEDGE_BASE_v3-*.md` — the version in the filename changes; git copy is `docs/MASTER_KNOWLEDGE_BASE.md`). P0 Step 2 now uses `git clone` / `git ls-remote` (web_fetch only opens URLs already seen in chat). P0 Step 1 no longer says to pull `recent_chats` at start (matches ways-of-working, Sep 12). Added capability matrix + Gizmo-Proxy scope finding (Sep 17: dev PAT 403s outside `arche-epos/arche-suite`) to P5. P1: Pilgrim Private v4.35.1 and DPS v32.48.0 verified live Sep 20. **Security:** proxy secret was found in plaintext in the PUBLIC repo copy of this file — git copy now redacts both PAT and proxy secret; secret must be rotated (history retains the old value). |
 | v3.7.10 | Sep 16, 2026 | **Corrected a stale "not built" claim.** Two Sep 15, 2026 session-handoffs (`session-handoff-sep15-2026-pilgrim-guide-part1.md`/`...-SHIPPED.md`) stated the Word Study "stub" (Lexicon disambiguation: cheap classify call → 3-5 candidate senses → full lookup by Strong's number) was "still fully unbuilt." It had actually shipped a week earlier — commit `5cead4f0`, **v4.33.0, Sep 8, 2026** ("Word Study mode live — Lexicon disambiguation picker, sense-pick tracking"). Confirmed live in `pilgrim-private/studyTools.js` this session: `_lexClassify()`, `_lexRenderSensePicker()`, `pickWordSense()`, `_lexFullLookup()` all present, matching the originally-scoped design exactly. **Do not re-scope or rebuild this flow.** The only genuinely-outstanding Word Study item is wiring it into **Pilgrim Guide chat** (Part 2/AI Tools mode, `spec-pilgrim-guide-conversational-v1.md`) — the hardcoded `ui.js` build-status note gating chat-triggered word_study is real and still accurate, confirmed live Sep 16, 2026. Live app version as of this check: v4.34.31+ (P1 registry row below still shows v4.30.3 — needs its own re-baseline pass, not done here, out of scope for this correction). |
 | v3.7.9 | Sep 12, 2026 | Added **XP-22** (Removing an "Unused" Namespace Import Can Break a Window-Bridging Loop) — Pilgrim Private v4.34.15 removed `app.js`'s `import * as Utils` line as part of a display-name fix, correctly finding it unused at the import site, but missed that the window-bridging loop later in the same file (`[Utils, Storage, TTS, Sync, StudyTools, UI].forEach(...)`) still referenced `Utils` directly — a `ReferenceError` at module-evaluation time that silently broke the entire app (white screen, zero interactivity) since `app.js` never finished executing. Reverted to v4.34.14 (v4.34.16), then redone correctly in v4.34.17 by keeping the import and removing only the actually-dead code. |
@@ -138,14 +142,22 @@ Boss runs Sonnet by default with a limited Fable credit budget. Claude manages t
 
 | Project | Repo | Live URL | Stack | Current Version |
 |---|---|---|---|---|
-| Arché Study Tools (Pilgrim Private) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-private/` | Vanilla JS | **v4.35.1 — live on `main`, verified Sep 20, 2026 via git clone (commit `c92e31f`).** Version history: CHANGELOG in the app + session handoffs. |
-| Arché Study Tools (pilgrim-admin) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-admin/` | Vanilla JS | **v1.6.0 -- LIVE, confirmed Sep 4, 2026.** Boss-only analytics dashboard for Pilgrim Private. Since v1.2.0: mobile table-scroll fix (v1.3.2), full JSON export system incl. global "Export All" (v1.4.0), refresh/export toast feedback + timestamped export filenames (v1.5.0), and **AI Tool Run Timing card** (v1.6.0) -- per-tool last-5-runs + running average, includes Snapshot's full-batch entry. **Was completely absent from the local backup system (`sync-config.json`) despite being live since Aug 30 -- added Sep 4, 2026.** Cards: health/rate-limits, ranked usage, per-tester breakdown, Errors, Diagnostic Runs, AI Tool Run Timing. No row cap/pagination. |
-| Arché Study Tools (Pilgrim Public) | same repo | `archestudytools.com/` -> redirects to `/pilgrim-public/` | Vanilla JS | v4.1.1 -- **confirmed live Sep 4, 2026** (direct fetch, no drift; still unported from the Aug 2026 Pilgrim Private work, see Issue #15) |
-| Arché Study Tools (Scribe) | same repo | `archestudytools.com/scribe/` | Vanilla JS | v2.1 -- **confirmed live Sep 4, 2026** (direct fetch, no drift since April) |
-| Arché Study Tools (Codex Arête) | same repo | `archestudytools.com/codex/` | Vanilla JS | **v3.6.4 -- confirmed live Sep 4, 2026 via direct fetch.** This row was showing v3.3.2 (July 14) while `CODEX_HANDOFF_MASTER.md` separately claimed v3.6.3 -- the two docs disagreed with each other and both were wrong. Whether the old `CODEX_VERSION`-frozen-at-3.3.0 dashboard bug is still live is unconfirmed now that the constant correctly reads 3.6.4 -- spot-check next Codex session, not urgent. |
+| Arché Study Tools (Pilgrim Private) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-private/` | Vanilla JS | **v4.46.5 — in `main`, verified Oct 18, 2026 via git clone (repo HEAD `59fd94f`).** Changelog label "Latest — untested" (phone test pending). Live-site deploy state not re-checked (shell cannot reach the site). Newest handoff in PK covers through v4.46.3; v4.46.4–4.46.5 have no handoff. Version history: CHANGELOG in the app + `docs/handoffs/`. |
+| Arché Study Tools (pilgrim-admin) | `arche-epos/arche-suite` | `archestudytools.com/pilgrim-admin/` | Vanilla JS | **v1.13.0 — in `main`, verified Oct 18, 2026 via git clone.** Boss-only analytics dashboard for Pilgrim Private. Features added since the v1.6.0 row (Sep 4) are not catalogued here — see the app's own changelog. |
+| Arché Study Tools (Pilgrim Public) | same repo | `archestudytools.com/` -> redirects to `/pilgrim-public/` | Vanilla JS | **Temporary maintenance page since Sep 23, 2026** (`pilgrim-public/index.html` shows a maintenance notice; no app version). Restore date TBD — Boss's call (Oct 18, 2026). The last full app was v4.1.1, still unported from Pilgrim Private (Issue #15). |
+| Arché Study Tools (Scribe) | same repo | `archestudytools.com/scribe/` | Vanilla JS | v2.1 -- **confirmed in `main` Oct 18, 2026** |
+| Arché Study Tools (Codex Arête) | same repo | `archestudytools.com/codex/` | Vanilla JS | **v3.6.4 -- confirmed in `main` Oct 18, 2026.** |
+| Mentor | same repo | `archestudytools.com/mentor/` | Vanilla JS | `mentor/index.html` present in `main` Oct 18, 2026; **no version string found in the file — version unverified.** Worker routes in A8. See `mentor-spec-v1.md`. |
+| kokoro-test | same repo | `archestudytools.com/kokoro-test/` | Vanilla JS | v1.2 (noindex TTS test page, not a product app). Last `arche-suite` commit `59fd94f`, Oct 10, 2026. |
+| prayer / teacher / worship | same repo | — | — | README placeholders only ("Not yet specced"). No app. |
+| Joseph | *unverified* | *unverified* | Vanilla JS | Personal finance manager. **Placeholder row — repo, URL and version not verified (Oct 18, 2026); Boss to confirm.** |
+| Brew Log | `Gizmo5332/brew-log` | `gizmo5332.github.io/brew-log/` | *unverified* | v2.0.0 shipped Sep 17, 2026 per `session-handoff-sep17-2026-brew-log-v2.md`. **Placeholder row — current version not re-verified; Boss to confirm.** Boss-deployed (manual). |
+| ARK Map Tool | `Gizmo5332/*` *(repo name unverified)* | `gizmo5332.github.io` *(path unverified)* | Vanilla JS + Leaflet | **Placeholder row — repo, URL and version not verified (Oct 18, 2026); Boss to confirm.** |
+| Gmail Cleaner | `Gizmo5332/*` *(repo name unverified)* | `gizmo5332.github.io` *(path unverified)* | React CDN | **Placeholder row — repo, URL and version not verified (Oct 18, 2026); Boss to confirm.** |
 | Waypoint | `Gizmo5332/Waypoint` | `gizmo5332.github.io/Waypoint/` | React 18 CDN | v2.6.0 — confirmed via uploaded live HTML, July 14, 2026. Adds PIN security upgrade (6→8 digit), Worker v2.0 KV rate limiting, onboarding flow. `waypoint-reference.md` still shows v2.2.1/May 20 — **doc is significantly stale, needs regeneration.** |
-| DPS Daily Planner | `jcaldwelldmp/Daily-Planner` | `jcaldwelldmp.github.io/Daily-Planner/` | React 18 CDN | **v32.48.0 — live on `main`, verified Sep 20, 2026 via git clone.** File is `DPS.html` (capital letters); `index.html` is a redirect stub. |
-| DPS Supervisors | same repo, `supervisors.html` | `jcaldwelldmp.github.io/Daily-Planner/supervisors.html` | React 18 CDN | sup-v4.5.1 — code fix shipped July 14, 2026: `SUP_VERSION` constant was frozen at 4.4.0, one behind its own changelog's top entry (4.5.0); resolved prior sup-v3.3/sup-v4.2.1 numbering conflict along the way. **Open:** embedded `DPS_VERSION='v32.8.1'` constant is unused dead code, internally consistent with its own local changelog copy, but stale vs. confirmed DPS main v32.9.2 — needs live `dps.html` to fix correctly, not actioned. |
+| DPS Daily Planner | `jcaldwelldmp/Daily-Planner` | `jcaldwelldmp.github.io/Daily-Planner/` | React 18 CDN | **v33.8.0 — live on `main`, verified Oct 18, 2026 via git clone (commit `951a4bc`, Oct 15; ~18,677 lines).** File is `DPS.html` (capital letters); `index.html` is a redirect stub. Single user (Boss), internal-only; `LOCAL_ONLY=true` since v33.4.0 (Oct 12) — no vault, no Gist. See Part 4. |
+| ~~DPS Supervisors / Leads / Migration Tool~~ | same repo (`archive/`) | — | — | **RETIRED Sep 30, 2026 — no users.** `supervisors.html`, `leads.html`, `migration-tool.html` now live in `Daily-Planner/archive/`. History only; no development. |
+| ~~mobile.html~~ | same repo (`archive/`) | — | — | **On Hold (Boss, Oct 18, 2026).** Stays in `archive/`; no longer receives updates since v33.4.0. Undecided: Boss wants to brainstorm a secure send/retrieve path (SharePoint or another Microsoft product) first. |
 
 **Repo note:** `Gizmo5332/JC-Study-Tool` (the old Arché repo) was retired June 18, 2026 —
 domain removed, fully inert. All three Arché apps now live as folders in
@@ -290,8 +302,8 @@ POST /label    { owner, repo, name, color, description? }
 | Credential | Value | Expires | Storage | Purpose |
 |---|---|---|---|---|
 | `github-proxy-2026-07-19` | **Not logged here — lives only in Cloudflare** | ⚠️ **No expiration date set** | Cloudflare (`github-proxy` → `GITHUB_PAT` secret only) | **Deployed production token.** Powers `github-proxy`'s `/commit`, `/issue`, `/label` endpoints — repo deploys + the feedback pipeline. |
-| `GitHub-Proxy 9/12/26 - Dev Work` | `[REDACTED — see Project Knowledge unredacted copy]` | **Dec 31, 2026** | MKB + used directly via `bash_tool` | **Session/dev token.** Claude's direct `api.github.com` calls during dev work (Git Data API blob/tree/commit/ref flow). Confirmed working Sep 12, 2026. Scope: repo `arche-epos/arche-suite` only — Contents (R/W), Issues (R/W, unused by Claude, see below), Pages (R/W, untested), Metadata (Read, auto). |
-| Proxy secret | `[REDACTED — see Project Knowledge unredacted copy]` | None | MKB + Keeper | Auth header (`X-Proxy-Auth`) for browser-initiated `github-proxy` calls. ⚠️ **EXPOSED (found Sep 20, 2026): sat in plaintext in the public repo copy of this file (git history keeps it). Rotate in Cloudflare (`github-proxy`) + Keeper, then update this row.** |
+| `GitHub-Proxy 9/12/26 - Dev Work` | `[REDACTED — see Project Knowledge unredacted copy]` | **Dec 31, 2026** | MKB + used directly via `bash_tool` | **Session/dev token.** Claude's direct `api.github.com` calls during dev work (Git Data API blob/tree/commit/ref flow). Confirmed working Sep 12, 2026. Scope: repo `arche-epos/arche-suite` only — Contents (R/W), Issues (R/W, unused by Claude, see below), Pages (R/W, untested), Metadata (Read, auto). **Note (v3.7.14, Sep 28, 2026): this token's direct-`api.github.com`-write use is currently BLOCKED in the Claude Code harness** — raw authenticated writes to api.github.com are refused by that harness's network proxy ("Write access to this GitHub API path is not permitted through this proxy," see docs.anthropic.com/en/docs/claude-code/github-actions). It remains valid and is kept here as a **documented fallback only**, for a future session that might run on a different backend where direct PAT writes work again. In the Claude Code harness, use the GitHub App + `add_repo` + `git push` method instead (see Capability matrix and Usage in Sessions below). |
+| Proxy secret | `[REDACTED — see Project Knowledge unredacted copy]` | None | MKB + Keeper | Auth header (`X-Proxy-Auth`) for browser-initiated `github-proxy` calls. **Rotated Sep 21, 2026** (previous value was exposed in the public repo's git history; that value is now dead — do not reuse). Boss confirmed the Cloudflare `github-proxy` secret was updated same day. |
 
 > ⚠️ **PAT rotation reminder (session token):** `GitHub-Proxy 9/12/26 - Dev Work` expires Dec 31, 2026. Generate a new fine-grained PAT, update this table, and give the new value at the start of the session it's needed.
 >
@@ -305,20 +317,23 @@ POST /label    { owner, repo, name, color, description? }
 |---|---|
 | Discord | `enarchelogos` (Arché server) |
 | Civitai | `En_Arche_Logos` / `jessecaldwell07@gmail.com` |
-| GitHub (Arché) | `arche-epos` |
+| GitHub (Arché) | `arche-epos` — **Boss's personal GitHub account, not an organization** (confirmed Sep 28, 2026 via a screenshot of github.com/settings/organizations showing "You are not a member of any organizations"). Any doc language or install/management URL implying `arche-epos` is an org is wrong — use the personal-account view at https://github.com/settings/installations. |
 
-### Capability matrix (verified Sep 20, 2026 — mirrors `SESSION-BOOT.md`)
+### Capability matrix (verified Sep 20, 2026 — mirrors `SESSION-BOOT.md`; push row + branch-deletion row updated Sep 28, 2026)
 
 | Need | Can Claude? | How |
 |---|---|---|
 | Read `arche-epos/arche-suite` | YES | `git clone` in bash_tool |
-| **Push to `arche-epos/arche-suite`** | **YES** | Dev PAT (row above) + Git Data API flow below. Proven Sep 12–20, 2026 |
+| **Push to `arche-epos/arche-suite`** | **YES** | **Primary method (confirmed working Sep 28, 2026 — v4.39.0 pushed to `main`, commit `0589607`, byte-verified via the Contents API):** the "Claude" GitHub App (github.com/apps/claude), installed on Boss's personal GitHub account, grants Contents R/W. `add_repo(owner:"arche-epos", repo:"arche-suite", access:"push")` attaches the repo with real push access; ordinary `git commit` + `git push` work from there — no manual blob/tree/commit Git Data API steps needed. The Dev PAT (row above) + Git Data API flow below is kept as a **documented fallback only** — direct PAT writes to api.github.com are currently blocked by this harness's network proxy. |
 | Read public repos (`Gizmo5332/*`, `jcaldwelldmp/Daily-Planner`) | YES | `git clone` in bash (github.com is allowlisted). Do not rely on web_fetch |
-| Push to `Gizmo5332/*` or `jcaldwelldmp/*` | NO with the dev PAT | Dev PAT scope is `arche-epos/arche-suite` only — **403 confirmed Sep 17, 2026**. Boss deploys via file picker, or pastes a per-repo PAT at session start (e.g. "Gizmo-Proxy" for `Gizmo5332/brew-log`; value stored nowhere, never stored by Claude) |
+| Push to `Gizmo5332/*` or `jcaldwelldmp/*` | NO | Not extended — these repos stay manual-deploy-only by design (Boss's explicit decision, Sep 28, 2026), independent of the dev PAT's scope (which also 403s there — confirmed Sep 17, 2026). Boss deploys via file picker, or pastes a per-repo PAT at session start (e.g. "Gizmo-Proxy" for `Gizmo5332/brew-log`; value stored nowhere, never stored by Claude) |
+| Delete a branch on `arche-epos/arche-suite` | NO | `git push origin --delete <branch>` returns 403 in this harness even with working push access — believed a harness-level guardrail, not a GitHub permission gap (Contents:write already covers ref-delete in GitHub's own model). Boss deletes stray branches manually via the GitHub web UI (repo → Branches → trash icon); Claude never attempts branch deletion. |
 | Read a Cloudflare Worker's live code | YES | Cloudflare MCP `workers_get_worker_code` |
 | Deploy a Cloudflare Worker | NO | Boss pastes into the dashboard |
 
-### Git Data API Deployment Patterns (Claude-side deploys)
+### Git Data API Deployment Patterns (Claude-side deploys — LEGACY FALLBACK, see Usage in Sessions)
+
+> These patterns apply to the legacy Dev PAT + Git Data API fallback path, currently blocked in the Claude Code harness (see Credentials table and Usage in Sessions). Kept in case a future session runs a different backend. The primary GitHub App + `git push` method needs none of this — ordinary `git commit`/`git push` handles it.
 
 Proven multi-file commit flow — follow in order, no shortcuts:
 1. Fetch `HEAD` SHA → fetch base tree SHA
@@ -335,7 +350,10 @@ Additional patterns:
 - Post-push verification via `api.github.com/repos/.../contents/{path}?ref=branch` with `Accept: application/vnd.github.v3.raw` — `raw.githubusercontent.com` CDN can be stale for fresh pushes
 
 ### Usage in Sessions
-Claude calls `api.github.com` directly from `bash_tool` using the GitHub PAT — no proxy needed for read/write operations within a session. The proxy Worker remains available for browser-initiated operations (e.g. the HTML setup tool).
+
+**Current primary method (Claude Code harness, confirmed working Sep 28, 2026):** the "Claude" GitHub App is installed on Boss's personal GitHub account and grants Contents R/W on `arche-epos/arche-suite`. Claude calls `add_repo(owner:"arche-epos", repo:"arche-suite", access:"push")` once per session to attach the repo with real push credentials, then uses ordinary `git commit` + `git push` from the harness's working directory — no proxy, no manual Git Data API steps. Proven this session: v4.39.0 pushed to `main`, commit `0589607`, byte-verified via the Contents API. Destructive operations are more restricted than ordinary pushes: `git push origin --delete <branch>` returned a 403 even though commits/pushes succeed — treat branch deletion as blocked (see Capability matrix) and have Boss delete stray branches manually.
+
+**Legacy method (fallback only, currently blocked in this harness):** the original design called for Claude to call `api.github.com` directly from `bash_tool` using the GitHub PAT — "no proxy needed for read/write operations within a session." That is no longer accurate for the Claude Code harness: raw authenticated writes to `api.github.com` are blocked by the harness's own network proxy (confirmed error: "Write access to this GitHub API path is not permitted through this proxy"). This method, and the Git Data API blob/tree/commit flow above, is kept documented as a fallback in case a future session runs on a different backend where direct PAT writes to api.github.com work again — do not attempt it first in this harness, run the primary GitHub App method instead. The `github-proxy` Worker remains available for browser-initiated operations (e.g. the HTML setup tool) regardless of which method Claude's own session uses.
 
 ### Closing Issues
 Close an issue when the fix/feature is confirmed deployed and live — not when the code is written.
@@ -748,7 +766,7 @@ Confirm before any change        Build first, ask later
 
 # PART 2 — ARCHÉ STUDY TOOLS (Pilgrim + Scribe)
 
-**Apps:** Pilgrim-Private (v4.9.73) · Pilgrim Public (v4.1.1) · Scribe (v2.1) · Codex (v3.1.2)
+**Apps:** Pilgrim-Private · Pilgrim Public (maintenance page) · Scribe · Codex · Mentor — current versions: see the P1 registry (do not trust a number typed here)
 **Repo:** `arche-epos/arche-suite` (migrated June 18, 2026 from `Gizmo5332/JC-Study-Tool`, now inert)
 **Stack:** Vanilla JS, single HTML file per app, no build tools, no framework
 
@@ -909,7 +927,7 @@ All API calls in the private build go through `https://arche-proxy.archestudytoo
 | Feedback | `/feedback` | POST — files a GitHub Issue via `github-proxy` Service Binding (screenshots committed to `feedback-attachments/{app}/`, labeled, issue opened on `arche-epos/arche-suite`) |
 
 **Worker secrets:** `DEEPINFRA_API_KEY`, `GROQ_API_KEY` (fallback), `GEMINI_API_KEY`, `ESV_TOKEN`, `GITHUB_TOKEN`, `GIST_ID`, `API_BIBLE_KEY`, `GITHUB_PROXY_SECRET`, `CODEX_SETUP_KEY`
-**KV bindings:** `PILGRIM_USERS` — keys `pin:<4digit>` → userId string (e.g. `pin:8144` → `jesse`) | `MENTOR_USERS` — Mentor auth + user records | `CODEX_USERS` — Codex auth + user records
+**KV bindings:** `PILGRIM_USERS` — keys `pin:<4digit>` → userId string (e.g. `pin:<pin>` → `jesse`) | `MENTOR_USERS` — Mentor auth + user records | `CODEX_USERS` — Codex auth + user records
 **Service Bindings:** `GITHUB_PROXY` — bound to the `github-proxy` Worker (Service Binding required, not public `fetch()` — Cloudflare blocks worker-to-worker `fetch()` over `*.workers.dev`, error 1042)
 **Cloudflare account:** `archestudytools@gmail.com`
 **Allowed origins (CORS):** `https://archestudytools.com`, `https://arche-epos.github.io` — local-dev origins (`127.0.0.1:5500`, `localhost:5500`) confirmed removed from the live file as of Aug 24, 2026.
@@ -1623,272 +1641,75 @@ All `handleImg` functions compress to max 800px / 60% JPEG (~80KB). Gist push pa
 
 # PART 4 — DPS DAILY PLANNER
 
-**App:** Daily supervisor planning tool for training tracking and coverage
-**Repo:** `jcaldwelldmp/Daily-Planner`
+**App:** Daily planner for training tracking, coverage and department work. **Single user (Boss), internal-only.**
+**Repo:** `jcaldwelldmp/Daily-Planner` (Boss deploys manually; Claude never pushes here)
 **Live URL:** `https://jcaldwelldmp.github.io/Daily-Planner/`
-**Stack:** React 18 CDN + Babel Standalone 7.23.2 + localStorage + GitHub Gist
-**Current:** v32.18.0 | `DPS.html` ~16,140 lines (see P1 registry for live version — cross-check before trusting this line)
+**Stack:** React 18 CDN + Babel Standalone 7.23.2 + localStorage
+**File:** `DPS.html` only. Version and size: see the P1 registry (v33.8.0, ~18,677 lines on Oct 18, 2026) and confirm against the live file before trusting any number here.
+
+> **Trimmed Oct 18, 2026 (v3.7.15).** The old D1–D4, D7, D8, D10 and D12 sections described the pre-v33 app (15-day flow, supervisors.html, Brent Appleby colors, v32 line numbers) and were removed. The still-valid rules below were checked against live `DPS.html` v33.8.0. The old text remains in the git history of `docs/MASTER_KNOWLEDGE_BASE.md` (v3.7.11 and earlier).
+
+## Current state (verified Oct 18, 2026, v33.8.0)
+
+- **Local-only mode** (`LOCAL_ONLY = true`, since v33.4.0, Oct 12, 2026): the Cloudflare vault and GitHub Gist sync are disabled. No network calls to either. Data lives in this browser (localStorage) plus manual Full Backup files. The PIN gate is gone; a browser with no data shows a Restore from Full Backup / Start fresh screen. Settings Sync and Vault tabs are hidden, and saved vault PIN / Gist token / Gist ID are erased on load.
+- **Network-folder write-through** (shared drive as the backup/sync path) is **not built.** `spec-dps-internal-architecture-v2.md` predates v33.4.0, so read its sync sections against this note.
+- **Training:** the 15-day flow was replaced by the training-outline rebuild. Training days carry permanent IDs (`d_01`, `d_02`, … via `dayIdForPosition`), so reordering the outline cannot orphan data. There are custom timers, part-time schedules, Sign Off that graduates the agent, and a Pre-Hire status. Specs: `spec-training-outline-rebuild-v1.md`, `spec-training-outline-phase3-v1.md`.
+- **Retired Sep 30, 2026 (no users):** `supervisors.html`, `leads.html`, `migration-tool.html` (now in `Daily-Planner/archive/`). `mobile.html` is On Hold, also in `archive/`.
+- **Pointers:** `spec-dps-internal-architecture-v2.md` (direction), `spec-training-outline-rebuild-v1.md` (training), `DPS_HANDOFF_MASTER.md` (**stale — regeneration against live `DPS.html` is a separate pending job**). `dps-multi-file-split-spec-v2.md` is the split plan, and `es-modules-lessons-v2.md` is the playbook before any ES Modules split.
+- **Storage keys:** do not copy a list from this document; it drifts. Search `DPS.html` for `localStorage` / `dps-` (main state `dps-v2`, agents `dps-agents`, plus roster, projects, meetings, mock-bank and other keys).
 
 ---
 
-## D1. DESIGN SYSTEM — DPS
+## D5. AGENT DATA MODEL — DPS (rule only)
 
-```js
-const C = {
-  bg: '#111318', su: '#181b24', ca: '#1c1f2b', bo: '#252836',
-  or: '#f97316', gr: '#22c55e', rd: '#ef4444', yl: '#eab308',
-  pu: '#a855f7', bl: '#3b82f6', tx: '#e8ebf4', mu: '#8b90a8', te: '#14b8a6'
-};
-const MO = "'Courier New', Courier, monospace";
-```
+The live shape is whatever `initAgent(name, startDate)` returns in `DPS.html` (search `const initAgent`). It carries many more fields than the pre-v33 model (queues, additional roles, shift history, team, `days` keyed by outline day id, mock/buddy call lists with goals, `trainingEval` with DMP values and TSWP ratings). Do not copy a field list into this document.
 
-**Semantic color assignments:**
-- Orange = Schedule
-- Purple = Training
-- Blue = Department
-- Teal = Personal Projects
-
-**Supervisor → color mapping:**
-- Dolan Parnell → blue
-- Ryan Kay → dark-green
-- Stephen Bowen → light-green
-- Brent Appleby → red
-
----
-
-## D2. LOCALSTORAGE KEYS — DPS
-
-```
-dps-v2              dps-agents           dps-absences
-dps-training-outline  dps-queue-minimums  dps-seat-roles
-dps-added-seats     dps-deleted-seats    dps-mode
-dps-fontscale       dps-projects
-```
-
----
-
-## D3. FILE SIZE MANAGEMENT — DPS
-
-The DPS file is ~7,583 lines. This requires special care:
-- **Never copy-paste into GitHub editor** — silently truncates at ~5,900 lines
-- Track line count in every handoff document
-- Use `grep -c ''` to get exact line count before delivery
-- Context management per session is critical — batch changes efficiently
-
----
-
-## D4. TRAINING WORKFLOW — DPS
-
-Complete flow (must be sequential — each phase gates the next):
-
-1. **Days (15)** — daily check-ins, quizzes, homework → gate requires all 15 days + all quiz scores + final quiz → generates supervisor HTML email + agent plain text email
-2. **Mock Calls** — logged calls + `mockDoingWell` + `mockAreasOfImprovement` → gate requires ≥1 call + both fields → emails
-3. **Buddy Calls** — logged calls + `buddyDoingWell` + `buddyAreasOfImprovement` → gate requires ≥1 call + both fields → emails
-4. **Eval** — DMP Values + TSWP ratings → Clear for Solo requires `mockCallsComplete` + `buddyCallsComplete` + all categories rated
-5. **Clear for Solo** → sets `trainingComplete`, `clearForSoloDate`, graduates agent to active roster
-
----
-
-## D5. AGENT DATA MODEL — DPS
-
-```js
-{
-  // Core
-  name, status, notes: [],
-
-  // Days phase
-  doingWell, areasOfImprovement,
-
-  // Mock phase
-  mockCallStartDate,
-  mockDoingWell, mockAreasOfImprovement,
-  mockCallsComplete, mockCallsCompleteDate,
-
-  // Buddy phase
-  buddyCallStartDate,
-  buddyDoingWell, buddyAreasOfImprovement,
-  buddyCallsComplete, buddyCallsCompleteDate,
-
-  // Eval
-  trainingEval: {
-    signedOff, signedOffDate,
-    dmpValues,   // ratings object
-    tswp         // ratings object
-  }
-}
-```
-
-**Critical rule:** Any time `sanitizeAgent` gets new fields, `initAgent` must also be updated. Verify `buddyDoingWell`, `buddyAreasOfImprovement`, `buddyCallStartDate` exist in `initAgent`. Failure = new records missing fields, old records crashing on access.
-
----
+**Critical rule (still valid):** any new agent field must be added to **both** `sanitizeAgent` (runs on every load, backfills old records) **and** `initAgent` (new records). Failure = new records missing the field, or old records crashing on access. Verified both functions exist in v33.8.0.
 
 ## D6. SANITIZE + INIT PATTERN — DPS
 
-Both functions must stay in sync. Every new field added to one must be added to both.
-
-```js
-// sanitizeAgent — runs on every load (handles old records)
-const sanitizeAgent = h => ({
-  ...h,
-  name: h.name || '',
-  status: h.status || 'trainee',
-  notes: h.notes || [],
-  mockCallsComplete: h.mockCallsComplete || false,
-  buddyDoingWell: h.buddyDoingWell || '',
-  buddyAreasOfImprovement: h.buddyAreasOfImprovement || '',
-  buddyCallStartDate: h.buddyCallStartDate || '',
-});
-
-// initAgent — runs when creating a NEW record — must match sanitize exactly
-const initAgent = () => ({
-  name: '', status: 'trainee', notes: [],
-  mockCallsComplete: false,
-  buddyDoingWell: '',
-  buddyAreasOfImprovement: '',
-  buddyCallStartDate: '',
-});
-```
-
----
-
-## D7. MIMECAST URL ISSUE — DPS
-
-**BUG-02:** GitHub API URLs in the source may be wrapped by Mimecast proxy (appear as `url.us.m.mimecastprotect.com/...`). These must be the real GitHub API URLs (`https://api.github.com/gists`, etc.) in any clean copy. Check `useGistSync` around lines 1981, 1989, 2005.
-
----
-
-## D8. EMAIL GENERATION PATTERN — DPS
-
-### Two Emails Per Phase
-1. **Supervisor email** — HTML formatted, embedded progress data, professional layout
-2. **Agent email** — Plain text, conversational tone, wraps narrative fields
-
-### Copy State Pattern
-```js
-const[copiedSupEmail, setCopiedSupEmail] = useState(false);
-setCopiedSupEmail(true);
-setTimeout(function() { setCopiedSupEmail(false); }, 2000);
-```
-
-### Conditional Email Button Rule
-Email buttons appear only after a phase is marked complete. Never show before.
-
-```jsx
-{hire.mockCallsComplete && (
-  <div>
-    <button onClick={copyMockSupEmail}>📋 Supervisor Email</button>
-    <button onClick={copyMockAgentEmail}>📋 Agent Email</button>
-  </div>
-)}
-```
-
----
+`sanitizeAgent` only adds safe defaults and never removes data (`...h` first, then `field: h.field || default`). Keep the two functions in sync (D5). Same pattern as U6 (sanitize/migrate on every load).
 
 ## D9. COMPLETION GATE PATTERN — DPS
 
-Always gate actions to when all requirements are satisfied. Show specific missing items, not generic errors.
-
-```js
-const missingItems = [];
-if (!allDaysChecked) missingItems.push('All training days must be checked');
-if (!allQuizScoresEntered) missingItems.push('All quiz scores must be entered');
-if (!finalQuizScore) missingItems.push('Final quiz score is required');
-const canComplete = missingItems.length === 0;
-
-// In JSX:
-{!canComplete && (
-  <ul style={{ color: C.rd, fontFamily: MO, fontSize: 11 }}>
-    {missingItems.map(function(m, i) { return <li key={i}>{m}</li>; })}
-  </ul>
-)}
-<button disabled={!canComplete} onClick={handleComplete}
-  style={{ opacity: canComplete ? 1 : 0.4 }}>
-  Mark Complete
-</button>
-```
-
----
-
-## D10. KEY LINE REFERENCE — DPS
-
-| Approx Line | Section |
-|---|---|
-| ~59 | C, MO, PD constants |
-| ~175 | expandSyncData |
-| ~250 | loadOutline / saveOutline |
-| ~340 | loadProjects / saveProjects |
-| ~400 | Modal component |
-| ~720 | FullBackupRestoreModal |
-| ~760 | CollectTab |
-| ~1961 | useGistSync hook |
-| ~2330 | Training Mode constants |
-| ~2442 | sanitizeAgent |
-| ~2612 | initAgent |
-| ~3274 | buddySectionHtml |
-| ~3420 | generateMockSupEmailHtml |
-| ~3494 | generateBuddySupEmailHtml |
-| ~4119 | Buddy Calls tab |
-| ~4265 | Eval tab |
-| ~5010 | CoverageGrid |
-| ~6503 | DailyPlanner |
-
----
+Gate every phase-completion action (days, mock calls, buddy calls, eval, Sign Off) on its requirements, and show the **specific missing items**, not a generic error. Disable the button and list what is missing. Email/summary buttons appear only after the phase is marked complete. Re-check the actual gate conditions in the live file before changing them; the training flow changed in the outline rebuild.
 
 ## D11. KNOWN BUGS & REGRESSION RISKS — DPS
 
-### Open Bugs
-| # | Issue | Notes |
+### Bug list status (checked Oct 18, 2026 against v33.8.0)
+| # | Old issue | Status |
 |---|---|---|
-| BUG-01 | Buddy Calls flow untested end-to-end | Gate, narrative fields, email gen, Clear for Solo dependency |
-| BUG-02 | Gist Mimecast URL wrapping | Real GitHub URLs must replace any mimecastprotect.com URLs |
-| BUG-03 | Personal Projects (PROJ-E) — untested post-build | Check for state bleed after buddy calls changes |
-| BUG-04 | Auto-poll disabled | Commented out at ~line 2043 — ready to uncomment but not validated |
-| BUG-05 | `initAgent` may be missing new buddy fields | Verify `buddyDoingWell`, `buddyAreasOfImprovement`, `buddyCallStartDate` |
-| BUG-06 | Date input timezone off-by-one | Use `fmtDate()` with `T12:00:00` on all date displays |
-| BUG-07 | Gist pull `raw_url` fallback risk | Falls back to inline `content` if `raw_url` missing — will truncate at 1MB as data grows |
-| BUG-08 | `mobile.html` not kept in sync | Intentionally lightweight but diverging from main features |
+| BUG-01 | Buddy Calls flow untested end-to-end | **Unverified** — not re-tested in this pass |
+| BUG-02 | Gist Mimecast URL wrapping | **Closed** — 0 `mimecastprotect` URLs in `DPS.html`; Gist is disabled in local-only mode |
+| BUG-03 | Personal Projects (PROJ-E) untested | **Unverified** |
+| BUG-04 | Auto-poll disabled | **Moot** — no Gist/vault polling in local-only mode |
+| BUG-05 | `initAgent` may miss buddy fields | **Closed** — `buddyDoingWell`, `buddyAreasOfImprovement`, `buddyCallStartDate` are in `initAgent` |
+| BUG-06 | Date input timezone off-by-one | **Standing rule** — see below |
+| BUG-07 | Gist pull `raw_url` fallback risk | **Moot** in local-only mode (reopens if Gist sync returns) |
+| BUG-08 | `mobile.html` not kept in sync | **Closed** — mobile.html On Hold, in `archive/` |
 
-### Regression Risks
+### Regression risks (standing)
 - Adding a new agent field without updating both `sanitizeAgent` AND `initAgent`
-- Deploying via copy-paste — silent truncation at ~5,900 lines
-- Using `?.` or `??` in any new code — silent Babel crash
-- `JSX title={expr||expr}` — extract to const first
-- ISO date strings displayed directly — always append `T12:00:00` or use `fmtDate()`
-
----
-
-## D12. BACKLOG — DPS (Priority Order)
-
-| # | Priority | Item |
-|---|----------|------|
-| BUDDY-TEST | **NEXT** | Test full buddy calls flow end-to-end after deploy |
-| PROJ-E | POST-TEST | Bug reports & polish from personal projects after testing |
-| DEPT-A | PLANNED | Department Projects tab — Jesse's view, `dps-dept-projects` key |
-| DEPT-B | PLANNED | Team-facing secondary page — 6 team tabs, check-off + time log |
-| DEPT-C | PLANNED | Gist sync for dept projects — merge-on-read strategy |
-| CODE-1 | MEDIUM | Code documentation — after architecture meeting |
-| DOCS-1 | MEDIUM | Development Archaeology — synthesize changelog + error pattern doc |
-| 7 | LOW | JSON import on mobile |
-
----
+- Deploying via copy-paste — silent truncation at ~5,900 lines (DPS.html is far past that; file picker only)
+- Using `?.` or `??` in any new code — silent Babel crash (U1)
+- JSX `title={expr||expr}` — extract to a const first
+- ISO date strings displayed directly — append `T12:00:00` or use the file's date helpers (`fmtDate`/`fmtShortDate`). Standing Aug 25, 2026 lesson: pre-filling a datetime picker from `toISOString()` shows UTC, not local time
+- Storage is local-only now: a cleared browser or lost device means data loss unless a Full Backup file exists. Remind Boss to run Full Backup after meaningful sessions
 
 ## D13. DEPLOYMENT — DPS
 
-1. Download `index.html` from Claude output to phone Downloads
-2. GitHub.com → repo → **Add file → Upload files** → select → commit to main
-3. **Never copy-paste** — truncates silently at ~5,900 lines
-4. Run 💾 BACKUP immediately after every deploy
-5. Verify version number in Settings → About
-
----
+1. Boss uploads the new `DPS.html` to `jcaldwelldmp/Daily-Planner` via **Add file → Upload files** (file picker). **Never copy-paste** into the GitHub editor.
+2. Run a Full Backup in the app immediately after every deploy.
+3. Verify the version in Settings → About.
+4. Claude delivers the file plus a ready-to-paste commit message; Claude does not push (see D14).
 
 ## D14. WORKING-MODEL BOUNDARY — DPS & WORK APPS
 
 **Claude writes all code; Boss performs ALL deploys and infra changes** for DPS and related work apps (GitHub pushes, Cloudflare, anything on `jcaldwelldmp/` infrastructure).
 
 - Claude delivers files + exact commit messages/instructions
-- Claude **never** attempts direct API deploys to `jcaldwelldmp/` repos or DPS infrastructure (dev PAT doesn't cover them anyway — see P5)
-- Brent Appleby (former manager) has been superseded by Jonathan Whisman. No formal cross-device sync approval exists or is being sought; `dps-vault` sync has been running live and unapproved since v32.9.0 (June 22, 2026), predating the standalone-arch spec by 2 days. Left running as-is, not expanded. If sync work resumes, planned approach is a shared network-drive folder, not `dps-vault`. See `dps-standalone-arch-spec-v1.md` §1a.
+- Claude **never** attempts direct API deploys to `jcaldwelldmp/` repos or DPS infrastructure (the GitHub App and dev PAT do not cover them — see P5)
+- Brent Appleby (former manager) was superseded by Jonathan Whisman; no cross-device sync approval exists or is being sought. `dps-vault` sync ran unapproved from v32.9.0 (June 22, 2026) until local-only mode disabled it in v33.4.0 (Oct 12, 2026). If sync work resumes, the planned approach is a shared network-drive folder, not `dps-vault`. See `spec-dps-internal-architecture-v2.md`.
 
 ---
 

@@ -32,6 +32,23 @@ Full content preserved where recoverable; summary stubs otherwise.
 | session-handoff-sep15-2026-pilgrim-guide-part1-SHIPPED.md | Sep 15 | Pilgrim Guide Part 1 (ambiguity handling) shipped | **Full** |
 | session-handoff-sep17-2026-brew-log-v2.md | Sep 17 | Brew Log v2.0.0 shipped | **Full** |
 | session-handoff-sep19-2026-transcript-recording-spec.md | Sep 19 | Transcript + Recording spec locked (push-path claim corrected Sep 20) | **Full** |
+| session-handoff-sep20-2026-doc-audit-passes-b-c.md | Sep 20 | Doc audit passes B–C | **Full** |
+| session-handoff-sep21-2026-scripture-memory-stage2-spec.md | Sep 21 | Scripture Memory Stage 2 spec | **Full** |
+| session-handoff-sep21-2026-scripture-memory-stage2-build.md | Sep 21 | Scripture Memory Stage 2 build | **Full** |
+| session-handoff-sep23-2026-ai-tools-fabrication-lockdown-and-grounding-spec.md | Sep 23 | AI tools fabrication lockdown + grounding spec | **Full** |
+| session-handoff-sep23-2026-ai-tools-grounding-phase1.md | Sep 23 | AI tools grounding Phase 1 | **Full** |
+| session-handoff-sep23-2026-ai-tools-grounding-phase2.md | Sep 23 | AI tools grounding Phase 2 | **Full** |
+| session-handoff-sep23-2026-ai-tools-grounding-phase3.md | Sep 23 | AI tools grounding Phase 3 | **Full** |
+| session-handoff-sep23-2026-ai-tools-grounding-phase3-part2.md | Sep 23 | AI tools grounding Phase 3 part 2 | **Full** |
+| session-handoff-sep26-2026-category-d-resolved-new-false-positive-found.md | Sep 26 | Category D resolved; new false positive found | **Full** |
+| session-handoff-sep28-2026-bible-tools-release1.md | Sep 28 | Bible Tools Release 1 | **Full** |
+| session-handoff-sep28-2026-bible-tools-release2.md | Sep 28 | Bible Tools Release 2 (translation comparison, v4.42.x) | **Full** |
+| session-handoff-sep29-2026-bible-tools-release3-interlinear.md | Sep 29 | Bible Tools Release 3 — Interlinear (v4.43.x) | **Full** |
+| session-handoff-sep30-2026-ot-verse-map.md | Sep 30 | OT verse map (v4.44.x) | **Full** |
+| session-handoff-sep30-2026-settings-about-v4-45-0.md | Sep 30 | Settings About (v4.45.0) | **Full** |
+| session-handoff-sep30-2026-retire-ai-word-study-language-structure.md | Sep 30 | Retired AI Word Study + Language & Structure (v4.46.0/1) | **Full** |
+| session-handoff-oct01-2026-ot-verse-map-wordstudy-v4-46-2.md | Oct 1 | OT verse map in Word Study (v4.46.2) | **Full** |
+| session-handoff-oct02-2026-lookup-word-no-ai-v4-46-3.md | Oct 2 | Look Up Word AI retired (v4.46.3) | **Full** |
 
 ---
 **Going forward:** Current handoff stays in Project Knowledge.
