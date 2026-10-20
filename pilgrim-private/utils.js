@@ -14,11 +14,12 @@ var ACTIVE_USER=null; // set by initPinGate()/activateUser() before any storage 
  * Sends only a screen path and/or tool name — NEVER content of any kind. Failures
  * are swallowed silently; a broken beacon must never surface to the tester or
  * affect app behavior in any way.
- * @param {{screen?:string, tool?:string, field?:string, tour?:string, tts?:string,
+ * @param {{screen?:string, tool?:string, field?:string, tour?:string, tts?:string, ttsChars?:number,
  *   fileType?:string, fileBytes?:number}} payload - screen: dot-path nav location
  *   (e.g. 'study.notes'). tool: AI-tool key, or 'snapshot' for the batch-mode counter.
  *   field: 'notes'|'outline'|'conclusions' — fired once per edit session, no content.
  *   tour: 'study'|'settings'. tts: source key ('ai'|'fn'|'concl'|'outline'|'scr'|'read').
+ *   ttsChars: character count of the text about to be read aloud (v4.46.6) — a number only, no text.
  *   fileType+fileBytes: 'image'|'doc' plus an estimated byte size — no content, size only.
  */
 function trackEvent(payload){
@@ -497,7 +498,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.5',date:'Oct 2, 2026',label:'Latest — untested',
+    version:'4.46.6',date:'Oct 19, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Pilgrim now keeps a running total of how many characters have been read aloud (Listen buttons, the Scripture panel, and the Read tab), so voice costs can be estimated. It is only a number. The words that were read, and what you were studying, are never sent or saved.",
+      "note: nothing stored on your device or changed in your studies. Cache-buster bumped to 4.46.6."
+    ]},
+  {
+    version:'4.46.5',date:'Oct 2, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the Study tour is easier to see. The dimming behind each step is lighter, and steps with nothing to highlight (like the new study’s Notes screen) barely dim the page, with the tip box sitting near the bottom so the screen above stays readable.",

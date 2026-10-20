@@ -12,7 +12,7 @@ import {
   activeRef,
   trackEvent,
   logError
-} from './utils.js?v=4.46.5';
+} from './utils.js?v=4.46.6';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -70,6 +70,14 @@ export function setTtsSource(v)  { _ttsSource  = v; }
  * @returns {string[]} Array of sentence-length chunks.
  */
 function ttsSplit(text){return text.replace(/\n+/g,' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[text];}
+/**
+ * Total characters in a TTS chunk array from startIdx onward — a number only, used for the
+ * usage-tracking beacon (cost estimation). Never sends or stores the text itself.
+ * @param {string[]} chunks
+ * @param {number} [startIdx=0]
+ * @returns {number}
+ */
+function _ttsCharCount(chunks,startIdx){var n=0;for(var i=startIdx||0;i<chunks.length;i++)n+=(chunks[i]||'').length;return n;}
 /**
  * Returns the plain text for a given TTS source identifier.
  * Sources: 'ai' (active AI panel result), 'fn' (Field Notes), 'concl' (Conclusions),
@@ -203,7 +211,7 @@ function ttsPlay(source,fromIdx,charOffset){
  */
 function ttsToggleAI(){
   if(_ttsSource==='ai'){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay('ai',_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText('ai');if(!text){toast('No content to read');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:'ai'});ttsPlay('ai',0);
+  ttsStop();var text=ttsGetText('ai');if(!text){toast('No content to read');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:'ai',ttsChars:_ttsCharCount(_ttsSentences,0)});ttsPlay('ai',0);
 }
 /**
  * Toggles TTS for a Field Notes panel source ('fn', 'concl', or 'outline').
@@ -212,7 +220,7 @@ function ttsToggleAI(){
  */
 function ttsToggleField(source){
   if(_ttsSource===source){if(_ttsActive){ttsPause();return;}if(_ttsPaused){ttsPlay(source,_ttsIdx,_ttsCharOffset);return;}}
-  ttsStop();var text=ttsGetText(source);if(!text){toast('Nothing to read here');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:source});ttsPlay(source,0);
+  ttsStop();var text=ttsGetText(source);if(!text){toast('Nothing to read here');return;}_ttsSentences=ttsSplit(text);trackEvent({tts:source,ttsChars:_ttsCharCount(_ttsSentences,0)});ttsPlay(source,0);
 }
 /**
  * Toggles TTS for the Scripture panel. Pause if playing, resume if paused, or start
@@ -238,7 +246,7 @@ function ttsPlayScrFrom(idx){
   if(!chunks.length||idx<0||idx>=chunks.length)return;
   ttsStop();
   _ttsSentences=chunks;
-  trackEvent({tts:'scr'});
+  trackEvent({tts:'scr',ttsChars:_ttsCharCount(chunks,idx)});
   ttsPlay('scr',idx);
 }
 /**
@@ -266,7 +274,7 @@ function ttsPlayReadFrom(idx){
   if(!chunks.length||idx<0||idx>=chunks.length)return;
   ttsStop();
   _ttsSentences=chunks;
-  trackEvent({tts:'read'});
+  trackEvent({tts:'read',ttsChars:_ttsCharCount(chunks,idx)});
   ttsPlay('read',idx);
 }
 /**

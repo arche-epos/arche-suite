@@ -9,12 +9,12 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.46.5';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.46.6';
 import {
   memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
   memGradeAttempt, memNextChunkState, memLogPracticeAttempt, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.46.5';
+} from './memory-core.js?v=4.46.6';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;

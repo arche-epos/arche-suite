@@ -227,6 +227,7 @@ footer{text-align:center;color:var(--txt4);font-size:12px;margin-top:20px}
         <div class="detail-col">
           <h4>TTS Plays (by source)</h4>
           <div id="topTts"></div>
+          <div id="ttsCharsStat" class="muted" style="margin-top:10px"></div>
         </div>
         <div class="detail-col">
           <h4>Notes / Outline / Conclusions</h4>
@@ -774,6 +775,14 @@ function renderTopLists(){
 
 function renderEngagement(){
   renderBarList('topTts', aggregateAcross('ttsPlays'));
+  // Characters read aloud (v4.46.6+ app only; earlier plays have no character count)
+  const ttsCharsTotal = aggregateAcross('ttsChars').reduce((a, [, v]) => a + (v || 0), 0);
+  const ttsCharsEl = document.getElementById('ttsCharsStat');
+  if (ttsCharsEl) {
+    ttsCharsEl.textContent = ttsCharsTotal
+      ? `Characters read aloud: ${ttsCharsTotal.toLocaleString()} (~${Math.round(ttsCharsTotal / 5000).toLocaleString()} chapters; ${(ttsCharsTotal / 10000).toFixed(1)}% of a 1M/month free voice tier)`
+      : 'Characters read aloud: none recorded in this range (counts start with app v4.46.6).';
+  }
   renderBarList('topFields', aggregateAcross('fields'));
   renderBarList('topTours', aggregateAcross('tours'));
 }
