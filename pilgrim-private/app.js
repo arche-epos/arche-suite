@@ -5,33 +5,33 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.46.6';
+} from './utils.js?v=4.47.0';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.46.6';
+} from './storage.js?v=4.47.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.46.6';
+} from './sync.js?v=4.47.0';
 
 import {
   loadTTSSett, initTTSVoices, ttsSyncAfterResume
-} from './tts.js?v=4.46.6';
+} from './tts.js?v=4.47.0';
 
-import { mediaInit } from './media.js?v=4.46.6';
+import { mediaInit } from './media.js?v=4.47.0';
 
-import { memWireSync } from './memory.js?v=4.46.6';
+import { memWireSync } from './memory.js?v=4.47.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.46.6';
-import * as Storage from './storage.js?v=4.46.6';
-import * as TTS from './tts.js?v=4.46.6';
-import * as Sync from './sync.js?v=4.46.6';
-import * as StudyTools from './studyTools.js?v=4.46.6';
-import * as UI from './ui.js?v=4.46.6';
-import * as Media from './media.js?v=4.46.6';
-import * as Memory from './memory.js?v=4.46.6';
+import * as Utils from './utils.js?v=4.47.0';
+import * as Storage from './storage.js?v=4.47.0';
+import * as TTS from './tts.js?v=4.47.0';
+import * as Sync from './sync.js?v=4.47.0';
+import * as StudyTools from './studyTools.js?v=4.47.0';
+import * as UI from './ui.js?v=4.47.0';
+import * as Media from './media.js?v=4.47.0';
+import * as Memory from './memory.js?v=4.47.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -101,7 +101,7 @@ window.addEventListener('unhandledrejection', function(e) {
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden) { UI.checkForUpdate(); ttsSyncAfterResume(); }
 });
-document.querySelectorAll('.overlay:not(#pin-gate-overlay)').forEach(function(o) {
+document.querySelectorAll('.overlay:not(#pin-gate-overlay):not(#ai-lockdown-overlay)').forEach(function(o) {
   o.addEventListener('click', function(e) { if (e.target === o) o.classList.remove('on'); });
 });
 setInterval(autoSave, 30000);
@@ -194,6 +194,7 @@ function startPilgrim() {
   } catch (e) { /* cosmetic only */ }
   UI.checkForUpdate();
   UI.tourCleanupDemoData();
+  UI.checkAiLockdownNotice(); // v4.47.0 one-time notice
 }
 // Re-expose after function definition (hoisting handles the window.startPilgrim = startPilgrim above)
 

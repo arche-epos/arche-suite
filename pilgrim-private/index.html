@@ -1927,7 +1927,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.46.6"></script>
+<script type="module" src="app.js?v=4.47.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
@@ -2144,6 +2144,14 @@ input[type="range"]{accent-color:var(--gold)}
       <button class="btn btn-ghost" style="flex:1" onclick="closeOverlay('export-backup-overlay')">Cancel</button>
       <button class="btn btn-primary" style="flex:1" id="export-confirm-btn" onclick="confirmExport()">Export Selected</button>
     </div>
+  </div>
+</div>
+<!-- AI LOCKDOWN NOTICE (v4.47.0) — one-time, shown after login until acknowledged --><div class="overlay" id="ai-lockdown-overlay" style="z-index:950;cursor:default">
+  <div class="modal" style="text-align:center">
+    <div style="font-family:'EB Garamond',serif;font-size:28px;color:var(--gold);margin-bottom:4px">&#10022;</div>
+    <div class="modal-title" style="margin-bottom:10px">A note about the AI tools</div>
+    <div style="font-size:15px;line-height:1.55;color:var(--txt1);margin-bottom:18px;text-align:left">I apologize for the tools being locked down for so long, but I ran into a critical error that needed to be fixed before we could proceed. If you experienced any issues during that time or loss, please let me know and I&#8217;m happy to help.</div>
+    <button class="btn btn-primary btn-full" onclick="ackAiLockdownNotice()">Acknowledge &amp; see what happened</button>
   </div>
 </div>
 <!-- PIN GATE MODAL --><div class="overlay" id="pin-gate-overlay" style="z-index:900;cursor:default">

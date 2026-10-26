@@ -498,7 +498,19 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.46.6',date:'Oct 19, 2026',label:'Latest — untested',
+    version:'4.47.0',date:'Oct 26, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the AI Study Tools are back on for everyone. The temporary lock that stopped them for every account except the developer’s has been removed.",
+      "what happened: on Sep 23, 2026 Pilgrim’s AI Study Tools (Word Study, Language & Structure, and Cross-References) were found making up answers. They asked the AI to recall facts from memory, such as Strong’s numbers, original Greek and Hebrew words, cross-references, and the names of scholars. When the AI did not actually know a fact, it filled the gap with something that looked right: invented Strong’s numbers, Greek wording attached to verses that does not appear there, and scholars cited who could not be verified, all written in a confident, authoritative voice. Because the errors were hard to spot, the AI tools were locked for everyone else while the problem was fixed.",
+      "what was fixed: Word Study, Interlinear, and Cross-References now look their facts up in real source data (Strong’s dictionaries, Hebrew and Greek word tagging, and OpenBible.info cross-references) instead of asking the AI to remember them. The old AI Word Study commentary, AI Language & Structure, and AI Cross-References tools were retired. Studies you saved before then are untouched.",
+      "note: Historical Context, Cultural Context, and Places & Geography are still written by AI. They can be wrong, so check anything important against a trusted source.",
+      "message shown during the lock (Sep 23, 2026): \u201cI apologize for the inconvenience, but there is a critical error in Pilgrim. I am working to resolve it and plan to have it fixed by 09/30/26 by 8:00pm. If you have an urgent need for any of your studies or information, please reach out to me directly via call or text. Thank you for your understanding and patience.\u201d",
+      "message from Jesse: \u201cI apologize for the tools being locked down for so long, but I ran into a critical error that needed to be fixed before we could proceed. If you experienced any issues during that time or loss, please let me know and I\u2019m happy to help.\u201d",
+      "note: you will see a one-time notice about this when you log in. It saves a single flag on this device so it only appears once for each account. Nothing in your studies, sync, or backups is touched. Cache-buster bumped to 4.47.0."
+    ]},
+  {
+    version:'4.46.6',date:'Oct 19, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Pilgrim now keeps a running total of how many characters have been read aloud (Listen buttons, the Scripture panel, and the Read tab), so voice costs can be estimated. It is only a number. The words that were read, and what you were studying, are never sent or saved.",

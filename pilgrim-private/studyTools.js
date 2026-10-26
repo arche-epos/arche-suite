@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.46.6';
+} from './utils.js?v=4.47.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.46.6';
-import { syncToGist } from './sync.js?v=4.46.6';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.46.6';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.46.6';
-import { decodeMorph, shortGloss } from './morph.js?v=4.46.6';
-import { hebrewVerses } from './versemap.js?v=4.46.6';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.47.0';
+import { syncToGist } from './sync.js?v=4.47.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.47.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.47.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.47.0';
+import { hebrewVerses } from './versemap.js?v=4.47.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1222,9 +1222,6 @@ function geminiErrMsg(msg){
  */
 function groqErrMsg(msg){
   if(!msg)return'Error fetching analysis. Please try again.';
-  // Emergency access lockdown (arche-proxy) — see pilgrim-ai-tools-fabrication doc.
-  // Remove this branch once lockdown is lifted.
-  if(msg.indexOf('critical error in Pilgrim')!==-1)return msg;
   if(msg.toLowerCase().includes('rate')||msg.toLowerCase().includes('quota')||msg.toLowerCase().includes('429'))
     return'Rate limit reached — the free tier allows 30 requests/min. Please wait 1–2 minutes and try again.';
   if(msg.toLowerCase().includes('expired')||msg.toLowerCase().includes('invalid')||msg.toLowerCase().includes('api key')||msg.includes('401'))

@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.46.6';
+} from './utils.js?v=4.47.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.46.6';
+} from './storage.js?v=4.47.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.46.6';
+} from './media.js?v=4.47.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.46.6';
+} from './tts.js?v=4.47.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.46.6';
+} from './sync.js?v=4.47.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.46.6';
+} from './studyTools.js?v=4.47.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.46.6';
+} from './memory.js?v=4.47.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3988,6 +3988,37 @@ function clearErrorLogUI(){
  * @param {string} namespacedKey - The per-user namespaced key to migrate into.
  */
 
+/**
+ * v4.47.0 — one-time notice after the AI tools lockdown was lifted. Shown once per account
+ * (per-user localStorage flag 'bsn_ai_lockdown_ack_'+userId). The flag is only a "seen" marker:
+ * it is not part of studies, sync or backups.
+ */
+function checkAiLockdownNotice(){
+  try{
+    if(!ACTIVE_USER)return;
+    if(localStorage.getItem('bsn_ai_lockdown_ack_'+ACTIVE_USER))return;
+    var ov=document.getElementById('ai-lockdown-overlay');
+    if(ov)ov.classList.add('on');
+  }catch(e){/* never block boot over a notice */}
+}
+/**
+ * Acknowledge button on the lockdown notice: saves the flag, closes the notice, and opens
+ * Settings > What's New with the newest entry expanded.
+ */
+function ackAiLockdownNotice(){
+  try{localStorage.setItem('bsn_ai_lockdown_ack_'+ACTIVE_USER,'1');}catch(e){}
+  var ov=document.getElementById('ai-lockdown-overlay');
+  if(ov)ov.classList.remove('on');
+  navTo('settings');
+  _clOpen[0]=true;
+  renderChangelog();
+  if(!_clSectionOpen)clSectionToggle();
+  setTimeout(function(){
+    var sec=document.getElementById('settings-sec-changelog');
+    if(sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});
+  },350);
+}
+
 function initPinGate(){
   var cached=localStorage.getItem('bsn_active_user');
   if(cached){
@@ -4016,9 +4047,7 @@ async function submitPin(){
     var res=await fetch(WORKER_URL+'/auth/pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin})});
     var data=await res.json();
     if(!res.ok||!data.userId){
-      // 'temporarily_locked' = emergency access lockdown (arche-proxy), not a wrong PIN —
-      // see pilgrim-ai-tools-fabrication doc. Remove this branch once lockdown is lifted.
-      if(errEl)errEl.textContent=data.error==='temporarily_locked'&&data.message?data.message:'Incorrect PIN — try again';
+      if(errEl)errEl.textContent='Incorrect PIN — try again';
       if(input){input.value='';input.focus();}
       return;
     }
@@ -4295,7 +4324,7 @@ export {
   // S28a — Error Log
   errorLogSectionToggle, renderErrorLog, copyErrorLog, clearErrorLogUI,
   // S27-partial — PIN Auth UI
-  initPinGate, submitPin, switchUser,
+  initPinGate, submitPin, switchUser, checkAiLockdownNotice, ackAiLockdownNotice,
   // S28-partial — Startup helpers
   updateWordCount, checkForUpdate,
   refreshForUpdate, dismissUpdateBanner,
