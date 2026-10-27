@@ -498,7 +498,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.47.0',date:'Oct 26, 2026',label:'Latest — untested',
+    version:'4.47.1',date:'Oct 26, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: tapping Acknowledge on the AI tools notice now takes you straight to What\u2019s New without the Settings tour starting on top of it. The tour is not marked as seen, so it still offers itself the next time you open Settings.",
+      "fix: on shorter desktop windows, tour tips for tall Settings sections (Text-to-Speech, Tags, About) no longer cover the section they describe. The tip moves into the left sidebar instead.",
+      "note: text and look only. Nothing stored or changed. Cache-buster bumped to 4.47.1."
+    ]},
+  {
+    version:'4.47.0',date:'Oct 26, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the AI Study Tools are back on for everyone. The temporary lock that stopped them for every account except the developer’s has been removed.",

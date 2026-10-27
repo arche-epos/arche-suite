@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.47.0';
+} from './utils.js?v=4.47.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.47.0';
+} from './storage.js?v=4.47.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.47.0';
+} from './media.js?v=4.47.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.47.0';
+} from './tts.js?v=4.47.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.47.0';
+} from './sync.js?v=4.47.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.47.0';
+} from './studyTools.js?v=4.47.1';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.47.0';
+} from './memory.js?v=4.47.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -873,7 +873,7 @@ function navTo(id){
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
-  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN))setTimeout(function(){startTour('settings');},300);}
+  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
 }
 /**
  * Switches between the Study tab's Notes and Study Tools sub-panels.
@@ -3079,6 +3079,7 @@ function tourPositionSpotlight(rect){
 function tourPositionBubble(rect){
   var b=document.getElementById('tour-bubble');if(!b)return;
   var vw=window.innerWidth,vh=window.innerHeight;
+  b.style.width=''; // reset any sidebar-docked width from the previous step
   var bw=b.offsetWidth||300,bh=b.offsetHeight||180;
   if(!rect){
     // no target: sit near the bottom (not dead center) so the page being described stays visible above the bubble
@@ -3087,6 +3088,18 @@ function tourPositionBubble(rect){
     return;
   }
   var spaceBelow=vh-rect.top-rect.height,spaceAbove=rect.top;
+  // v4.47.1: target too tall for the bubble above or below it (short desktop windows). Rather than
+  // covering the section it describes, dock the bubble in the left sidebar, which is not part of it.
+  if(spaceBelow<bh+18&&spaceAbove<bh+18){
+    var nav=document.querySelector('.botnav');
+    var nr=nav?nav.getBoundingClientRect():null;
+    if(nr&&nr.left<=1&&nr.width<=320&&nr.height>=vh*0.8&&rect.left>=nr.right-4){
+      b.style.width=Math.max(180,nr.width-16)+'px';
+      var dh=b.offsetHeight||bh;
+      b.style.top=Math.max(16,vh-dh-16)+'px';b.style.left='8px';
+      return;
+    }
+  }
   var top=(spaceBelow>=bh+18||spaceBelow>=spaceAbove)?(rect.top+rect.height+18):(rect.top-bh-18);
   top=Math.max(16,Math.min(top,vh-bh-16));
   var left=Math.max(16,Math.min(rect.left,vw-bw-16));
@@ -4009,7 +4022,9 @@ function ackAiLockdownNotice(){
   try{localStorage.setItem('bsn_ai_lockdown_ack_'+ACTIVE_USER,'1');}catch(e){}
   var ov=document.getElementById('ai-lockdown-overlay');
   if(ov)ov.classList.remove('on');
+  window._skipSettingsTourOnce=true; // v4.47.1: don't let the Settings tour cover What's New; it still auto-offers on the next Settings visit
   navTo('settings');
+  setTimeout(function(){window._skipSettingsTourOnce=false;},1000);
   _clOpen[0]=true;
   renderChangelog();
   if(!_clSectionOpen)clSectionToggle();
