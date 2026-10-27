@@ -14,8 +14,8 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.48.0';
-import { mediaDeleteStudy, trRefresh } from './media.js?v=4.48.0';
+} from './utils.js?v=4.48.1';
+import { mediaDeleteStudy, trRefresh } from './media.js?v=4.48.1';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -93,8 +93,57 @@ export function loadStudies() {
  * Shows a toast error message if the write fails due to storage quota.
  */
 export function persist() {
-  try { localStorage.setItem(SK, JSON.stringify(studies)); }
-  catch(e) { logError('Persist Studies (quota)', e); toast('Storage full — remove large attachments to free space'); }
+  try {
+    localStorage.setItem(SK, JSON.stringify(studies));
+    if (window._persistFailed) { window._persistFailed = false; _hideStorageFullBanner(); }
+    return true;
+  } catch(e) {
+    var now = Date.now();
+    // Log at most once per 10 min — a full browser makes autosave fail every 30s (120 reports on Oct 11).
+    if (!window._persistLastLog || now - window._persistLastLog > 600000) { window._persistLastLog = now; logError('Persist Studies (quota)', e); }
+    window._persistFailed = true;
+    _showStorageFullBanner();
+    return false;
+  }
+}
+
+/** Shows a persistent "not saved" banner with a backup button. Safe to call repeatedly. */
+function _showStorageFullBanner() {
+  try {
+    if (document.getElementById('storage-full-banner')) return;
+    var b = document.createElement('div');
+    b.id = 'storage-full-banner';
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:700;background:var(--crimson);color:#fff;border-radius:10px;padding:12px 14px;font-family:Crimson Pro,serif;font-size:15px;line-height:1.35;box-shadow:0 4px 18px rgba(0,0,0,.5)';
+    b.innerHTML = '<strong>Not saved \u2014 device storage is full.</strong> Your latest edits are only in memory and will be lost if you close or reload. Download a backup now, then remove large photos.'
+      + '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sec" style="flex:1" onclick="exportData()">Download backup</button>'
+      + '<button class="btn btn-ghost" style="flex:1;color:#fff;border-color:#fff" onclick="document.getElementById(\'storage-full-banner\').remove()">Dismiss</button></div>';
+    document.body.appendChild(b);
+  } catch (e) { /* banner is best-effort */ }
+}
+function _hideStorageFullBanner() {
+  var b = document.getElementById('storage-full-banner'); if (b) b.remove();
+}
+
+/**
+ * Approximate localStorage usage for the Settings meter. Browsers cap localStorage at roughly
+ * 5 million characters per origin, so chars/5M is the fill estimate.
+ * @returns {{total:number, studies:number, photos:number, other:number, limit:number}} characters
+ */
+export function computeStorageUsage() {
+  var total = 0, studiesChars = 0;
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i), n = k.length + (localStorage.getItem(k) || '').length;
+      total += n;
+      if (k === SK) studiesChars = n;
+    }
+  } catch (e) {}
+  var photos = 0;
+  try {
+    studies.forEach(function(st) { (st.resources || []).forEach(function(r) { if (r.dataUrl) photos += r.dataUrl.length; }); });
+  } catch (e) {}
+  return { total: total, studies: studiesChars - photos, photos: photos, other: total - studiesChars, limit: 5000000 };
 }
 
 /**
@@ -191,8 +240,8 @@ export function saveStudy(silent) {
   var i = updated.findIndex(function(s) { return s.id === cur.id; });
   if (i >= 0) updated[i] = cur; else updated.unshift(cur);
   setStudies(updated);
-  persist();
-  if (!silent) toastSuccess('\u2713 Saved');
+  var _ok = persist();
+  if (!silent && _ok) toastSuccess('\u2713 Saved');
   _queueGistSync();
 }
 

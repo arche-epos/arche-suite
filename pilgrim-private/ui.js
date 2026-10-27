@@ -29,28 +29,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.48.0';
+} from './utils.js?v=4.48.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
-  deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs
-} from './storage.js?v=4.48.0';
+  deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage
+} from './storage.js?v=4.48.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.48.0';
+} from './media.js?v=4.48.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.48.0';
+} from './tts.js?v=4.48.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.48.0';
+} from './sync.js?v=4.48.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,11 +71,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.48.0';
+} from './studyTools.js?v=4.48.1';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.48.0';
+} from './memory.js?v=4.48.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -873,7 +873,7 @@ function navTo(id){
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
-  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
+  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();renderStorageMeter();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
 }
 /**
  * Switches between the Study tab's Notes and Study Tools sub-panels.
@@ -2801,6 +2801,20 @@ async function confirmExport(){
  * Exports all studies, tags, deleted-tag tombstones, and streak as a JSON backup file.
  * Uses the Web Share API on capable devices; falls back to anchor download.
  */
+/**
+ * Settings > Data & Storage: approximate device-storage meter (localStorage ~5M chars/origin).
+ * Warns at 80%. Read-only — touches no data.
+ */
+function renderStorageMeter(){
+  var el=document.getElementById('storage-meter');if(!el)return;
+  var u=computeStorageUsage(),pct=Math.min(100,Math.round(u.total/u.limit*100));
+  var mb=function(n){return (n/1000000).toFixed(1);};
+  var col=pct>=90?'var(--crimsonbright)':pct>=80?'var(--gold)':'var(--sagebright)';
+  el.innerHTML='<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--txt2);margin-bottom:5px"><span>Device storage (approx.)</span><span>'+mb(u.total)+' of ~5 MB &middot; '+pct+'%</span></div>'
+   +'<div style="height:8px;background:var(--bg3);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+col+'"></div></div>'
+   +'<div style="font-size:12px;color:var(--txt3);margin-top:5px">Studies '+mb(u.studies)+' MB &middot; Photos '+mb(u.photos)+' MB &middot; Other '+mb(u.other)+' MB'
+   +(pct>=80?'<br><strong style="color:var(--gold)">Nearly full \u2014 export a backup and remove large photos.</strong>':'')+'</div>';
+}
 async function exportData(){
   var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
   var payload={studies:studies,tags:TAGS,deletedTags:DELETED_TAGS,streak:streak};
@@ -4322,7 +4336,7 @@ export {
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,
-  exportData, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
+  exportData, renderStorageMeter, checkTabHints, dismissTabHints, checkOnboarding, renderObStep,
   obNext, showTourOffer, skipOnboarding, trackOpen, renderStats,
   // S25 — Guided Tours
   startTour, tourNext, tourBack, tourJump, skipTour, endTour,

@@ -1260,6 +1260,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div style="margin-bottom:22px" id="settings-sec-backup">
       <div class="sethead">Data &amp; Storage</div>
       <div class="setsub">All notes stored locally on this device. Export to save a backup to iCloud Drive, Google Drive, or any file app.</div>
+      <div id="storage-meter" style="margin-bottom:14px"></div>
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <button class="btn btn-ghost" style="flex:1" onclick="openExportBackupModal()">Export / Backup</button>
         <button class="btn btn-ghost" style="flex:1" onclick="importDataPrompt()">Restore Backup</button>
@@ -1927,7 +1928,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.48.0"></script>
+<script type="module" src="app.js?v=4.48.1"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

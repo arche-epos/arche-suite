@@ -498,7 +498,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.48.0',date:'Oct 26, 2026',label:'Latest — untested',
+    version:'4.48.1',date:'Oct 26, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: if your device\u2019s storage is full and a save fails, you now see a red \u201CNot saved\u201D banner with a Download backup button. Before, only a brief message flashed and later edits could be lost without you knowing. The \u201CSaved\u201D message no longer appears when a save actually failed.",
+      "new: Settings > Data & Storage shows how full your device storage is (studies, photos, other) and warns you at 80%.",
+      "fix: repeated storage-full errors are now reported once every 10 minutes instead of every 30 seconds."
+    ]
+  },
+  {
+    version:'4.48.0',date:'Oct 26, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "feature: every saved verse in the Library Memory tab now has a Practice button. It opens just that verse (or passage) so you can work on it by itself.",
