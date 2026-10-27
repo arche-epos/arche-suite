@@ -12,7 +12,7 @@ import {
   activeRef,
   trackEvent,
   logError
-} from './utils.js?v=4.47.1';
+} from './utils.js?v=4.48.0';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -309,11 +309,11 @@ function ttsRestart(source){
  * Loads TTS rate, voice, and volume preferences from localStorage and applies them.
  * Silently no-ops on parse failure. Calls updateTTSRateUI/updateTTSVolumeUI after loading.
  */
-function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;if(typeof s.volume==='number')_ttsVolume=s.volume;}}catch(e){logError('Load TTS Settings',e);}updateTTSRateUI();updateTTSVolumeUI();}
+function loadTTSSett(){try{var s=JSON.parse(localStorage.getItem(SK_TTS_SETT));if(s){if(s.rate)_ttsRate=s.rate;if(s.voice)_ttsVoice=s.voice;if(typeof s.volume==='number')_ttsVolume=s.volume;if(typeof s.practiceGap==='number'&&s.practiceGap>=3&&s.practiceGap<=5)_ttsPracGap=s.practiceGap;}}catch(e){logError('Load TTS Settings',e);}updateTTSRateUI();updateTTSVolumeUI();}
 /**
  * Persists the current TTS rate, voice, and volume selections to localStorage.
  */
-function saveTTSSett(){localStorage.setItem(SK_TTS_SETT,JSON.stringify({rate:_ttsRate,voice:_ttsVoice,volume:_ttsVolume}));}
+function saveTTSSett(){localStorage.setItem(SK_TTS_SETT,JSON.stringify({rate:_ttsRate,voice:_ttsVoice,volume:_ttsVolume,practiceGap:_ttsPracGap}));}
 /**
  * Sets the TTS playback rate, persists it, and refreshes the rate UI.
  * @param {number} r - Playback rate (0.5 – 3.0).
@@ -407,11 +407,80 @@ function updateTTSRepeatUI(){
   });
 }
 
+// ── v4.48.0 — Memory "Practice" listening: reference, pause, verse; optional repeat ──────────
+// Self-contained player used only by the Memory tab's per-verse Practice screen. Has its own
+// session counter so it never touches the Read / Scripture-panel playback state or their shared
+// Repeat flag. Gap (3/4/5 s) is the only persisted bit (additive field "practiceGap" in the
+// existing TTS settings object); Repeat is per-session and always starts off.
+var _ttsPracGap=4,_ttsPracRepeat=false,_ttsPracSession=0,_ttsPracTimer=null,_ttsPracCb=null;
+/** Pushes a state ('speaking'|'waiting'|'stopped') to the Practice screen's listener, if any. */
+function _ttsPracSetState(s){if(_ttsPracCb){try{_ttsPracCb(s);}catch(e){}}}
+/** Stops Practice listening immediately (cancels speech and any pending gap timer). */
+function ttsPracticeStop(){
+  _ttsPracSession++;
+  if(_ttsPracTimer){clearTimeout(_ttsPracTimer);_ttsPracTimer=null;}
+  if(window.speechSynthesis)window.speechSynthesis.cancel();
+  _ttsPracSetState('stopped');
+}
+/**
+ * Speaks the reference, waits the gap, speaks the verse text. If Repeat is on, waits the gap
+ * and starts over; otherwise stops. Gap and Repeat are read live, so changing them mid-play applies.
+ * @param {string} reference - Spoken first (e.g. "John 3:16").
+ * @param {string} text - Chunk text; [n] verse markers are stripped before speaking.
+ * @param {Function} onState - Called with 'speaking' | 'waiting' | 'stopped'.
+ */
+function ttsPracticeStart(reference,text,onState){
+  if(!window.speechSynthesis){if(window.toast)window.toast('Text-to-speech not supported in this browser');return;}
+  ttsStop();ttsPracticeStop();
+  _ttsPracCb=onState||null;
+  var sid=_ttsPracSession;
+  var verse=String(text||'').replace(/\[\d+\]/g,' ').replace(/\s+/g,' ').trim();
+  function wait(next){
+    _ttsPracSetState('waiting');
+    _ttsPracTimer=setTimeout(function(){_ttsPracTimer=null;if(sid!==_ttsPracSession)return;next();},_ttsPracGap*1000);
+  }
+  function speakAll(str,done){
+    var parts=ttsSplit(String(str||'')).map(function(p){return p.trim();}).filter(Boolean);
+    var i=0;
+    function nextPart(){
+      if(sid!==_ttsPracSession)return;
+      if(i>=parts.length){done();return;}
+      var u=new SpeechSynthesisUtterance(parts[i++]);
+      u.rate=_ttsRate||1;u.pitch=1;u.volume=(typeof _ttsVolume==='number')?_ttsVolume:1;
+      var v=ttsGetVoice();if(v)u.voice=v;
+      u.onend=function(){if(sid===_ttsPracSession)nextPart();};
+      u.onerror=function(){if(sid===_ttsPracSession)ttsPracticeStop();};
+      window.speechSynthesis.speak(u);
+    }
+    _ttsPracSetState('speaking');
+    nextPart();
+  }
+  function cycle(){
+    speakAll(reference,function(){
+      wait(function(){
+        speakAll(verse,function(){
+          if(_ttsPracRepeat)wait(cycle);else _ttsPracSetState('stopped');
+        });
+      });
+    });
+  }
+  cycle();
+}
+/** @returns {number} Practice gap in seconds (3, 4 or 5). */
+function getTTSPracticeGap(){return _ttsPracGap;}
+/** Sets and saves the Practice gap; ignores anything outside 3-5. @param {number|string} n */
+function setTTSPracticeGap(n){n=parseInt(n,10);if(n>=3&&n<=5){_ttsPracGap=n;saveTTSSett();}}
+/** @returns {boolean} Whether Practice Repeat is on (this session only). */
+function getTTSPracticeRepeat(){return _ttsPracRepeat;}
+/** Flips Practice Repeat and returns the new value. @returns {boolean} */
+function toggleTTSPracticeRepeat(){_ttsPracRepeat=!_ttsPracRepeat;return _ttsPracRepeat;}
+
 // ── Named exports ────────────────────────────────────────────────────────────
 export {
   ttsSplit, ttsGetText, ttsUpdateBtn, ttsGetVoice, ttsStop, ttsPause, ttsSyncAfterResume,
   ttsPlay, ttsToggleAI, ttsToggleField, ttsToggleScr, ttsPlayScrFrom, ttsToggleRead, ttsPlayReadFrom, ttsTestVoice,
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
   adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI,
-  toggleTTSRepeat, updateTTSRepeatUI
+  toggleTTSRepeat, updateTTSRepeatUI,
+  ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat
 };

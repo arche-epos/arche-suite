@@ -498,7 +498,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.47.1',date:'Oct 26, 2026',label:'Latest — untested',
+    version:'4.48.0',date:'Oct 26, 2026',label:'Latest — untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "feature: every saved verse in the Library Memory tab now has a Practice button. It opens just that verse (or passage) so you can work on it by itself.",
+      "feature: Practice has a Listen button. It reads the reference, pauses, then reads the verse. Turn on Repeat to have it pause and read the whole thing again, over and over, until you tap Stop. Choose a pause of 3, 4 or 5 seconds (it starts at 4).",
+      "feature: Practice starts at the verse\u2019s current level. Make it easier lowers the hints for that session only; Back to my level undoes it.",
+      "note: Practice is free practice. Nothing is saved to your schedule: no level, due date or history changes. The only thing remembered on this device is your chosen pause length, stored with your voice settings. Repeat always starts off. Cache-buster bumped to 4.48.0."
+    ]},
+  {
+    version:'4.47.1',date:'Oct 26, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: tapping Acknowledge on the AI tools notice now takes you straight to What\u2019s New without the Settings tour starting on top of it. The tour is not marked as seen, so it still offers itself the next time you open Settings.",

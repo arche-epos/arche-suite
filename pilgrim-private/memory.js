@@ -9,12 +9,13 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.47.1';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.48.0';
+import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat } from './tts.js?v=4.48.0';
 import {
   memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
   memGradeAttempt, memNextChunkState, memLogPracticeAttempt, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.47.1';
+} from './memory-core.js?v=4.48.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
@@ -156,6 +157,7 @@ function renderMemoryList() {
       '<div style="font-family:var(--font-body);font-size:calc(14px * var(--content-scale));color:var(--txt2);line-height:1.55;margin:4px 0 6px;">' + escHtml(it.text) + '</div>' +
       '<div class="word-card-meta">' + escHtml(when) + '</div>' +
       '<div class="word-card-actions">' +
+        '<button class="btn btn-sm btn-primary" data-mvid="' + escHtml(it.id) + '" onclick="memPracticeBtn(this)" style="font-size:11px;padding:4px 10px;min-height:28px;">Practice</button>' +
         '<button class="btn btn-sm" data-mvid="' + escHtml(it.id) + '" onclick="memDeleteBtn(this)" style="font-size:11px;padding:4px 10px;min-height:28px;color:var(--crimsonbright);background:none;border:1px solid var(--border);">Remove</button>' +
       '</div>' +
     '</div>';
@@ -199,6 +201,104 @@ function _memShuffle(arr) {
     var t = a[i]; a[i] = a[j]; a[j] = t;
   }
   return a;
+}
+
+/**
+ * v4.48.0 — per-verse "Practice": opens the quiz overlay for ONE saved verse/passage only
+ * (its chunks in order, not shuffled). Mode 'solo' grades and shows the diff but saves
+ * nothing — no level, interval, due date or history changes.
+ * @param {string} id - Memory item id.
+ */
+function memPracticeVerse(id) {
+  var item = memLoad().items.find(function(x) { return x.id === id; });
+  var steps = item ? memGetAllChunks([item]) : [];
+  if (!steps.length) { toast('Nothing to practice for this verse'); return; }
+  var multi = steps.length > 1;
+  steps.forEach(function(s) {
+    s.ease = 0; // session-only "make it easier" steps; never written to the store
+    s.speakRef = (multi && s.chunk.verseStart !== null)
+      ? s.reference + ', verses ' + s.chunk.verseStart + ' through ' + s.chunk.verseEnd
+      : s.reference;
+  });
+  _memQuiz = { mode: 'solo', queue: steps, idx: 0, answeredThisStep: false, results: [], hideAll: false, stepVisible: true };
+  var ov = document.getElementById('mem-quiz-overlay');
+  if (ov) ov.classList.add('on');
+  var hideAllCb = document.getElementById('mem-quiz-hideall');
+  if (hideAllCb) hideAllCb.checked = false;
+  _memRenderQuizStep();
+}
+/** onclick wrapper for the Practice button on a Memory card. */
+function memPracticeBtn(btn) { memPracticeVerse(btn.getAttribute('data-mvid')); }
+
+/** Effective cue level for a step: the saved level minus any session-only ease (never below 0). */
+function _memEffLevel(step) { return Math.max(0, step.chunk.level - (step.ease || 0)); }
+
+/**
+ * Practice only: lowers (delta -1) or fully restores (delta 0) the cue level for THIS verse on screen.
+ * Never writes to the store, so the verse's saved level is untouched. A typed answer survives.
+ * @param {number} delta - -1 one step easier, 0 back to the saved level.
+ */
+function memEaseStep(delta) {
+  if (!_memQuiz || _memQuiz.mode !== 'solo') return;
+  var step = _memQuiz.queue[_memQuiz.idx];
+  var maxEase = step.chunk.level;
+  // delta -1 = one step easier; 0 = back to the saved level in one tap
+  step.ease = delta === 0 ? 0 : Math.max(0, Math.min(maxEase, (step.ease || 0) - delta));
+  var ta = document.getElementById('mem-quiz-input');
+  var typed = ta ? ta.value : '';
+  var vis = _memQuiz.stepVisible;
+  _memRenderQuizStep();
+  _memQuiz.stepVisible = vis;
+  _memRenderQuizPromptBox();
+  var ta2 = document.getElementById('mem-quiz-input');
+  if (ta2) ta2.value = typed;
+}
+
+/** Renders the Practice listen panel (Listen/Stop, Repeat, gap, easier) into #mem-practice-panel. */
+function _memRenderPracticePanel(state) {
+  var el = document.getElementById('mem-practice-panel');
+  if (!el || !_memQuiz || _memQuiz.mode !== 'solo') return;
+  var step = _memQuiz.queue[_memQuiz.idx];
+  var busy = state === 'speaking' || state === 'waiting';
+  var rep = getTTSPracticeRepeat(), gap = getTTSPracticeGap();
+  var eff = _memEffLevel(step);
+  var btnCss = 'font-size:12px;padding:6px 12px;min-height:34px;';
+  el.innerHTML =
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">' +
+      '<button type="button" class="btn btn-sm ' + (busy ? 'btn-sec' : 'btn-primary') + '" style="' + btnCss + '" onclick="memPracticeListen()">' + (busy ? '■ Stop' : '▶ Listen') + '</button>' +
+      '<button type="button" class="btn btn-sec btn-sm" id="mem-practice-repeat" style="' + btnCss + (rep ? 'color:var(--gold);border-color:var(--gold);' : 'color:var(--txt3);') + '" onclick="memPracticeRepeat()">↻ Repeat' + (rep ? ' on' : '') + '</button>' +
+      '<label style="font-size:12px;color:var(--txt3);display:flex;align-items:center;gap:4px;">Pause ' +
+        '<select onchange="memPracticeGap(this.value)" style="font-size:12px;padding:4px;background:var(--bg1);color:var(--txt1);border:1px solid var(--border);border-radius:6px;">' +
+          [3, 4, 5].map(function(g) { return '<option value="' + g + '"' + (g === gap ? ' selected' : '') + '>' + g + 's</option>'; }).join('') +
+        '</select></label>' +
+      (state === 'waiting' ? '<span style="font-size:12px;color:var(--txt4);font-style:italic;">pausing…</span>' : '') +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;">' +
+      '<button type="button" class="btn btn-sec btn-sm" style="' + btnCss + '"' + (eff <= 0 ? ' disabled' : '') + ' onclick="memEaseStep(-1)">Make it easier</button>' +
+      ((step.ease || 0) > 0 ? '<button type="button" class="btn btn-ghost btn-sm" style="' + btnCss + '" onclick="memEaseStep(0)">Back to my level</button>' : '') +
+      '<span style="font-size:11px;color:var(--txt4);">Easier is for this session only — your saved level doesn’t change.</span>' +
+    '</div>';
+}
+/** Listen / Stop toggle for Practice. Speaks the reference, pauses, then the verse. */
+function memPracticeListen() {
+  if (!_memQuiz || _memQuiz.mode !== 'solo') return;
+  var step = _memQuiz.queue[_memQuiz.idx];
+  if (_memQuiz.listenState === 'speaking' || _memQuiz.listenState === 'waiting') { ttsPracticeStop(); return; }
+  ttsPracticeStart(step.speakRef || step.reference, step.chunk.text, function(state) {
+    if (!_memQuiz) return;
+    _memQuiz.listenState = state;
+    _memRenderPracticePanel(state);
+  });
+}
+/** Practice Repeat toggle (per session; applies live to a loop already playing). */
+function memPracticeRepeat() {
+  toggleTTSPracticeRepeat();
+  _memRenderPracticePanel(_memQuiz && _memQuiz.listenState);
+}
+/** Practice pause-length picker (3, 4 or 5 seconds); saved with the TTS settings. */
+function memPracticeGap(v) {
+  setTTSPracticeGap(v);
+  _memRenderPracticePanel(_memQuiz && _memQuiz.listenState);
 }
 
 /**
@@ -247,6 +347,7 @@ function memToggleHideAll(checked) {
 
 /** Closes the quiz overlay and discards the in-progress session (already-graded steps were saved as they happened). */
 function memCloseQuiz() {
+  ttsPracticeStop();
   var ov = document.getElementById('mem-quiz-overlay');
   if (ov) ov.classList.remove('on');
   _memQuiz = null;
@@ -269,23 +370,29 @@ function _memRenderQuizStep() {
   var footer = document.getElementById('mem-quiz-footer');
   var progress = document.getElementById('mem-quiz-progress');
   if (!body || !footer || !_memQuiz) return;
+  ttsPracticeStop(); // never carry audio from one step into the next
+  _memQuiz.listenState = 'stopped';
   var step = _memQuiz.queue[_memQuiz.idx];
   var chunk = step.chunk;
+  var solo = _memQuiz.mode === 'solo';
+  var effLevel = solo ? _memEffLevel(step) : chunk.level;
   if (progress) progress.textContent = (_memQuiz.idx + 1) + ' of ' + _memQuiz.queue.length +
-    (_memQuiz.mode === 'all' ? ' \u00b7 Practice' : ' \u00b7 Test Me');
-  var cueNote = chunk.level === 0 ? 'Read it aloud, then type it below from memory.'
-    : chunk.level >= MEM_LEVEL_MAX ? 'No cue \u2014 type the whole thing from memory.'
+    (solo ? ' \u00b7 Practice (not saved)' : _memQuiz.mode === 'all' ? ' \u00b7 Practice' : ' \u00b7 Test Me');
+  var cueNote = effLevel === 0 ? 'Read it aloud, then type it below from memory.'
+    : effLevel >= MEM_LEVEL_MAX ? 'No cue \u2014 type the whole thing from memory.'
     : 'Fill in the blanks from memory.';
   // Every new verse resets to the session's Hide All default (spec: per-verse, not global-state) \u2014
   // NOT to always-visible, so a "Hide All" run stays hidden verse to verse.
   _memQuiz.stepVisible = !_memQuiz.hideAll;
   body.innerHTML =
     '<div style="font-family:\'EB Garamond\',serif;font-size:18px;color:var(--gold);margin-bottom:4px;">' + escHtml(step.reference) + '</div>' +
-    '<div style="font-size:12px;color:var(--txt3);margin-bottom:14px;">Level ' + chunk.level + ' of ' + MEM_LEVEL_MAX + ' \u2014 ' + escHtml(cueNote) + '</div>' +
+    '<div style="font-size:12px;color:var(--txt3);margin-bottom:14px;">Level ' + effLevel + ' of ' + MEM_LEVEL_MAX + (solo && effLevel !== chunk.level ? ' (eased from ' + chunk.level + ')' : '') + ' \u2014 ' + escHtml(cueNote) + '</div>' +
+    (solo ? '<div id="mem-practice-panel"></div>' : '') +
     '<div id="mem-quiz-prompt-box"></div>' +
     '<textarea id="mem-quiz-input" rows="5" placeholder="Type the verse from memory\u2026" style="width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:15px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg1);color:var(--txt1);resize:vertical;"></textarea>' +
     '<div id="mem-quiz-result" style="margin-top:14px;"></div>';
   _memRenderQuizPromptBox();
+  if (solo) _memRenderPracticePanel('stopped');
   footer.innerHTML = '<button class="btn btn-primary btn-full" onclick="memSubmitQuizAnswer()">Check</button>';
   var ta = document.getElementById('mem-quiz-input');
   if (ta) setTimeout(function() { ta.focus(); }, 50);
@@ -303,7 +410,7 @@ function _memRenderQuizPromptBox() {
   if (!el || !_memQuiz) return;
   var step = _memQuiz.queue[_memQuiz.idx];
   var chunk = step.chunk;
-  var prompt = memBuildBlankedText(chunk.text, chunk.level);
+  var prompt = memBuildBlankedText(chunk.text, _memQuiz.mode === 'solo' ? _memEffLevel(step) : chunk.level);
   if (!prompt) { el.innerHTML = ''; return; }
   var visible = _memQuiz.stepVisible;
   el.innerHTML =
@@ -319,12 +426,15 @@ function memSubmitQuizAnswer() {
   var step = _memQuiz.queue[_memQuiz.idx];
   var ta = document.getElementById('mem-quiz-input');
   var typed = ta ? ta.value : '';
+  ttsPracticeStop();
   var grade = memGradeAttempt(step.chunk.text, typed);
-  var updated = _memQuiz.mode === 'all'
-    ? memLogPracticeAttempt(step.chunk, grade.pct)
-    : memNextChunkState(step.chunk, grade.pct);
-  _memUpdateChunk(step.itemId, step.chunkId, updated);
-  step.chunk = updated;
+  if (_memQuiz.mode !== 'solo') { // Practice (solo) is free practice: nothing is written to the store
+    var updated = _memQuiz.mode === 'all'
+      ? memLogPracticeAttempt(step.chunk, grade.pct)
+      : memNextChunkState(step.chunk, grade.pct);
+    _memUpdateChunk(step.itemId, step.chunkId, updated);
+    step.chunk = updated;
+  }
   _memQuiz.results.push(grade.pct);
 
   var diffHtml = grade.words.map(function(w) {
@@ -335,7 +445,8 @@ function memSubmitQuizAnswer() {
   if (resultEl) {
     resultEl.innerHTML =
       '<div style="font-size:16px;font-weight:600;color:' + (grade.pct >= 100 ? 'var(--gold)' : grade.pct < 50 ? 'var(--crimsonbright)' : 'var(--txt1)') + ';margin-bottom:8px;">' + grade.pct + '% correct</div>' +
-      '<div style="font-family:var(--font-body);font-size:14px;line-height:1.7;color:var(--txt2);">' + diffHtml + '</div>';
+      '<div style="font-family:var(--font-body);font-size:14px;line-height:1.7;color:var(--txt2);">' + diffHtml + '</div>' +
+      (_memQuiz.mode === 'solo' ? '<div style="font-size:11px;color:var(--txt4);margin-top:10px;font-style:italic;">Practice only \u2014 nothing was saved to your schedule.</div>' : '');
   }
   var ta2 = document.getElementById('mem-quiz-input');
   if (ta2) ta2.disabled = true;
@@ -351,6 +462,7 @@ function memSubmitQuizAnswer() {
 /** Advances to the next chunk in the queue. */
 function memAdvanceQuiz() {
   if (!_memQuiz) return;
+  ttsPracticeStop();
   _memQuiz.idx++;
   if (_memQuiz.idx >= _memQuiz.queue.length) { memFinishQuiz(); return; }
   _memRenderQuizStep();
@@ -359,6 +471,7 @@ function memAdvanceQuiz() {
 /** Shows a one-line session summary, then closes on tap. */
 function memFinishQuiz() {
   if (!_memQuiz) return;
+  ttsPracticeStop();
   var results = _memQuiz.results;
   var avg = results.length ? Math.round(results.reduce(function(s, p) { return s + p; }, 0) / results.length) : 0;
   var body = document.getElementById('mem-quiz-body');
@@ -379,5 +492,6 @@ export {
   renderMemoryList, memToggleAdd, memSaveManual,
   memBuildVerseRef, memRangeLabel, memJoinVerses,
   memOpenQuiz, memCloseQuiz, memSubmitQuizAnswer, memAdvanceQuiz, memFinishQuiz,
-  memToggleStepVisibility, memToggleHideAll
+  memToggleStepVisibility, memToggleHideAll,
+  memPracticeVerse, memPracticeBtn, memEaseStep, memPracticeListen, memPracticeRepeat, memPracticeGap
 };
