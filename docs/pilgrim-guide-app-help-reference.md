@@ -1,17 +1,22 @@
-# Pilgrim Guide — App Reference & Intent Guide (v3.1)
+# Pilgrim Guide — App Reference & Intent Guide (v3.2)
 **Used for:** every Pilgrim Guide request — both to decide which mode a message
 belongs to, and (for App Help) as the answer key itself.
-**Grounded against:** Pilgrim Private live source, v4.34.11 (Sep 12, 2026); every UI label in the Quick Reference re-checked against v4.35.1 source on Sep 20, 2026 (no changes needed); Bible Tools (Read + Study entries) added for v4.40.0, AI Cross-References retired in v4.41.0, Translation Comparison added in v4.42.0 (Sep 28, 2026), Interlinear added in v4.43.0 (Sep 29, 2026), and its Old Testament verse map in v4.44.0 (Sep 30, 2026); Settings > About (version, Check for updates, Force refresh, data-source credits) added in v4.45.0 (Sep 30, 2026); AI Word Study commentary and AI Language & Structure retired in v4.46.0 (Sep 30, 2026); Word Study now maps Old Testament English verse numbers to the Hebrew verses (as Interlinear does) and Go Deeper/Continue are blocked on the retired Cross-References results in v4.46.2 (Oct 1, 2026); Look Up Word's AI Explanation paragraph retired in v4.46.3 (Oct 2, 2026); Study tour gains a Bible Tools step in v4.46.4; tour readability, Memory tab, and nav-position fixes in v4.46.5
-**v3 (Sep 7/8, 2026):** Scripture Finder is now live. Every reply MUST be a JSON
-envelope (see "Response format" below) instead of plain prose — this is what
-lets the client run AI-proposed references through real verification before
-showing anything.
+**Grounded against:** Pilgrim Private v4.48.0 (Oct 26, 2026). Every screen, button
+label and Settings heading in the Quick Reference was re-checked against the live
+source (index.html and the JS modules) in the v3.2 pass.
+**v3.2 (Oct 26, 2026):** Full currency pass. Added what was missing or out of date:
+the Memory tab (Test Me, Practice All, per-verse Practice, Add a Verse), Save to
+Memory, Transcripts, Export Study to PDF, Share Study Link, study-card actions,
+Places & Geography and the This Passage / Whole Book switch, Settings > Appearance,
+Share This App, What's New, Data & Storage, Pilgrim Guide itself, and which tools
+use AI. Corrected stale wording (the "Lexicon" and "Word Study search" names are now
+**Look Up Word**; the "Passage section" is now Study Info and the Scripture panel; the
+feedback form lives under Diagnostics). Word-meaning questions now point to the tools
+that exist instead of a dead end.
 **v3.1 (Sep 15, 2026):** Added ambiguity-handling guidance — app_help and
-word_study now ask a brief clarifying question when a request could plausibly
-mean more than one thing, matching Scripture Finder's existing behavior.
-Explicitly disambiguated the "back up my studies" Quick Reference entries
-(cloud sync vs. local export file), which shared enough wording to get
-misread as a single answer.
+word_study ask a brief clarifying question when a request could plausibly mean
+more than one thing. Disambiguated the two "back up my studies" entries.
+**v3 (Sep 7/8, 2026):** Scripture Finder live; every reply is a JSON envelope.
 **Maintained by:** update this doc in the same delivery as any Pilgrim Private
 nav/tab/Settings change — see project SOP. This is the only place the model
 learns what the app can do; if it's not here, the model won't know it exists.
@@ -71,8 +76,11 @@ message — there is no manual mode switcher. On every incoming message:
    against real fetched text before showing it.
 3. **Is it asking what a specific word means in the original language**
    (Greek/Hebrew, a Strong's number, "what does agape mean")? → **Word Study.**
-   Not yet built (Phase 3) — if this comes up before that ships, say lookups
-   like this aren't available yet, don't attempt one.
+   The chat can't do these lookups yet — don't attempt one or answer from memory.
+   Use mode "word_study" and say so in one or two sentences, then point the user to
+   the tools that can: **Look Up Word** (type a word or a Strong's number like
+   G3056 or H1254) or **Bible Tools > Interlinear** (every original word of a
+   verse). See the Quick Reference for where to find each.
 4. **Neither of the above** (theology, doctrine, opinion, anything unrelated)
    → out of scope. Say so plainly, don't guess, don't redirect to a mode that
    can't handle it either.
@@ -116,27 +124,80 @@ that avoids the excluded list.
 
 ## Quick Reference — by screen
 
+### Pilgrim Guide (this assistant)
+- Open Pilgrim Guide → the round button at the bottom right of every screen. On
+  the Library tab it opens a small menu (**New Study** / **Pilgrim Guide**); on
+  every other screen it opens Pilgrim Guide directly.
+- What Pilgrim Guide does → answers "how do I…" questions about the app, and
+  helps find a Bible passage from a topic or a partly remembered quote (every
+  reference is checked against the real text before it is shown). It does not
+  interpret Scripture or give theology, and the chat is not saved — it clears
+  when the page reloads.
+- On a Scripture Finder result → tap a result for **Open in Read** or
+  **Start a Study**; **Deeper Dive** finds further matches and **Search All
+  Translations** broadens the search.
+
+### Navigation
+- Move between screens → the five buttons: **Library**, **Read**, **Study**,
+  **Progress**, **Settings**. On a phone or tablet they run along the top; on a
+  desktop they are a sidebar on the left.
+- The app shows "Offline" when there is no connection. Pilgrim Guide, the AI
+  tools, and Study Sync need internet.
+
 ### Library (home)
-- Find a study I saved → **Library > Studies** tab
-- Start a new study → **Library FAB > New Study**
-- Search my studies → search bar at top of Library
-- Sort my studies (by date, reference, teacher, series, last modified) →
-  sort dropdown, top-right of Library
-- Filter studies by tag → tag filter bar under the search box
+- Find a study I saved → **Library > Studies** tab; tap a study to open it
+- Start a new study → **Library round button > New Study**, then pick a template:
+  **Blank**, **Sermon Notes**, **Devotional**, or **Small Group**
+- Search my studies → search bar at top of Library (references, teachers, titles)
+- Sort my studies → the **Sort By** dropdown at the top right: Latest,
+  Reference, Teacher, Series, or Modified. When sorted by Reference, Teacher or
+  Series, a second filter appears beside it (Book / Teacher / Series).
+- Filter studies by tag → the tag chips under the search box
+- Share, duplicate, or delete one study → the **Share**, **Duplicate**, and
+  **Delete** buttons on that study's card. Delete asks for confirmation and
+  cannot be undone.
 - Find a word I looked up before / my saved words → **Library > Words** tab
-- Look up a new word and save it → "Look Up Word & Save to Word List" button
-  on the Words tab (opens Lexicon)
+- Look up a new word and save it → "✦ Look Up Word & Save to Word List" button
+  on the Words tab (see Look Up Word below)
+- Memorize Bible verses → **Library > Memory** tab (see Scripture Memory below)
+
+### Scripture Memory (Library > Memory tab)
+- Add a verse to memorize → **+ Add a Verse to Memory**: type the reference
+  (the verse text fills in automatically), choose a version, and tap **Save
+  Verse**. You can also save from Read ("Save Passage to Memory") or from a
+  study's Scripture panel ("Save to Memory"); a range such as John 3:16-18 saves
+  as one memory passage.
+- Quiz me on verses that are due → **Test Me** (a number shows how many are due,
+  and a banner says "N verses due for review"). You type the verse from memory,
+  tap **Check**, and see a percentage with missed words marked. How you do
+  sets when it comes back and how much of a hint you get next time.
+- Practice every verse without affecting the schedule → **Practice All**
+- Practice just one verse → the **Practice** button on that verse's card. It
+  opens only that verse, starting at the level you have reached. Nothing is saved,
+  so your schedule does not change.
+- Listen to a verse while practicing → **Listen** on the Practice screen reads
+  the reference, pauses, then reads the verse. Turn on **Repeat** to have it pause
+  and read it again until you tap **Stop**. **Pause** sets the gap to 3, 4 or 5
+  seconds (the choice is remembered on this device).
+- Make a practice verse easier → **Make it easier** on the Practice screen adds
+  more of the verse back for that session only; **Back to my level** undoes it.
+  Your saved level never changes.
+- Hide the verse text while typing → **Hide Passage / Show Passage** under the
+  verse, or **Hide All** at the top of a quiz
+- Remove a verse from Memory → **Remove** on its card
 
 ### Read
-- Read a chapter → **Read** tab, type a reference or tap the book icon to
-  browse by book/chapter
-- Change translation while reading → translation dropdown next to the
-  reference field
-- Listen to scripture (text-to-speech) → play/pause, skip verse, repeat,
-  speed, voice, and volume controls in the Read player bar
-- Move between chapters → Prev/Next Chapter buttons
-- Turn a passage I'm reading into a study → "Start a Study from this Passage"
-  button (appears once text is loaded)
+- Read a chapter → **Read** tab: type a reference, or tap **Pick** to browse by
+  book and chapter
+- Change translation while reading → the version dropdown next to the reference
+  field (14 translations)
+- Listen to scripture (text-to-speech) → the player bar: play/pause, previous and
+  next verse, repeat, speed, voice, and volume
+- Move between chapters → **Prev Chapter** / **Next Chapter**
+- Turn a passage I'm reading into a study → **Start a Study from this Passage**
+  (appears once text is loaded)
+- Save the passage to Memory → **Save Passage to Memory** (appears once text is
+  loaded)
 - See cross-references for a verse (no AI — from a fixed dataset) → tap a verse
   number, then the **Bible Tools** button in the Read player bar (it stays
   greyed out until a verse is selected). Opens the Bible Tools sheet listing the
@@ -163,28 +224,61 @@ that avoids the excluded list.
   Psalm title says "Psalm title"). Hebrew meanings are short Strong's
   definitions.
 
+
 ### Study — Notes tab
-- Take notes during a sermon/quiet time/small group → **Study > Notes**,
-  Observations & Notes field
-- Change the passage or translation for this study → Passage section, Notes tab
-- See saved word lookups tied to this specific study → Saved Words, Notes tab
-- Look up a word while in a study → "Look Up Word" button, Notes tab
-- Attach a photo or document to a study → "Add Photo or Document" button, Notes tab
+- Open or leave a study → tap a study in Library to open it; **Library** (top left)
+  goes back. Changes save with **Save**, and the app also saves as you work.
+- Set the study's details → **Study Info** at the top of the Notes tab: Date,
+  Teacher / Preacher, Scripture Reference (the **Pick** button browses by book
+  and chapter), Series, Title, and Tags. Tap the header to hide or show it.
+- Change the passage or translation for this study → type the reference in
+  Study Info, and use the version dropdown in the **Scripture** panel below it
+- Use the Scripture panel → **Copy**, **Paste** (for text you copied from your own
+  Bible app), **Save to Memory**, **Bible Tools** (Cross-References, Translation
+  Comparison, Interlinear), and **Listen** with previous/next verse, repeat, and
+  speed controls
+- Take notes during a sermon/quiet time/small group → **Observations & Notes**
+  field. **A−** / **A+** change text size here; the full controls are in
+  Settings > Appearance.
+- Look up a word while in a study → "✦ Look Up Word" button, Notes tab
+- See saved word lookups tied to this specific study → **Saved Words**, below
+  the notes
+- Attach a photo or document → **Add Photo or Document** (opens "Add Files to
+  Study": **Camera**, **Gallery**, **Document**, or **Transcript**). Text extracted
+  from photos and documents shows when you tap the tile under **Resources &
+  Documents** on the Study Tools tab.
+- Add a class transcript → **Add Photo or Document > Transcript** (TXT, DOCX,
+  PDF, VTT or SRT file). A **Transcript** section then appears on the Notes tab
+  with a search box and **Copy**, **Download .txt**, **Replace**, and **Delete**.
+  It is stored on this device only: it is included in the JSON backup file but
+  not in cloud sync.
 
 ### Study — Study Tools tab
-- Get Greek/Hebrew/English word meaning for the passage → **Word Study** (no AI
-  as of v4.46.0 — the button shows the source-dictionary facts: original word,
-  Strong's number, transliteration, full definition; commentary saved on older
-  studies still appears under the facts, unchanged; for Old Testament passages it uses the
-  same English-to-Hebrew verse map as Interlinear, so Psalm titles and Joel 2-3 show the right
-  words). For one word or a Strong's
-  number, use the Word Study search
+- Choose what the tools look at → the **This Passage / Whole Book** switch above
+  the tool buttons
+- Which tools use AI → only **Historical Context**, **Cultural Context**, and
+  **Places & Geography** (and Pilgrim Guide) are AI-written and can make mistakes
+  — check anything important against a trusted source. **Word Study**, **Bible
+  Tools** (Cross-References, Translation Comparison, Interlinear), and **Look Up
+  Word** come straight from fixed source data with no AI. AI results never draw
+  theological conclusions; those are yours.
+- Get Greek/Hebrew/English word meaning for the passage → **Word Study** (no AI —
+  the button shows the source-dictionary facts: original word, Strong's number,
+  transliteration, full definition; commentary saved on older studies still
+  appears under the facts, unchanged; for Old Testament passages it uses the same
+  English-to-Hebrew verse map as Interlinear, so Psalm titles and Joel 2-3 show the
+  right words). For one word or a Strong's number, use **Look Up Word** (under
+  Study Helps on this tab, in Notes, or on the Words tab)
 - Get grammar/syntax help → the AI **Language & Structure** tool was retired in
   v4.46.0. Use **Bible Tools > Interlinear** for word-by-word parsing of any
   verse. Results saved on older studies still appear as a "Lang & Structure"
   tab in the results panel, and still export
 - Get historical background (period, politics, author) → **Historical Context**
 - Get cultural background (customs, geography, daily life) → **Cultural Context**
+- Get places, distances, and terrain → **Places & Geography**
+- Work with a tool's result → buttons on the result: **Listen**, **Copy**,
+  **Share**, and **Clear** (removes that result). **Go Deeper** adds fuller
+  detail on AI results, and **Continue** appears when an answer was cut off.
 - Find related/thematic verses / cross-references (no AI — from a fixed dataset;
   the old AI Cross-References tool was retired in v4.41.0) → **Bible Tools**
   button in the Scripture panel (next to Copy, Paste, Save to Memory; appears
@@ -203,39 +297,57 @@ that avoids the excluded list.
   entry. Old Testament verses whose Hebrew numbering differs show headings
   such as "Hebrew 51:2". Interlinear replaced the old AI Language & Structure
   tool with parsing from fixed data
-- Run the AI tools at once → **Study Snapshot** (as of v4.46.0 it runs Places &
-  Geography on the exact passage, plus Historical and Cultural Context at the
-  whole-book level; Word Study and Language & Structure no longer run in it)
+- Run the AI tools at once → **Study Snapshot** (runs Places & Geography on the
+  exact passage, plus Historical and Cultural Context at the whole-book level; it
+  asks you to confirm first)
 - Outline a passage or book → **Passage/Book Outline**
 - Write my own takeaways (AI-free space) → **My Conclusions**
+- Export a study as a PDF → **Export Study to PDF…** at the bottom of the Study
+  Tools tab: choose which sections and tools to include, then export
+- Send someone a link to a study → **Share Study Link** (bottom of the Study
+  Tools tab), or **Share** on the study's card in Library
 
 ### Progress
-- See my study streak, most-studied books, or recent activity → **Progress** tab
-  (read-only)
+- See my study streak, totals, most-studied books, or recent activity →
+  **Progress** tab (read-only): Day Streak, Total Studies, Words Written, AI Tools
+  Run, Most Studied Books, and Recent Activity
 
 ### Settings
+Settings sections, top to bottom: Study Sync, Appearance, Listen / Text-to-Speech,
+Available Translations, About Translations, Study Tags, Share Arché · Pilgrim,
+Data & Storage, Account, About, What's New, Error Log, Diagnostics, Guided Tours.
 - "Back up my studies" is AMBIGUOUS — two separate, unrelated mechanisms
   both use the word "backup." Do NOT answer directly; ask which one the user
   means:
   - Cloud sync backup (syncs to their account; used to restore on this or
     another device) → **Settings > Study Sync > ↑ Backup**
   - Local backup file (a file they export and keep themselves) →
-    **Settings > Export / Backup** (see below)
+    **Settings > Data & Storage > Export / Backup** (see below)
+- Studies sync automatically after every save; the Study Sync buttons are for
+  manual backups and restores
 - Restore my studies from the cloud → **Settings > Study Sync > ↓ Restore**
 - Force-overwrite local data with the cloud backup (rare/advanced) →
   Settings > Study Sync > Advanced > "Force Restore — overwrite local with
   Backup"
+- Change the look (light or dark theme, font, text size) → **Settings >
+  Appearance**: Theme (**Parchment (Light)** or **Original (Dark)**), Content
+  Font, and Content Text Size (A− / A+)
 - Change text-to-speech voice, speed, or volume → **Settings > Listen /
-  Text-to-Speech**
+  Text-to-Speech** (**Test Voice** plays a sample)
 - Change my default Bible translation → **Settings > Available Translations**
   (tap a translation to set it as default; "About Translations" explains the
   differences between them)
-- Create, edit, or manage tags for my studies → **Settings > Study Tags**
+- Create, edit, or manage tags for my studies → **Settings > Study Tags** (**New
+  Tag**; deleting a tag also removes it from your studies)
+- Invite a friend to use the app → **Settings > Share Arché · Pilgrim > ✦ Share
+  This App**
 - Export a backup file of all my data (the OTHER backup — see the ambiguous-
-  "back up my studies" note above) → **Settings > Export / Backup**
-- Restore from a backup file → **Settings > Restore Backup**
-- Erase everything and start over → **Settings > Clear All Data** (destructive
-  — confirm the user actually wants this before treating it as routine)
+  "back up my studies" note above) → **Settings > Data & Storage > Export /
+  Backup** (you choose which studies to include)
+- Restore from a backup file → **Settings > Data & Storage > Restore Backup**
+- Erase everything and start over → **Settings > Data & Storage > Clear All
+  Data** (destructive — confirm the user actually wants this before treating it
+  as routine)
 - Switch to a different user/PIN → **Settings > Account > Switch User**
 - See which app version I'm on, or check whether a newer version is live →
   **Settings > About** (shows the version; **Check for updates** says whether
@@ -246,30 +358,34 @@ that avoids the excluded list.
 - See data-source credits and licenses (MACULA Greek, Open Scriptures Hebrew
   Bible, Strong's, OpenBible.info) → **Settings > About > Data sources &
   credits**
+- See what changed in the app, or read about past updates → **Settings > What's
+  New** (newest first; tap a version to expand it)
 - Check whether AI tools, text extraction, sync, or the Bible API are working →
-  **Settings > Diagnostics > Connection Status** (Test button per service)
-- Turn on a test mode for the feedback form → Settings > Diagnostics >
-  Feedback Submission toggle
-- See or export my error/diagnostic history → **Settings > Diagnostics >
-  Recent Runs**, and the separate **Error Log** section (Copy Log / Clear Log)
-- Send feedback or report a bug → feedback button (opens the feedback form
-  described above)
-- Replay the app tutorial → **Settings > Guided Tours** ("Replay Study Tour" /
-  "Replay Settings Tour")
+  **Settings > Diagnostics > Connection Status** (**Test** button per service)
+- Run a full system check → **Settings > Diagnostics > ◆ Run Diagnostics**
+- Send feedback or report a bug → **Settings > Diagnostics > ⇧ Submit
+  Feedback** (opens the feedback form). The **Feedback Submission** toggle there
+  turns on a test mode for the form.
+- See or export my error/diagnostic history → **Settings > Diagnostics > Recent
+  Runs**, and the separate **Error Log** section (**Copy Log** / **Clear Log**;
+  keeps the last 50 errors on this device)
+- Replay the app tutorial → **Settings > Guided Tours** (**Replay Study Tour** /
+  **Replay Settings Tour**)
 
 ### Look Up Word (word lookup — available from several places)
 - Look up a word or Strong's number (e.g. "logos", "G3056", "H1254") →
-  "Look Up Word" button, opened from Library > Words, Study > Notes, or globally.
-  Results are fixed Strong's dictionary data (no AI as of v4.46.3: original word,
-  definition, KJV renderings, where it appears). Results can be saved to the Words list;
-  words saved earlier keep any Explanation they already had.
+  "✦ Look Up Word" button, opened from Library > Words, Study > Notes, or Study >
+  Study Tools (Study Helps). Results are fixed Strong's dictionary data (no AI:
+  original word, definition, KJV renderings, where it appears). Results can be
+  saved to the Words list; words saved earlier keep any Explanation they already
+  had.
 
 ---
 
 ## Out of scope for App Help (decline, don't guess)
 - What a passage means, theological questions, doctrine
-- Word meanings / original-language content beyond pointing to Lexicon (the
-  actual lookup is Word Study mode, not yet built)
+- Word meanings / original-language content — the chat can't look these up;
+  point to **Look Up Word** or **Bible Tools > Interlinear** instead
 - Finding a verse from a description (Scripture Finder's job, not App Help's)
 - Anything not listed above — if it's not in this doc, say you're not sure
   rather than inventing an answer
