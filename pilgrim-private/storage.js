@@ -14,8 +14,8 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.49.1';
-import { mediaDeleteStudy, trRefresh } from './media.js?v=4.49.1';
+} from './utils.js?v=4.49.2';
+import { mediaDeleteStudy, trRefresh } from './media.js?v=4.49.2';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -362,7 +362,7 @@ export function syncFromInputs(force) {
   if (fieldOn) {
     ar.reference  = document.getElementById('f-ref').value;
     var _ft = document.getElementById('f-trans').value;
-    if (_ft || !ar.pastedTranslation) ar.translation = _ft; // v4.49.1: never blank out a pasted translation label
+    if (_ft || !ar.pastedTranslation) ar.translation = _ft; // v4.49.2: never blank out a pasted translation label
   }
   // Persist current passage/book scope toggle to the ref object
   if (ar.deep) ar.deep.studyScope = studyScope;

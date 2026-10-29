@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.49.1';
+} from './utils.js?v=4.49.2';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.49.1';
+} from './storage.js?v=4.49.2';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.49.1';
+} from './media.js?v=4.49.2';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.49.1';
+} from './tts.js?v=4.49.2';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.49.1';
+} from './sync.js?v=4.49.2';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.49.1';
+} from './studyTools.js?v=4.49.2';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.49.1';
+} from './memory.js?v=4.49.2';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1099,7 +1099,7 @@ function populateField(){
   document.getElementById('f-teacher').value=cur.teacher||'';
   document.getElementById('f-series').value=cur.series||'';
   document.getElementById('f-ref').value=ar?ar.reference||'':'';
-  // v4.49.1 (S1-F2): re-create the pasted-translation option first, otherwise the dropdown blanks and the next save/blur refetches ESV
+  // v4.49.2 (S1-F2): re-create the pasted-translation option first, otherwise the dropdown blanks and the next save/blur refetches ESV
   var _ft=document.getElementById('f-trans');
   if(ar&&ar.pastedTranslation){
     var _pv=String(ar.pastedTranslation).toLowerCase(),_has=false;
@@ -1203,7 +1203,7 @@ function loadTags(){
 /** Writes the TAGS array to localStorage. */
 function persistTags(){
   try{localStorage.setItem(SK_TAGS,JSON.stringify(TAGS));return true;}
-  catch(e){logError('Persist Tags (quota)',e);notifyStorageFull();return false;} // v4.49.1: red "Not saved" banner instead of an uncaught error
+  catch(e){logError('Persist Tags (quota)',e);notifyStorageFull();return false;} // v4.49.2: red "Not saved" banner instead of an uncaught error
 }
 var DELETED_TAGS=[];
 /** Loads the DELETED_TAGS tombstone list from localStorage. */
@@ -1718,9 +1718,9 @@ function importDataFromFile(input){
     try{
       var payload=JSON.parse(e.target.result);
       // Support legacy array format and new object format {studies,tags,streak}
-      var imported=Array.isArray(payload)?payload:(Array.isArray(payload.studies)?payload.studies:[]);
+      var imported=(Array.isArray(payload)?payload:(Array.isArray(payload.studies)?payload.studies:[])).filter(function(s){return !s._tourDemo;}); // Study Tour samples are never restored (v4.49.2)
       if(!imported.length&&Array.isArray(payload))throw new Error('Invalid format');
-      // v4.49.1: ask first, and save a safety copy so the restore can be undone from Settings > Data & Storage
+      // v4.49.2: ask first, and save a safety copy so the restore can be undone from Settings > Data & Storage
       var _clash=imported.filter(function(s){return s.id&&studies.some(function(x){return x.id===s.id;});}).length;
       if(!confirm('Restore this backup file?\n\n'+imported.length+' stud'+(imported.length===1?'y':'ies')+' in the file: '+_clash+' will replace the matching stud'+(_clash===1?'y':'ies')+' on this device, the rest are added. Nothing else is deleted. Backups do not include AI results; the ones on this device are kept.\n\nA safety copy of your current data is saved first so you can undo.'))return;
       var _sc=makeSafetyCopy('Restore Backup file');
@@ -1731,7 +1731,7 @@ function importDataFromFile(input){
         migrateStudy(s);
         // Upsert: replace in-place if ID already exists, otherwise prepend as new
         var exists=studies.findIndex(function(x){return x.id===s.id;});
-        if(exists>=0){carryAiResults(s,studies[exists]);studies[exists]=s;}else{studies.unshift(s);added++;} // keep this device's AI results (v4.49.1)
+        if(exists>=0){carryAiResults(s,studies[exists]);studies[exists]=s;}else{studies.unshift(s);added++;} // keep this device's AI results (v4.49.2)
       });
       persist();
       // Restore tags if present
@@ -1960,7 +1960,7 @@ async function fetchAllMissingScripture(s){
 /** Opens the clear-all confirmation overlay. */
 function clearAll(){document.getElementById('clearall-overlay').classList.add('on');}
 /**
- * Confirms clear-all (v4.49.1): saves one safety copy, then removes EVERYTHING stored for the active user
+ * Confirms clear-all (v4.49.2): saves one safety copy, then removes EVERYTHING stored for the active user
  * (studies, photos, Memory, words, tags + tombstones, settings, TTS settings, streak, tour/onboarding flags,
  * error + diagnostic logs, transcripts/audio) and reloads so the app boots fresh. The login stays.
  * The safety copy is kept so Settings > Data & Storage can undo this.
@@ -2819,7 +2819,7 @@ async function confirmExport(){
   if(!selected.length){toast('Select at least one study');return;}
   var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
   var isAll=selected.length===studies.length;
-  var payload={studies:stripAiResultsForBackup(selected),tags:TAGS,deletedTags:DELETED_TAGS,streak:streak}; // AI results are not included in backups (v4.49.1)
+  var payload={studies:stripAiResultsForBackup(selected),tags:TAGS,deletedTags:DELETED_TAGS,streak:streak}; // AI results are not included in backups (v4.49.2)
   var trs=await mediaExportTranscripts(selected.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;
   if(isAll&&memHasData())payload.memoryVerses=memExportStore(); // Scripture Memory rides along only with a full (all-studies) export (v4.36.0)
@@ -2855,13 +2855,13 @@ function renderStorageMeter(){
    +'<div style="height:8px;background:var(--bg3);border-radius:6px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+col+'"></div></div>'
    +'<div style="font-size:12px;color:var(--txt3);margin-top:5px">Studies '+mb(u.studies)+' MB &middot; Photos '+mb(u.photos)+' MB &middot; Other '+mb(u.other)+' MB'
    +(pct>=80?'<br><strong style="color:var(--gold)">Nearly full \u2014 export a backup and remove large photos.</strong>':'')+'</div>';
-  // v4.49.1: one-tap undo of the last restore / Clear All (safety copy)
+  // v4.49.2: one-tap undo of the last restore / Clear All (safety copy)
   var sr=document.getElementById('safety-copy-row');
   if(sr){var si=safetyCopyInfo();sr.innerHTML=si?'<button class="btn btn-ghost btn-full" style="margin-bottom:10px" onclick="undoSafetyCopy()">&#8630; Undo "'+escHtml(si.label||'last change')+'" \u2014 safety copy from '+escHtml(new Date(si.t).toLocaleString())+'</button>':'';}
 }
 async function exportData(){
   var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-  var payload={studies:stripAiResultsForBackup(studies),tags:TAGS,deletedTags:DELETED_TAGS,streak:streak}; // AI results are not included in backups (v4.49.1)
+  var payload={studies:stripAiResultsForBackup(studies),tags:TAGS,deletedTags:DELETED_TAGS,streak:streak}; // AI results are not included in backups (v4.49.2)
   // Transcript text rides along in the backup (audio never does). Key only present when there is one.
   var trs=await mediaExportTranscripts(studies.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;

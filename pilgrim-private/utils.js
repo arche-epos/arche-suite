@@ -498,10 +498,11 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.1',date:'Oct 29, 2026',label:'Latest \u2014 untested',
+    version:'4.49.2',date:'Oct 29, 2026',label:'Latest \u2014 untested',
     _clSectionOpen:false,_clOpen:false,
     items:[
-      "fix: pasted Scripture text without verse numbers now shows in the Scripture panel (it was saved but the panel stayed blank), and it reads aloud."
+      "fix: pasted Scripture text without verse numbers now shows in the Scripture panel (it was saved but the panel stayed blank), and it reads aloud.",
+      "fix: the sample \u201CFirst-Time Study\u201D made by the Study Tour is no longer saved into backups or Study Sync, so it can no longer come back after a restore."
     ]
   },
   {
@@ -2472,7 +2473,8 @@ var AI_DEEP_KEYS=['lexical','grammar','historical','cultural','crossrefs','geogr
  * @returns {Array} Copies safe to JSON.stringify into a backup.
  */
 function stripAiResultsForBackup(list){
-  return list.map(function(s){
+  // v4.49.2 (S8-N3): Study Tour demo studies (_tourDemo) never go into a backup or Study Sync
+  return list.filter(function(s){return !s._tourDemo;}).map(function(s){
     if(!s.refs||!s.refs.length)return s;
     var changed=false;
     var refs=s.refs.map(function(r){
