@@ -14,8 +14,8 @@ import {
   toast, toastSuccess, closeOverlay,
   migrateStudy, activeRef,
   logError, trackEvent
-} from './utils.js?v=4.48.1';
-import { mediaDeleteStudy, trRefresh } from './media.js?v=4.48.1';
+} from './utils.js?v=4.49.0';
+import { mediaDeleteStudy, trRefresh } from './media.js?v=4.49.0';
 
 // ── Callbacks wired by app.js ──────────────────────────────────────────────
 // S08 calls into ui.js and sync.js. To avoid circular imports,
@@ -121,6 +121,8 @@ function _showStorageFullBanner() {
     document.body.appendChild(b);
   } catch (e) { /* banner is best-effort */ }
 }
+/** Shows the red "Not saved" banner for a failed non-study save (tags, etc.). Safe to call repeatedly. */
+export function notifyStorageFull() { window._persistFailed = true; _showStorageFullBanner(); }
 function _hideStorageFullBanner() {
   var b = document.getElementById('storage-full-banner'); if (b) b.remove();
 }
@@ -359,7 +361,8 @@ export function syncFromInputs(force) {
                 document.getElementById('scr-field').classList.contains('on');
   if (fieldOn) {
     ar.reference  = document.getElementById('f-ref').value;
-    ar.translation = document.getElementById('f-trans').value;
+    var _ft = document.getElementById('f-trans').value;
+    if (_ft || !ar.pastedTranslation) ar.translation = _ft; // v4.49.0: never blank out a pasted translation label
   }
   // Persist current passage/book scope toggle to the ref object
   if (ar.deep) ar.deep.studyScope = studyScope;

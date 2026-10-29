@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.48.1';
+} from './utils.js?v=4.49.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.48.1';
-import { syncToGist } from './sync.js?v=4.48.1';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.48.1';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.48.1';
-import { decodeMorph, shortGloss } from './morph.js?v=4.48.1';
-import { hebrewVerses } from './versemap.js?v=4.48.1';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.0';
+import { syncToGist } from './sync.js?v=4.49.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.49.0';
+import { hebrewVerses } from './versemap.js?v=4.49.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -103,6 +103,10 @@ async function fetchScr(){
   // Require at least "Book Chapter" (a digit after a space) before attempting fetch
   // Prevents mobile keyboard blur mid-typing from triggering "Could not load passage"
   if(!/\s\d/.test(ref))return;
+  // v4.49.0 (S1-F/F2): pasted Scripture is kept. Only a changed reference or a deliberately chosen translation replaces it.
+  if(ar&&ar.pastedTranslation&&ar.scriptureText&&(trans===String(ar.pastedTranslation).toLowerCase()||trans==='')&&(!ar.pastedRef||ar.pastedRef===ref)){
+    renderScrText(ar.scriptureText,ar.pastedTranslation);document.getElementById('scracts').style.display='flex';return;
+  }
   if(ar){ar.reference=ref;ar.translation=trans;}
   _updateBarRefLabel();
   var disp=document.getElementById('scrdisplay');
@@ -111,7 +115,7 @@ async function fetchScr(){
   try{
     var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
     if(!text)throw new Error('Empty response');
-    if(ar)ar.scriptureText=text;
+    if(ar){ar.scriptureText=text;ar.pastedTranslation='';ar.pastedRef='';} // fetched text replaces any pasted text (v4.49.0)
     renderScrText(text,trans);document.getElementById('scracts').style.display='flex';
   }catch(e){logError('Load Scripture Passage',e);disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal('Could not load that passage \u2014 check the reference, try again, or paste it in yourself.');}
 }
@@ -339,25 +343,28 @@ function confirmPaste(){
   var pastedTrans=(transEl&&transEl.value.trim())||'';
   if(pastedTrans){sett.lastPasteTrans=pastedTrans;localStorage.setItem(SK_SETT,JSON.stringify(sett));} // Remember last pasted label so the next paste modal pre-fills it
   var ar=activeRef();
+  var label=pastedTrans||'Pasted text'; // v4.49.0: always label pasted text so it is never mistaken for a fetchable translation
   if(ar){
     ar.scriptureText=t;
-    if(pastedTrans){ar.pastedTranslation=pastedTrans;ar.translation=pastedTrans.toLowerCase();}
+    ar.pastedTranslation=label;ar.translation=label.toLowerCase();
+    ar.pastedRef=(document.getElementById('f-ref').value||ar.reference||'').trim();
   }
-  renderScrText(t,pastedTrans||'manual');
+  renderScrText(t,label);
   var dtrans=document.getElementById('d-trans');
-  if(dtrans&&pastedTrans)dtrans.textContent=pastedTrans;
+  if(dtrans)dtrans.textContent=label;
   var ftrans=document.getElementById('f-trans');
-  if(ftrans&&pastedTrans){
+  if(ftrans){
     // Inject the pasted translation label as a custom <option> if it doesn't already exist in the dropdown
     var found=false;
-    for(var i=0;i<ftrans.options.length;i++){if(ftrans.options[i].value===pastedTrans.toLowerCase()){found=true;break;}}
+    for(var i=0;i<ftrans.options.length;i++){if(ftrans.options[i].value===label.toLowerCase()){found=true;break;}}
     // Remove any prior custom option before adding the new one to prevent duplicates
-    if(!found){var opt=document.createElement('option');opt.value=pastedTrans.toLowerCase();opt.textContent=pastedTrans;opt.id='custom-trans-opt';var existing=document.getElementById('custom-trans-opt');if(existing)existing.remove();ftrans.appendChild(opt);}
-    ftrans.value=pastedTrans.toLowerCase();
+    if(!found){var opt=document.createElement('option');opt.value=label.toLowerCase();opt.textContent=label;opt.id='custom-trans-opt';var existing=document.getElementById('custom-trans-opt');if(existing)existing.remove();ftrans.appendChild(opt);}
+    ftrans.value=label.toLowerCase();
   }
   document.getElementById('scracts').style.display='flex';
   closeOverlay('paste-overlay');
-  toast('Scripture set ('+(pastedTrans||'custom')+')');
+  saveStudy(true); // v4.49.0: save right away so the pasted text is stored with its label
+  toast('Scripture set ('+label+')');
 }
 /**
  * Renders the translation spectrum dot row in the Settings panel.
@@ -2034,6 +2041,7 @@ function saveLexWord(){
     gWords.push(gWord);
     try{localStorage.setItem(SK_WORDS,JSON.stringify(gWords));}catch(e){toast('Storage full');return;}
     closeOverlay('lex-save-overlay');
+    if(libTab==='words')renderWordList(); // v4.49.0: show the new word immediately
     toast('Word saved to Word List');
     return;
   }
@@ -2066,6 +2074,7 @@ function saveLexWord(){
   }
   persist();
   if(toStudy)renderStudyWords();
+  if(libTab==='words')renderWordList();
   closeOverlay('lex-save-overlay');
   toast('Word saved'+(toGlobal&&toStudy?' to both lists':toGlobal?' to Word List':' to study'));
   if(online)setTimeout(function(){syncToGist(true);},800);
@@ -2128,7 +2137,7 @@ function openLexiconModalFor(context){
 /**
  * Closes the lexicon lookup overlay.
  */
-function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');}
+function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');if(libTab==='words'&&document.getElementById('lib-words-panel'))renderWordList();} // v4.49.0: Words list refreshes when Look Up Word closes
 /**
  * Word Study — entry point wired to the Lexicon button (spec-ai-tools-grounding-v1.md
  * Plan A). A Strong's-number input (G#### / H####) is already unambiguous, so it skips

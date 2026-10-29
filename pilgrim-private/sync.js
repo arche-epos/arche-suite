@@ -12,11 +12,12 @@ import {
   WORKER_URL, ACTIVE_USER,
   sett, TAGS, setTags,
   toast, toastSuccess,
-  migrateStudy, todayStr, logError, trackEvent
-} from './utils.js?v=4.48.1';
+  migrateStudy, todayStr, logError, trackEvent,
+  stripAiResultsForBackup, carryAiResults, makeSafetyCopy
+} from './utils.js?v=4.49.0';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.48.1';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.48.1';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.49.0';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.49.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -145,7 +146,12 @@ function mergeStudies(local,remote){
       // Most-recent updatedAt wins; fall back to date if updatedAt missing; 0 if neither present
       var localTime=new Date(priorLocal.updatedAt||priorLocal.date||0).getTime();
       var remoteTime=new Date(r.updatedAt||r.date||0).getTime();
-      if(remoteTime>localTime)merged[r.id]=reconcileResourceBytes(Object.assign({},r),priorLocal);
+      if(remoteTime>localTime){
+        // Backups carry no photo bytes and no AI results (v4.49.0) — the local copy's real bytes/results always survive a remote win
+        var _w=reconcileResourceBytes(Object.assign({},r),priorLocal);
+        if(_w.refs)_w.refs=_w.refs.map(function(x){var rc=Object.assign({},x);if(rc.deep)rc.deep=Object.assign({},rc.deep);return rc;});
+        merged[r.id]=carryAiResults(_w,priorLocal);
+      }
     }
   });
   return Object.values(merged).sort(function(a,b){return (b.updatedAt||b.date||'')>(a.updatedAt||a.date||'')?1:-1;});
@@ -231,7 +237,7 @@ async function syncToGist(silent){
       }
     }catch(e){/* remote fetch failed — push local only, better than nothing */}
     var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-    var payload=JSON.stringify({studies:stubResourcesForSync(mergedStudies),tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak,memoryVerses:memExportStore()},null,2);
+    var payload=JSON.stringify({studies:stripAiResultsForBackup(stubResourcesForSync(mergedStudies)),tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak,memoryVerses:memExportStore()},null,2);
     var body={description:'Arché · Pilgrim Studies',public:false,files:{}};body.files[gistFilename()]={content:payload};
     var res=await fetch(WORKER_URL+'/gist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok){var errBody='';try{errBody=await res.text();}catch(e){}throw new Error('Sync '+res.status+' — '+errBody.slice(0,120));}
@@ -345,7 +351,12 @@ async function syncFromGist(){
  * Opens the Joshua 1:8 verse modal triggered by the header tagline.
  */
 
-function confirmForcePull(){if(confirm('Force Restore will replace ALL local studies with the backed-up version — any local-only changes will be lost. Continue?')){syncFromGistForce();}}
+function confirmForcePull(){
+  if(!confirm('Force Restore will replace ALL local studies with the backed-up version \u2014 any local-only changes will be lost.\n\nBackups do not include photos or AI results. Photos you added on this device will be missing from the restored studies; AI results for studies that exist in both places are kept.\n\nA safety copy of your current data is saved first, and you can undo from Settings > Data & Storage. Continue?'))return;
+  var r=makeSafetyCopy('Force Restore');
+  if(r==='fail'&&!confirm('A safety copy could not be saved (device storage is nearly full), so this cannot be undone. Continue anyway?'))return;
+  syncFromGistForce();
+}
 /**
  * Force-pulls the Gist backup and replaces all local studies without merging.
  * Updates the currently open study's Quill editors if it exists in the restored data.
@@ -364,7 +375,8 @@ async function syncFromGistForce(){
     if(!rawRes.ok)throw new Error('Raw fetch '+rawRes.status);
     var remote=await rawRes.json();
     if(!remote.studies||!Array.isArray(remote.studies))throw new Error('Invalid Gist format');
-    setStudies(remote.studies.map(function(s){migrateStudy(s);return s;}))
+    var _localById={};studies.forEach(function(x){_localById[x.id]=x;});
+    setStudies(remote.studies.map(function(s){migrateStudy(s);carryAiResults(s,_localById[s.id]);return s;})) // AI results are not in backups — keep this device's own
     persist();
     if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)_persistTags();}
     if(remote.memoryVerses)memReplaceFromRemote(remote.memoryVerses); // Scripture Memory (v4.36.0): only replaced when the backup actually has the key

@@ -1140,7 +1140,7 @@ input[type="range"]{accent-color:var(--gold)}
   <div class="scroll">
     <div style="margin-bottom:22px" id="settings-sec-sync">
       <div class="sethead">Study Sync</div>
-      <div class="setsub">Studies sync automatically across all your devices after every Save. Use the buttons below to manually back up or restore at any time.</div>
+      <div class="setsub">Studies sync automatically across all your devices after every Save. Use the buttons below to manually back up or restore at any time. Study Sync does not include photos or AI results; both stay on the device that made them.</div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn btn-sec" style="flex:1" onclick="syncFromGist()">&#8595; Restore</button>
         <button class="btn btn-primary" style="flex:1" onclick="syncToGist()">&#8593; Backup</button>
@@ -1259,8 +1259,9 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="divider"></div>
     <div style="margin-bottom:22px" id="settings-sec-backup">
       <div class="sethead">Data &amp; Storage</div>
-      <div class="setsub">All notes stored locally on this device. Export to save a backup to iCloud Drive, Google Drive, or any file app.</div>
+      <div class="setsub">All notes stored locally on this device. Export to save a backup to iCloud Drive, Google Drive, or any file app. Backup files include photos but not AI results.</div>
       <div id="storage-meter" style="margin-bottom:14px"></div>
+      <div id="safety-copy-row"></div>
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <button class="btn btn-ghost" style="flex:1" onclick="openExportBackupModal()">Export / Backup</button>
         <button class="btn btn-ghost" style="flex:1" onclick="importDataPrompt()">Restore Backup</button>
@@ -1810,7 +1811,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="overlay" id="clearall-overlay">
   <div class="modal">
     <div class="modal-title">Clear All Data?</div>
-    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete all studies, notes, AI results, and resources. This cannot be undone.</p>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete everything stored for your account on this device: all studies, notes, AI results, photos and resources, transcripts and audio, your Memory verses, saved words, tags, settings (including voice and appearance), streak, tutorial progress, and the error log. You stay signed in. A one-time safety copy of your studies, tags, words, Memory and settings is kept so you can undo from Settings &gt; Data &amp; Storage (transcripts and audio are not in it).</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('clearall-overlay')">Cancel</button>
       <button class="btn btn-danger" style="flex:1" onclick="confirmClearAll()">Delete Everything</button>
@@ -1928,7 +1929,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.48.1"></script>
+<script type="module" src="app.js?v=4.49.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
@@ -2135,7 +2136,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="overlay" id="export-backup-overlay">
   <div class="modal" style="max-width:520px">
     <div class="modal-title">Export / Backup</div>
-    <p style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.5">Choose which studies to include. All tags are always included.</p>
+    <p style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.5">Choose which studies to include. All tags are always included. AI results are not included in backups.</p>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <span style="font-size:12px;color:var(--txt3)" id="export-sel-count">All selected</span>
       <button onclick="toggleExportSelectAll()" id="export-selall-btn" style="background:none;border:none;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;cursor:pointer;padding:0">Deselect All</button>

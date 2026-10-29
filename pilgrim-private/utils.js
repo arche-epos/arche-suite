@@ -498,7 +498,20 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.48.1',date:'Oct 26, 2026',label:'Latest \u2014 untested',
+    version:'4.49.0',date:'Oct 29, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: pasted Scripture text now stays. It is saved the moment you paste it with its translation label (\u201CPasted text\u201D if you leave it blank), survives closing and reopening the study, and is only replaced if you change the reference or pick a different translation yourself.",
+      "fix: Clear All Data now removes everything on this device for your account (studies, photos, Memory, saved words, tags, settings, voice settings, streak, tutorial progress, error log, transcripts and audio) and the warning says so. You stay signed in.",
+      "new: before Clear All, Force Restore, or restoring a backup file, a one-time safety copy is saved. Settings > Data & Storage shows an Undo button for it. If storage is too full to keep one, you are asked before anything is removed.",
+      "fix: restoring a backup file now asks first and shows how many studies it will replace. Force Restore warns that photos and AI results are not in Study Sync backups.",
+      "change: AI results are no longer put into backup files or Study Sync (they will return once there is a server database). AI results already on this device are kept on every restore and sync. Older backup files that contain them still restore fine.",
+      "fix: creating a tag when device storage is full now shows the red \u201CNot saved\u201D banner instead of silently failing.",
+      "fix: the Words list in your Library now updates right away after you save a word from Look Up Word."
+    ]
+  },
+  {
+    version:'4.48.1',date:'Oct 26, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: if your device\u2019s storage is full and a save fails, you now see a red \u201CNot saved\u201D banner with a Download backup button. Before, only a brief message flashed and later edits could be lost without you knowing. The \u201CSaved\u201D message no longer appears when a save actually failed.",
@@ -2439,6 +2452,103 @@ function parseVerseChunks(text){
   return out;
 }
 
+
+// ── SECTION 27b — BACKUP SAFETY HELPERS (v4.49.0) ──
+// AI results are not included in backups (file export + Study Sync) until a server database exists.
+// carryAiResults() keeps this device's AI results when a backup copy (which has none) replaces a study.
+// makeSafetyCopy()/undoSafetyCopy() keep one raw copy of this user's data before any restore or clear.
+var AI_DEEP_KEYS=['lexical','grammar','historical','cultural','crossrefs','geography','lexical_book','grammar_book','historical_book','cultural_book','crossrefs_book','geography_book'];
+/**
+ * Returns copies of the given studies with every AI result blanked (for backup payloads only).
+ * Local state is never touched. Conclusions, Outline, scope and all other fields pass through.
+ * @param {Array} list - Studies array.
+ * @returns {Array} Copies safe to JSON.stringify into a backup.
+ */
+function stripAiResultsForBackup(list){
+  return list.map(function(s){
+    if(!s.refs||!s.refs.length)return s;
+    var changed=false;
+    var refs=s.refs.map(function(r){
+      if(!r.deep)return r;
+      var hit=AI_DEEP_KEYS.some(function(k){return r.deep[k]&&r.deep[k]!=='__shared__';});
+      if(!hit)return r;
+      changed=true;
+      var rc=Object.assign({},r);rc.deep=Object.assign({},r.deep);
+      AI_DEEP_KEYS.forEach(function(k){if(rc.deep[k]&&rc.deep[k]!=='__shared__')rc.deep[k]='';});
+      return rc;
+    });
+    if(!changed)return s;
+    var copy=Object.assign({},s);copy.refs=refs;return copy;
+  });
+}
+/**
+ * Fills EMPTY AI-result slots on `winner` from `other` (same study, matched by ref id). Never overwrites
+ * a non-empty result and never mutates `other`. Used wherever a backup copy replaces a local study.
+ * @param {Object} winner - Study that will be kept (mutated in place; copy it first if it is shared).
+ * @param {Object} other - Same study from the other side, may hold AI results.
+ * @returns {Object} winner
+ */
+function carryAiResults(winner,other){
+  if(!winner||!other||!winner.refs||!other.refs)return winner;
+  other.refs.forEach(function(orf){
+    if(!orf.deep)return;
+    var wr=winner.refs.find(function(x){return x.id===orf.id;});
+    if(!wr)return;
+    AI_DEEP_KEYS.forEach(function(k){
+      var v=orf.deep[k];
+      if(!v||v==='__shared__')return;
+      if(!wr.deep)wr.deep={};
+      if(!wr.deep[k])wr.deep[k]=v;
+    });
+  });
+  return winner;
+}
+var SK_SAFETY_PREFIX='bsn_safety_snapshot_';
+/** @returns {string} localStorage key of the active user's safety copy. */
+function safetyKey(){return SK_SAFETY_PREFIX+ACTIVE_USER;}
+/**
+ * Saves one raw copy of the active user's studies, tags, words, Memory, streak and settings.
+ * Falls back to a copy without photo bytes when storage is tight. Replaces any earlier safety copy.
+ * Transcripts/audio (IndexedDB) are not included.
+ * @param {string} label - What triggered it (shown in Settings).
+ * @returns {string} 'ok' | 'nophotos' | 'fail'
+ */
+function makeSafetyCopy(label){
+  var keys=[SK,SK_TAGS,SK_TAGS_DEL,SK_WORDS,SK_MEM,SK_STREAK,SK_SETT];
+  var snap={t:new Date().toISOString(),label:label||'',keys:{}};
+  try{keys.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)snap.keys[k]=v;});}catch(e){return 'fail';}
+  try{localStorage.removeItem(safetyKey());}catch(e){}
+  try{localStorage.setItem(safetyKey(),JSON.stringify(snap));return 'ok';}catch(e){/* too big — retry without photo bytes */}
+  try{
+    var st=JSON.parse(snap.keys[SK]||'[]');
+    st.forEach(function(x){(x.resources||[]).forEach(function(r){if(r.dataUrl){r.dataUrl='';r.stubbed=true;}});});
+    snap.keys[SK]=JSON.stringify(st);snap.noPhotos=true;
+    localStorage.setItem(safetyKey(),JSON.stringify(snap));return 'nophotos';
+  }catch(e2){try{localStorage.removeItem(safetyKey());}catch(e3){}return 'fail';}
+}
+/** @returns {Object|null} {t,label,noPhotos} of the saved safety copy, or null. */
+function safetyCopyInfo(){
+  try{var raw=localStorage.getItem(safetyKey());if(!raw)return null;var o=JSON.parse(raw);return {t:o.t,label:o.label,noPhotos:!!o.noPhotos};}catch(e){return null;}
+}
+/**
+ * Puts the safety copy back (raw keys), deletes it, and reloads. Asks first.
+ * @returns {boolean} true if a restore was started.
+ */
+function undoSafetyCopy(){
+  var raw=null,o=null;
+  try{raw=localStorage.getItem(safetyKey());o=raw?JSON.parse(raw):null;}catch(e){}
+  if(!o||!o.keys){toast('No safety copy found');return false;}
+  var when=new Date(o.t).toLocaleString();
+  if(!confirm('Undo "'+(o.label||'last change')+'"? This puts back the data saved on '+when+(o.noPhotos?' (photos were too large to keep and will be missing)':'')+' and replaces what is on this device now.'))return false;
+  try{
+    Object.keys(o.keys).forEach(function(k){localStorage.setItem(k,o.keys[k]);});
+    localStorage.removeItem(safetyKey());
+  }catch(e){logError('Undo Safety Copy',e);toast('Undo failed: '+e.message);return false;}
+  toast('Restored — reloading');
+  setTimeout(function(){location.reload();},600);
+  return true;
+}
+
 // Export all public symbols for ES Module consumers
 export {
   // Section 01 — constants
@@ -2465,6 +2575,8 @@ export {
   removeRef, confirmRemoveRef, doRemoveRef, renderRefPills,
   // Section 27 partial — namespace helpers
   migrateLegacyKey, activateUser,
+  // v4.49.0 — backup safety helpers
+  AI_DEEP_KEYS, stripAiResultsForBackup, carryAiResults, makeSafetyCopy, safetyCopyInfo, undoSafetyCopy, safetyKey,
   // Shared verse-chunk parsing (Read tab + Scripture panel)
   parseVerseChunks,
   // Section 28a — Error Log
