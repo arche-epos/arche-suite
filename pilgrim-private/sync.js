@@ -14,10 +14,10 @@ import {
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent,
   stripAiResultsForBackup, carryAiResults, makeSafetyCopy
-} from './utils.js?v=4.49.0';
+} from './utils.js?v=4.49.1';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.49.0';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.49.0';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.49.1';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.49.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -147,7 +147,7 @@ function mergeStudies(local,remote){
       var localTime=new Date(priorLocal.updatedAt||priorLocal.date||0).getTime();
       var remoteTime=new Date(r.updatedAt||r.date||0).getTime();
       if(remoteTime>localTime){
-        // Backups carry no photo bytes and no AI results (v4.49.0) — the local copy's real bytes/results always survive a remote win
+        // Backups carry no photo bytes and no AI results (v4.49.1) — the local copy's real bytes/results always survive a remote win
         var _w=reconcileResourceBytes(Object.assign({},r),priorLocal);
         if(_w.refs)_w.refs=_w.refs.map(function(x){var rc=Object.assign({},x);if(rc.deep)rc.deep=Object.assign({},rc.deep);return rc;});
         merged[r.id]=carryAiResults(_w,priorLocal);

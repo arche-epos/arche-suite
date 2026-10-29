@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.49.0';
+} from './utils.js?v=4.49.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.0';
-import { syncToGist } from './sync.js?v=4.49.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.0';
-import { decodeMorph, shortGloss } from './morph.js?v=4.49.0';
-import { hebrewVerses } from './versemap.js?v=4.49.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.1';
+import { syncToGist } from './sync.js?v=4.49.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.1';
+import { decodeMorph, shortGloss } from './morph.js?v=4.49.1';
+import { hebrewVerses } from './versemap.js?v=4.49.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -103,7 +103,7 @@ async function fetchScr(){
   // Require at least "Book Chapter" (a digit after a space) before attempting fetch
   // Prevents mobile keyboard blur mid-typing from triggering "Could not load passage"
   if(!/\s\d/.test(ref))return;
-  // v4.49.0 (S1-F/F2): pasted Scripture is kept. Only a changed reference or a deliberately chosen translation replaces it.
+  // v4.49.1 (S1-F/F2): pasted Scripture is kept. Only a changed reference or a deliberately chosen translation replaces it.
   if(ar&&ar.pastedTranslation&&ar.scriptureText&&(trans===String(ar.pastedTranslation).toLowerCase()||trans==='')&&(!ar.pastedRef||ar.pastedRef===ref)){
     renderScrText(ar.scriptureText,ar.pastedTranslation);document.getElementById('scracts').style.display='flex';return;
   }
@@ -115,7 +115,7 @@ async function fetchScr(){
   try{
     var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
     if(!text)throw new Error('Empty response');
-    if(ar){ar.scriptureText=text;ar.pastedTranslation='';ar.pastedRef='';} // fetched text replaces any pasted text (v4.49.0)
+    if(ar){ar.scriptureText=text;ar.pastedTranslation='';ar.pastedRef='';} // fetched text replaces any pasted text (v4.49.1)
     renderScrText(text,trans);document.getElementById('scracts').style.display='flex';
   }catch(e){logError('Load Scripture Passage',e);disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal('Could not load that passage \u2014 check the reference, try again, or paste it in yourself.');}
 }
@@ -225,7 +225,12 @@ async function getBibleAPI(ref,trans){
 function renderScrText(text,trans){
   _scrVerses=parseVerseChunks(text);
   _scrSelectedIdx=null;
+  // v4.49.1 (S1-F): pasted text usually has no [n] verse markers, which used to draw an empty panel. Show it as one unnumbered block.
+  if(!_scrVerses.length&&text&&String(text).trim()){
+    _scrVerses=[{num:'',text:String(text).replace(/<[^>]+>/g,'').trim(),plain:true}];
+  }
   var html=_scrVerses.map(function(v,i){
+    if(v.plain)return '<span class="readverse" id="scr-v-'+i+'">'+escHtml(v.text).replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>')+'</span>';
     return '<span class="readverse" id="scr-v-'+i+'"><sup class="vnum" onclick="scrSelectVerse('+i+')" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('scrdisplay').innerHTML='<div class="scrtext">'+html+'</div>';
@@ -343,7 +348,7 @@ function confirmPaste(){
   var pastedTrans=(transEl&&transEl.value.trim())||'';
   if(pastedTrans){sett.lastPasteTrans=pastedTrans;localStorage.setItem(SK_SETT,JSON.stringify(sett));} // Remember last pasted label so the next paste modal pre-fills it
   var ar=activeRef();
-  var label=pastedTrans||'Pasted text'; // v4.49.0: always label pasted text so it is never mistaken for a fetchable translation
+  var label=pastedTrans||'Pasted text'; // v4.49.1: always label pasted text so it is never mistaken for a fetchable translation
   if(ar){
     ar.scriptureText=t;
     ar.pastedTranslation=label;ar.translation=label.toLowerCase();
@@ -363,7 +368,7 @@ function confirmPaste(){
   }
   document.getElementById('scracts').style.display='flex';
   closeOverlay('paste-overlay');
-  saveStudy(true); // v4.49.0: save right away so the pasted text is stored with its label
+  saveStudy(true); // v4.49.1: save right away so the pasted text is stored with its label
   toast('Scripture set ('+label+')');
 }
 /**
@@ -2041,7 +2046,7 @@ function saveLexWord(){
     gWords.push(gWord);
     try{localStorage.setItem(SK_WORDS,JSON.stringify(gWords));}catch(e){toast('Storage full');return;}
     closeOverlay('lex-save-overlay');
-    if(libTab==='words')renderWordList(); // v4.49.0: show the new word immediately
+    if(libTab==='words')renderWordList(); // v4.49.1: show the new word immediately
     toast('Word saved to Word List');
     return;
   }
@@ -2137,7 +2142,7 @@ function openLexiconModalFor(context){
 /**
  * Closes the lexicon lookup overlay.
  */
-function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');if(libTab==='words'&&document.getElementById('lib-words-panel'))renderWordList();} // v4.49.0: Words list refreshes when Look Up Word closes
+function closeLexiconModal(){document.getElementById('lexicon-overlay').classList.remove('on');if(libTab==='words'&&document.getElementById('lib-words-panel'))renderWordList();} // v4.49.1: Words list refreshes when Look Up Word closes
 /**
  * Word Study — entry point wired to the Lexicon button (spec-ai-tools-grounding-v1.md
  * Plan A). A Strong's-number input (G#### / H####) is already unambiguous, so it skips

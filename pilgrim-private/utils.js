@@ -498,7 +498,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.0',date:'Oct 29, 2026',label:'Latest \u2014 untested',
+    version:'4.49.1',date:'Oct 29, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: pasted Scripture text without verse numbers now shows in the Scripture panel (it was saved but the panel stayed blank), and it reads aloud."
+    ]
+  },
+  {
+    version:'4.49.0',date:'Oct 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: pasted Scripture text now stays. It is saved the moment you paste it with its translation label (\u201CPasted text\u201D if you leave it blank), survives closing and reopening the study, and is only replaced if you change the reference or pick a different translation yourself.",
