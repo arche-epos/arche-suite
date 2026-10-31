@@ -498,7 +498,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.5',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.49.6',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: in Look Up Word, many Concordance verses showed \u201CVerse text unavailable\u201D. Ten verses were being requested from the Bible text service at once, which it refuses. The text now loads one chapter at a time (a page of ten verses is usually one to five requests), so the verses load reliably.",
+      "change: a verse that still cannot load now says \u201CVerse text could not be loaded\u201D, and the page shows a Retry button for the missing ones. Going back to a page also tries them again.",
+      "note: text only. Nothing stored or changed. Cache-buster bumped to 4.49.6."
+    ]
+  },
+  {
+    version:'4.49.5',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Look Up Word now lists EVERY verse where a word occurs, not just the first 30. The Concordance heading shows the real total (for example \u201C112 Verses (KJV)\u201D) and you page through it 10 verses at a time. On long lists there are First and Last buttons and a Go to page box.",

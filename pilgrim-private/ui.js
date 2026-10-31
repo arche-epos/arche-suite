@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.49.5';
+} from './utils.js?v=4.49.6';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.49.5';
+} from './storage.js?v=4.49.6';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.49.5';
+} from './media.js?v=4.49.6';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.49.5';
+} from './tts.js?v=4.49.6';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.49.5';
+} from './sync.js?v=4.49.6';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -66,17 +66,17 @@ import {
   switchLibTab, renderWordList, wlView, wlRemove, renderStudyWords, swView, swRemove, libTab,
   showWordDetail, showWordDetailCur, _showWordOverlay,
   openLexSaveSheet, toggleLexCb, saveLexWord, removeWordGlobal, removeWordStudy,
-  openLexiconModal, openLexiconModalFor, closeLexiconModal, runLexiconLookup, renderLexiconEntry, lexOccPage, lexOccGo,
+  openLexiconModal, openLexiconModalFor, closeLexiconModal, runLexiconLookup, renderLexiconEntry, lexOccPage, lexOccGo, lexOccRetry,
   resCapture, resAddDocPrompt, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.49.5';
+} from './studyTools.js?v=4.49.6';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.49.5';
+} from './memory.js?v=4.49.6';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since

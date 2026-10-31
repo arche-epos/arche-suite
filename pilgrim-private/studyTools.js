@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.49.5';
+} from './utils.js?v=4.49.6';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.5';
-import { syncToGist } from './sync.js?v=4.49.5';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.5';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.5';
-import { decodeMorph, shortGloss } from './morph.js?v=4.49.5';
-import { hebrewVerses } from './versemap.js?v=4.49.5';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.6';
+import { syncToGist } from './sync.js?v=4.49.6';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.6';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.6';
+import { decodeMorph, shortGloss } from './morph.js?v=4.49.6';
+import { hebrewVerses } from './versemap.js?v=4.49.6';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2370,7 +2370,7 @@ function _lexOccTitle(lex,asSaved){
 function _lexOccRowHTML(occ){
   var h='<div class="lex-occur"><div class="lex-occur-ref">'+escHtml(occ.ref)+'</div>';
   if(occ.text)h+='<div class="lex-occur-text">'+escHtml(occ.text)+'</div>';
-  else if(occ.tried)h+='<div class="lex-occur-text" style="font-style:italic;color:var(--txt4)">Verse text unavailable. Check your connection.</div>';
+  else if(occ.tried)h+='<div class="lex-occur-text" style="font-style:italic;color:var(--txt4)">Verse text could not be loaded.</div>';
   else h+='<div class="lex-occur-text" style="font-style:italic;color:var(--txt4)">Loading verse\u2026</div>';
   return h+'</div>';
 }
@@ -2380,11 +2380,13 @@ function _lexOccDraw(live){
   if(!body||_lexLive!==live)return;
   var occ=live.lex.occurrences,pages=Math.max(1,Math.ceil(occ.length/LEX_OCCURRENCE_PAGE));
   body.innerHTML=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).map(_lexOccRowHTML).join('');
+  var missing=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).filter(function(o){return o.tried&&!o.text;}).length;
   if(nav){
-    if(pages<2){nav.innerHTML='';}
+    if(pages<2){nav.innerHTML=missing?'<div class="lex-occ-row lex-occ-jump"><button class="btn btn-sm btn-ghost" onclick="lexOccRetry()">Retry '+missing+' missing verse'+(missing===1?'':'s')+'</button></div>':'';}
     else{
       var first=live.page===0,last=live.page>=pages-1;
-      nav.innerHTML='<div class="lex-occ-row">'
+      nav.innerHTML=missing?'<div class="lex-occ-row lex-occ-jump"><button class="btn btn-sm btn-ghost" onclick="lexOccRetry()">Retry '+missing+' missing verse'+(missing===1?'':'s')+'</button></div>':'';
+      nav.innerHTML+='<div class="lex-occ-row">'
         +(pages>3?'<button class="btn btn-sm btn-ghost" aria-label="First page" onclick="lexOccGo(1)"'+(first?' disabled':'')+'>&#171;</button>':'')
         +'<button class="btn btn-sm btn-ghost" onclick="lexOccPage(-1)"'+(first?' disabled':'')+'>&#8249; Prev</button>'
         +'<span class="lex-occ-pg">Page '+(live.page+1)+' of '+pages+'</span>'
@@ -2399,23 +2401,44 @@ function _lexOccDraw(live){
 function _lexOccSyncSaved(live){
   if(_lexLastResult&&_lexLastResult.strongsNumber===live.lex.strongsNumber)_lexLastResult.html=renderLexiconEntry(live.lex,live.query,false);
 }
+/**
+ * KJV text for one reference. v4.49.6: first from Bolls, one cached fetch per CHAPTER (so a page of ten verses is
+ * usually one to five requests, spaced and retried by _btBollsGet); only if that fails, from bible-api.com through the
+ * shared rate-limit gate (it allows about 15 calls per 30 seconds, which ten parallel verse fetches used to exceed).
+ */
+async function _lexKjvText(ref){
+  var pc=_btParseCitation(ref);
+  if(pc){
+    try{
+      var vs=await _btBollsChapter('KJV',pc.book,pc.c1);
+      var hit=vs.filter(function(v){return v.verse===pc.v1;})[0];
+      if(hit&&hit.text)return hit.text;
+    }catch(e){/* fall through to bible-api.com */}
+  }
+  await _btApiSlot();
+  return String(await getBibleAPI(ref,'kjv')).replace(/^\[\d+\]\s*/,'');
+}
 /** Shows concordance page p (0-based) and fetches KJV text only for that page's verses. */
 function lexOccShow(p){
   var live=_lexLive;if(!live)return;
   var occ=live.lex.occurrences,pages=Math.max(1,Math.ceil(occ.length/LEX_OCCURRENCE_PAGE));
   live.page=Math.max(0,Math.min(pages-1,p));
-  var seq=++live.seq;
   _lexOccDraw(live);
-  var need=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).filter(function(o){return !o.tried;});
+  // Verses with no text yet, including ones that failed on an earlier visit, are (re)fetched.
+  var need=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).filter(function(o){return !o.text&&!o.busy;});
   if(!need.length)return;
+  need.forEach(function(o){o.busy=true;o.tried=false;});
+  _lexOccDraw(live);
   Promise.all(need.map(function(o){
-    return getBibleAPI(o.ref,'kjv').then(function(t){o.text=String(t||'').replace(/^\[\d+\]\s*/,'');}).catch(function(){o.text='';}).then(function(){o.tried=true;});
+    return _lexKjvText(o.ref).then(function(t){o.text=String(t||'').trim();}).catch(function(){o.text='';}).then(function(){o.tried=true;o.busy=false;});
   })).then(function(){
     if(_lexLive!==live)return;
     _lexOccSyncSaved(live);
-    if(live.seq===seq)_lexOccDraw(live);
+    _lexOccDraw(live); // redraw whichever page is showing now
   });
 }
+/** "Retry" button: tries the verses on this page that failed to load. */
+function lexOccRetry(){if(_lexLive)lexOccShow(_lexLive.page);}
 /** Jump to a 1-based page number typed or tapped (First / Last / Go to page). */
 function lexOccGo(n){
   n=parseInt(n,10);if(!_lexLive||isNaN(n))return;
@@ -2965,7 +2988,7 @@ function _btBollsChapter(code,book,c){
   var k=code+'|'+book+'|'+c;
   if(!_btChap[k]){
     _btChap[k]=_btBollsGet('https://bolls.life/get-text/'+code+'/'+book+'/'+c+'/')
-      .then(function(vs){return vs.map(function(v){return {verse:v.verse,text:String(v.text).replace(/<sup[^>]*>.*?<\/sup>/gi,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()};});})
+      .then(function(vs){return vs.map(function(v){return {verse:v.verse,text:String(v.text).replace(/<S>[^<]*<\/S>/gi,'').replace(/<sup[^>]*>.*?<\/sup>/gi,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()};});})
       .catch(function(e){delete _btChap[k];throw e;});
   }
   return _btChap[k];
@@ -3192,7 +3215,7 @@ export {
   openLexSaveSheet, toggleLexCb, saveLexWord,
   removeWordGlobal, removeWordStudy,
   openLexiconModal, openLexiconModalFor, closeLexiconModal,
-  runLexiconLookup, renderLexiconEntry, pickWordSense, lexOccPage, lexOccGo,
+  runLexiconLookup, renderLexiconEntry, pickWordSense, lexOccPage, lexOccGo, lexOccRetry,
   // S16 — Resources & OCR
   resCapture, resAddDocPrompt, openAddResModal, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
