@@ -498,7 +498,19 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.7',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.50.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Historical, Cultural and Places & Geography no longer name scholars, books or atlases. The old prompts asked for them and the AI invented some that do not exist. Positions are now described in general terms.",
+      "fix: Historical Context now lists the main views on a date or authorship, each with its range, instead of presenting one date as \u201cthe conservative position\u201d. It also keeps the date of the events separate from the date the text was written.",
+      "fix: the three AI tools are now given the real Hebrew/Greek words of the passage and may name only those. Any Strong\u2019s number, Hebrew or Greek text, or transliteration that is not on that list is removed from the answer (this caught \u201cte-shar\u201d written for tehom).",
+      "fix: Go Deeper and Continue now give up after 2 minutes and discard a runaway repeating answer, instead of spinning forever. Your existing result is never changed when that happens.",
+      "new: a short \u201cAI-generated \u2014 verify before relying on this\u201d note under every Historical, Cultural and Places result, including ones saved earlier.",
+      "note: prompts, checks and one on-screen note only. No stored data, keys or backups changed. Cache-buster bumped to 4.50.0."
+    ]
+  },
+  {
+    version:'4.49.7',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: tapping Listen with nothing to read (empty Notes, Conclusions, Outline, or no passage loaded) crashed with \u201Ctoast is not a function\u201D. It now shows a short message instead.",

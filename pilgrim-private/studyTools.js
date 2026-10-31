@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.49.7';
+} from './utils.js?v=4.50.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.7';
-import { syncToGist } from './sync.js?v=4.49.7';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.7';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.7';
-import { decodeMorph, shortGloss } from './morph.js?v=4.49.7';
-import { hebrewVerses } from './versemap.js?v=4.49.7';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.50.0';
+import { syncToGist } from './sync.js?v=4.50.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.50.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.50.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.50.0';
+import { hebrewVerses } from './versemap.js?v=4.50.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -591,7 +591,7 @@ async function buildLexicalGround(bookNum,parsed,isBook){
     // particle) -- unfiltered here (allowedStrongs/lines stay permissive for the
     // verifyGroundedOutput backstop); the facts panel and prompt reference list each
     // filter to isContent===true words at their own call sites.
-    wordEntries.push({ref:e.ref,word:e.word,strongs:e.strongs,translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||'',isContent:_isContentWordMorph(e.morph,Number(bookNum)<=39)});
+    wordEntries.push({ref:e.ref,word:e.word,strongs:e.strongs,lemma:def.lemma||'',translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||'',isContent:_isContentWordMorph(e.morph,Number(bookNum)<=39)});
   }
   return {text:lines.join('\n'),allowedStrongs:Object.keys(seen),wordEntries:wordEntries};
 }
@@ -784,7 +784,81 @@ function _replaceIsolatedToken(text,tok,replacement,boundaryClass){
  * this comparison and is correctly stripped.
  */
 function _foldGreekWord(s){
-  return (s||'').normalize('NFD').replace(/[\u0300-\u036F]/g,'').toLowerCase().replace(/\u03C2/g,'\u03C3');
+  // v4.50.0: also strips Hebrew vowel points and cantillation (U+0591-05C7) so a pointed source word
+  // matches the same word written unpointed (Greek is unaffected -- no characters in that range).
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036F\u0591-\u05C7]/g,'').toLowerCase().replace(/\u03C2/g,'\u03C3');
+}
+
+/**
+ * v4.50.0: folds a Latin-script transliteration (e.g. Strong's "t\u1D49h\u00F4wm", or a model's "tehom") to bare
+ * lowercase a-z so two spellings of the same word compare equal. Comparison only -- never used for display.
+ */
+function _foldTranslit(s){
+  return String(s||'').normalize('NFKD').replace(/[\u0300-\u036F]/g,'').toLowerCase().replace(/[^a-z]/g,'');
+}
+/** True when strings a and b are equal or differ by exactly one inserted, deleted or changed character. */
+function _within1(a,b){
+  if(a===b)return true;
+  var la=a.length,lb=b.length;
+  if(Math.abs(la-lb)>1)return false;
+  var i=0;while(i<la&&i<lb&&a.charAt(i)===b.charAt(i))i++;
+  if(la===lb)return a.slice(i+1)===b.slice(i+1);
+  return la>lb?a.slice(i+1)===b.slice(i):b.slice(i+1)===a.slice(i);
+}
+/**
+ * v4.50.0: true if every part of a transliteration the AI wrote matches a transliteration from the verified
+ * word list (allowed = folded list entries and their parts). Parts of 1-2 letters (wa, ha, ah) always pass --
+ * they are prefixes/endings, not words; parts of 4+ letters may differ from a list entry by one character
+ * (Strong's spells H8415 "tehowm", writers spell it "tehom").
+ */
+function _translitAllowed(tok,allowed){
+  var parts=String(tok||'').split(/[\s\-\u2010-\u2015\/\u00B7]+/).map(_foldTranslit).filter(Boolean);
+  if(!parts.length)return true;
+  function ok(p){
+    if(p.length<=2||allowed.indexOf(p)>-1)return true;
+    if(p.length>=4)for(var i=0;i<allowed.length;i++){if(allowed[i].length>=4&&_within1(allowed[i],p))return true;}
+    return false;
+  }
+  return parts.every(ok);
+}
+/**
+ * v4.50.0: finds transliteration-shaped terms the AI wrote next to the words Hebrew / Greek / Aramaic.
+ * Deliberately narrow (a backstop, not a parser) so ordinary English is left alone:
+ *  - an italic term (*tehom*) directly after the keyword (within ~30 characters, same sentence), or
+ *  - any italic, quoted or parenthesised term within ~80 characters that contains a hyphen, accent mark or
+ *    modifier letter (te-shar, \u1E6Dehom) -- the shapes a transliteration takes and plain English does not.
+ * @param {string} text
+ * @returns {string[]} Unique candidate terms.
+ */
+function _findTranslitCandidates(text){
+  var out=[],seen={},kw=/\b(?:Hebrew|Greek|Aramaic)\b/g,m;
+  var LATIN="A-Za-z\\u00C0-\\u024F\\u02B0-\\u02FF\\u1D00-\\u1DBF\\u1E00-\\u1EFF";
+  var onlyLatin=new RegExp('^['+LATIN+'\'\\u2019\\-\\u2010-\\u2015\\s\\/]+$');
+  var marked=new RegExp('[\\-\\u2010-\\u2015\\u00C0-\\u024F\\u02B0-\\u02FF\\u1D00-\\u1DBF\\u1E00-\\u1EFF]');
+  while((m=kw.exec(text))){
+    var after=text.slice(m.index+m[0].length,m.index+m[0].length+80).split(/[.\n]/)[0];
+    var near=after.slice(0,30);
+    var re=/(\*|_)([^*_\n]{2,40}?)\1|["\u201C\u2018(]([^"\u201D\u2019)\n]{2,40})["\u201D\u2019)]/g,s;
+    var firstItalic=/(\*|_)([^*_\n]{2,40}?)\1/.exec(near);
+    var cands=[];
+    if(firstItalic)cands.push(firstItalic[2]);
+    while((s=re.exec(after))){var t=s[2]||s[3];if(marked.test(t))cands.push(t);}
+    cands.forEach(function(raw){
+      var tok=String(raw||'').trim();
+      if(!tok||tok.indexOf('[unverified')>-1||!onlyLatin.test(tok)||seen[tok])return;
+      seen[tok]=true;out.push(tok);
+    });
+  }
+  return out;
+}
+/**
+ * v4.50.0: true if text contains a runaway repetition (the Go Deeper "L. W. G. M. M. M. M." failure, finding AB):
+ * a short unit repeated 8+ times in a row, or a 15-80 character phrase repeated 3+ times in a row.
+ * Rules of dashes/equals/spaces are ignored (a unit must start with a letter or digit).
+ */
+function _looksLooping(text){
+  var t=String(text||'');
+  return /([A-Za-z0-9].{0,11}?)\1{7,}/s.test(t)||/([A-Za-z0-9].{14,79}?)\1{2,}/s.test(t);
 }
 
 /**
@@ -834,6 +908,16 @@ function verifyGroundedOutput(tool,content,ground,passageRef){
       if(allowedWordsFold.indexOf(_foldGreekWord(tok))===-1){
         cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified original-language text removed]',GREEK_HEBREW_CLASS);
         stripped.push({type:'word',token:tok,context:_contextSnippet(content,tok,GREEK_HEBREW_CLASS)});
+      }
+    });
+  }
+  // v4.50.0 (fix-plan 3a, finding Z): transliterations the AI wrote beside "Hebrew"/"Greek"/"Aramaic" that are
+  // not in the verified word list (e.g. "te-shar" for tehom) are removed. Backstop only -- see _findTranslitCandidates.
+  if(ground.allowedTranslits){
+    _findTranslitCandidates(cleaned).forEach(function(tok){
+      if(!_translitAllowed(tok,ground.allowedTranslits)){
+        cleaned=_replaceIsolatedToken(cleaned,tok,'[unverified transliteration removed]','A-Za-z\\u00C0-\\u024F\\u02B0-\\u02FF\\u1D00-\\u1DBF\\u1E00-\\u1EFF');
+        stripped.push({type:'translit',token:tok});
       }
     });
   }
@@ -1184,6 +1268,56 @@ function _reasoningConfigFor(toolName,baseMaxTokens){
   return {reasoning:'low',maxTokens:baseMaxTokens};
 }
 
+/**
+ * v4.50.0 (fix-plan Batch 3a, finding Z): the verified original-language words for a passage or book, used to
+ * ground the three AI tools that have no dataset of their own (Historical, Cultural, Places & Geography).
+ * Layer 1: listText goes into the prompt, and the model may name only these words. Layer 2: the allowed sets
+ * feed verifyGroundedOutput(), which removes any Strong's number, Hebrew/Greek text or transliteration not on
+ * the list. Reuses buildLexicalGround (same source data as Word Study). Never throws: if the data cannot load,
+ * the sets stay empty, which makes the scan stricter (every original-language word is removed), not looser.
+ * Book scope uses the same 40-word cap as Word Study.
+ * @param {string} ref - Passage or book reference.
+ * @param {string} scope - 'passage' | 'book'.
+ * @returns {Promise<{listText:string, allowedStrongs:string[], allowedWords:string[], allowedTranslits:string[]}>}
+ */
+async function buildOrigLangGuard(ref,scope){
+  var g={listText:'(no original-language data could be loaded for this reference)',allowedStrongs:[],allowedWords:[],allowedTranslits:[]};
+  try{
+    var parsed=parseRef(ref);
+    if(!parsed)return g;
+    var lg=await buildLexicalGround(parsed.book,parsed,scope==='book');
+    var seenT={},lines=[];
+    function addT(t){var f=_foldTranslit(t);if(f&&g.allowedTranslits.indexOf(f)<0)g.allowedTranslits.push(f);String(t||'').split(/[^A-Za-zÀ-ɏʰ-˿ᴀ-ᶿḀ-ỿ]+/).forEach(function(p){var pf=_foldTranslit(p);if(pf&&g.allowedTranslits.indexOf(pf)<0)g.allowedTranslits.push(pf);});}
+    (lg.wordEntries||[]).forEach(function(e){
+      if(e.word)g.allowedWords.push(e.word);
+      if(e.lemma)g.allowedWords.push(e.lemma);
+      if(e.translit)addT(e.translit);
+      if(e.isContent&&e.translit&&!seenT[e.translit]){
+        seenT[e.translit]=true;
+        var gloss=String(e.kjvDef||e.strongsDef||'').replace(/\s+/g,' ').slice(0,70);
+        lines.push(e.translit+(gloss?' — '+gloss:''));
+      }
+    });
+    g.allowedStrongs=lg.allowedStrongs||[];
+    if(lines.length)g.listText=lines.join('\n');
+  }catch(e){}
+  return g;
+}
+/**
+ * v4.50.0: the prompt block that carries the verified word list and the rule that goes with it (layer 1 of Z).
+ * Appended to Historical, Cultural, Places & Geography prompts and to their Go Deeper prompt.
+ * @param {{listText:string}} g - Result of buildOrigLangGuard().
+ * @returns {string}
+ */
+function _origLangPromptBlock(g){
+  return '\n\n--- VERIFIED ORIGINAL-LANGUAGE WORDS IN THIS TEXT ---\n'+g.listText+'\n--- END ---\nORIGINAL-LANGUAGE RULE: If you mention a Hebrew, Greek, or Aramaic word, it must be one from the list above, written exactly as the transliteration shown there. Never write Hebrew or Greek script, never give a Strong\'s number, and never give a transliteration or meaning for any original-language word that is not on the list — describe such things in plain English instead.';
+}
+/**
+ * v4.50.0: wording shared by Historical, Cultural, Places & Geography and their Go Deeper (findings R/AA): the model
+ * may not cite scholars or works. Earlier prompts asked for named scholars and atlases, and it invented them.
+ */
+var NO_CITATIONS_RULE=' Do not name or cite any specific scholar, author, book, article, atlas, commentary, or publication date. Describe positions in general terms instead (for example "a traditional view" or "many archaeologists"), and note that these points should be checked against a trusted reference.';
+
 async function buildPrompt(tool,ref,trans,scope){
   var isBook=(scope||studyScope)==='book',book=getBookFromRef(ref);
   var subject=isBook?'the book of '+book+' as a whole':ref; // Governs whether prompts say 'this passage' or 'the book of X'
@@ -1223,13 +1357,21 @@ async function buildPrompt(tool,ref,trans,scope){
   }
 
   // Ungrounded tools (spec §7 — no equivalent structured dataset; unchanged, scholarly debate framing retained)
-  var base2=base.replace(/\n\n$/,' When scholarly debate exists, present all major positions with named scholars and their evidence — never state a debated matter as settled fact.\n\n');
+  var base2=base.replace(/\n\n$/,' When scholarly debate exists, present the main positions and the range of dates or readings each one holds — never state a debated matter as settled fact.'+NO_CITATIONS_RULE+'\n\n');
   var prompts={
-    historical:base2+intro+' Provide a solid historical overview -- accessible to a general reader but substantive, not superficial. Do not truncate:\n\nSUMMARY\n[3-5 sentence overview: when this was likely written, by whom, and the key historical backdrop]\n\nTIME PERIOD & AUTHOR\n[If the date or authorship is genuinely debated among scholars, say so plainly and give the general range each side holds (e.g., \"critical scholarship dates this to X; conservative/evangelical scholarship dates this to Y\"), in 3-4 sentences — do not present either as settled. If there is broad scholarly consensus with no significant debate, state the accepted date and author plainly]\n\nPOLITICAL & HISTORICAL LANDSCAPE\n[The empires, rulers, and major historical events shaping this period — a full paragraph]\n\nAUTHOR BACKGROUND\n[What is known or traditionally held about the author\'s identity and relationship to the events, in 2-3 sentences]\n\nORIGINAL AUDIENCE\n[Who originally received this and why it mattered to them, in 2-3 sentences]\n\nARCHAEOLOGICAL ATTESTATION\n[Brief note on well-established archaeological findings relevant to this book, if any]\n\nComplete all sections with real substance, in accessible language. Reserve extended scholarly debate, minority positions, and exhaustive named-scholar citations for a follow-up request.'+noC,
+    historical:base2+intro+' Provide a solid historical overview -- accessible to a general reader but substantive, not superficial. Do not truncate:\n\nSUMMARY\n[3-5 sentence overview: when this was likely written, by whom, and the key historical backdrop]\n\nTIME PERIOD & AUTHOR\n[If the date or authorship is genuinely debated, list the main positions, each with its approximate date range and a general description of who holds it (e.g., \"a traditional view\", \"many critical scholars\"), in 3-5 sentences. Do not call any single date \"the conservative position\" — conservative and evangelical scholars themselves hold more than one. Keep the date of the events described separate from the date the text was written or compiled. State a date or author as settled only where there is broad scholarly consensus and no significant debate]\n\nPOLITICAL & HISTORICAL LANDSCAPE\n[The empires, rulers, and major historical events shaping this period — a full paragraph]\n\nAUTHOR BACKGROUND\n[What is known or traditionally held about the author\'s identity and relationship to the events, in 2-3 sentences]\n\nORIGINAL AUDIENCE\n[Who originally received this and why it mattered to them, in 2-3 sentences]\n\nARCHAEOLOGICAL ATTESTATION\n[Brief note on well-established archaeological findings relevant to this book, if any]\n\nComplete all sections with real substance, in accessible language. Reserve extended scholarly debate, minority positions, and exhaustive named-scholar citations for a follow-up request.'+noC,
     cultural:base2+intro+' Provide a concise cultural overview -- readable for someone without seminary background, do not truncate:\n\nSUMMARY\n[2-4 sentence plain-language overview of the cultural setting most relevant to understanding this text]\n\nCULTURAL CUSTOMS & IDIOMS\n[The 2-3 most important customs or idioms in the passage, briefly explained]\n\nSOCIAL STRUCTURES\n[Brief note on hierarchies or social dynamics relevant to the text]\n\nComplete all sections in plain, accessible language.'+noC,
-    geography:base2+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification with the specific conservative scholarly sources or works (e.g. Zondervan Atlas of the Bible, ISBE, ESV Study Bible notes, Aharoni) supporting each view. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey).\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
+    geography:base2+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification and describe in general terms who holds it (e.g. "a traditional identification", "many archaeologists"). Do not name specific scholars, books, or atlases. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey).\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
   };
-  return {prompt:prompts[tool]||'',ground:null};
+  // v4.50.0 (finding Z): ground the original-language words these three tools may mention (layer 1 = the verified
+  // list in the prompt, layer 2 = the sets verifyGroundedOutput() checks the answer against).
+  var og=await buildOrigLangGuard(ref,isBook?'book':'passage');
+  var pt=prompts[tool]||'';
+  if(pt){
+    var ogBlock=_origLangPromptBlock(og);
+    pt=(pt.slice(-noC.length)===noC)?pt.slice(0,-noC.length)+ogBlock+noC:pt+ogBlock;
+  }
+  return {prompt:pt,ground:pt?{allowedStrongs:og.allowedStrongs,allowedWords:og.allowedWords,allowedTranslits:og.allowedTranslits}:null};
 }
 
 /**
@@ -1667,7 +1809,9 @@ function renderAIPanelContent(ck){
   if(base==='lexical'&&content)retiredNote='<div style="'+_noteStyle+'">Saved AI commentary from before Word Study became source-data only. It is kept exactly as you saved it.</div>';
   else if(base==='grammar')retiredNote='<div style="'+_noteStyle+'">Saved result. Language &amp; Structure has been retired — Bible Tools &gt; Interlinear shows word-by-word parsing for any verse.</div>';
   else if(hasFactsPanel&&aiFactsResults[fkey]===''&&!content)retiredNote='<div style="'+_noteStyle+'">No source-dictionary data was found for this reference, or it could not load. Check your connection and try again.</div>';
-  contentEl.innerHTML='<div>'+(factsHtml&&typeof DOMPurify!=='undefined'?DOMPurify.sanitize(factsHtml):factsHtml)+retiredNote+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+'</div>';
+  // v4.50.0 (fix-plan 3a, findings R/AA): drawn at display time, never stored, so results saved before this version get it too.
+  var verifyNote=((base==='historical'||base==='cultural'||base==='geography')&&content)?'<div style="'+_noteStyle+'">AI-generated. Dates, names, places and archaeological claims can be wrong or disputed. Verify before relying on this.</div>':'';
+  contentEl.innerHTML='<div>'+(factsHtml&&typeof DOMPurify!=='undefined'?DOMPurify.sanitize(factsHtml):factsHtml)+retiredNote+(typeof DOMPurify!=='undefined'?DOMPurify.sanitize(html):html)+verifyNote+'</div>';
   if(hasFactsPanel&&aiFactsResults[fkey]==null&&ar&&ar.reference){
     var scope=ck.endsWith('_book')?'book':'passage';
     buildFactsHtmlForTool(base,ar.reference,scope).then(function(fh){
@@ -1695,6 +1839,7 @@ function closeAIPanel(){if(window.speechSynthesis&&_ttsActive&&_ttsSource==='ai'
  * scaled-back (Aug 25 2026) default prompt leaves out. Doubles as the source of truth
  * for which tools show the Go Deeper button (updateExpandBtn reads its keys).
  */
+var EXPAND_TIMEOUT_MS=120000; // v4.50.0 (AB): longest Go Deeper / Continue request is allowed to run
 var DEEP_PRIORITIES={
   // NOTE: no 'lexical' key here (v2, spec-ai-tools-grounding-v2-structured-display.md
   // §5, Boss decision Sep 28 2026) -- Word Study's Go Deeper button is deliberately
@@ -1705,10 +1850,10 @@ var DEEP_PRIORITIES={
   // isolation, THEN scope Go Deeper's grounded rework as its own separate follow-up
   // rather than testing two behavior changes to the same tool at once.
   grammar:'disputed grammatical readings where two or more valid readings exist, citing Wallace, Moulton, or BDF by name; a full conjunction-and-particle breakdown; any grammatical nuance not yet covered',
-  historical:'additional named scholars and specific positions not yet mentioned; minority scholarly views; additional archaeological evidence; patristic or early church testimony on dating or authorship; any internal textual evidence not yet discussed',
-  cultural:'additional customs with named primary sources; archaeological finds not yet mentioned; comparative material from surrounding cultures (Greek, Roman, Jewish); details about specific locations, social groups, or economic practices referenced in the text not yet covered',
+  historical:'additional positions on dating and authorship not yet mentioned, described in general terms; minority scholarly views; additional archaeological evidence; early church testimony on dating or authorship, described generally; any internal textual evidence not yet discussed',
+  cultural:'additional customs and practices; archaeological finds not yet mentioned; comparative material from surrounding cultures (Greek, Roman, Jewish); details about specific locations, social groups, or economic practices referenced in the text not yet covered',
   crossrefs:'linguistic connections (shared words or phrases in the original language); additional thematic, narrative, or prophetic connections not yet covered',
-  geography:'additional locations in the passage beyond those already covered (if more than 6 exist); deeper archaeological detail; a full listing of contested or probable identifications with named conservative scholarly sources for each proposed view'
+  geography:'additional locations in the passage beyond those already covered (if more than 6 exist); deeper archaeological detail; a full listing of contested or probable identifications, describing in general terms who holds each proposed view'
 };
 /**
  * Shows or hides the "Go Deeper" button row based on whether the active AI tab's
@@ -1744,15 +1889,34 @@ async function expandCurrentTool(){
   var btn=document.getElementById('btn-expand');var lbl=document.getElementById('expand-btn-label');
   btn.style.opacity='.5';btn.style.pointerEvents='none';lbl.textContent='Going deeper...';
   var toolLabel=TOOL_LABELS[base]||base;
-  var expandPrompt='The following '+toolLabel+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\nPrioritize: '+DEEP_PRIORITIES[base]+'.\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, name scholars on each side.\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
+  var expandPrompt='The following '+toolLabel+' has already been provided for '+ar.reference+':\n\n--- EXISTING CONTENT ---\n'+existing+'\n--- END EXISTING CONTENT ---\n\nYour task: provide ONLY genuinely new information not present above. Do NOT restate, rephrase, summarize, or echo anything already covered.\n\nPrioritize: '+DEEP_PRIORITIES[base]+'.\n\nScripture is the sole and infallible Word of God — the primary authority. Where the text itself speaks plainly, state that as primary evidence. When scholarly debate exists, present the main positions in general terms.'+NO_CITATIONS_RULE+'\n\nIMPORTANT: If you have no genuinely new information to add, respond with exactly this sentence: "No additional information is available for this passage beyond what has already been provided."\n\nNew information only:';
+  // v4.50.0 (finding AB): a 120-second timeout and a runaway-repetition check. If either trips, the new text is
+  // thrown away and the existing result is left exactly as it was.
+  var _tab=aiActiveTab,_timer=null;
   try{
+    var _scopeX=_tab.endsWith('_book')?'book':'passage';
+    var ogX=await buildOrigLangGuard(ar.reference,_scopeX);
+    expandPrompt+=_origLangPromptBlock(ogX);
     var _rc3=_reasoningConfigFor(base,2048);
-    var res=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc3.reasoning},{role:'user',content:expandPrompt}],max_tokens:_rc3.maxTokens,temperature:0.2,frequency_penalty:0.3})});
+    var _ctl=new AbortController();
+    _timer=setTimeout(function(){_ctl.abort();},EXPAND_TIMEOUT_MS);
+    var res=await fetch(WORKER_URL+'/groq',{method:'POST',signal:_ctl.signal,headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc3.reasoning},{role:'user',content:expandPrompt}],max_tokens:_rc3.maxTokens,temperature:0.2,frequency_penalty:0.3})});
     if(!res.ok){var err=await res.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'HTTP '+res.status);}
     var data=await res.json();
+    clearTimeout(_timer);_timer=null;
     var more=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'';
-    if(more){var combined=existing+'\n\n---\n\n'+more;if(!ar.deep)ar.deep={};ar.deep[aiActiveTab]=combined;aiPanelResults[aiActiveTab]=combined;saveStudy(true);renderAIPanelContent(aiActiveTab);toast('Added deeper detail');}
-  }catch(e){toast('Go Deeper failed: '+e.message);}
+    if(more&&_looksLooping(more)){
+      logError('AI Study Tool: Go Deeper loop discarded ('+base+')',new Error('runaway repetition, '+more.length+' chars'));
+      toast('Go Deeper returned a garbled result and it was discarded. Your existing result is unchanged — try again.');
+    }else if(more){
+      more=verifyGroundedOutput(base,more,{allowedStrongs:ogX.allowedStrongs,allowedWords:ogX.allowedWords,allowedTranslits:ogX.allowedTranslits},ar.reference);
+      var combined=existing+'\n\n---\n\n'+more;if(!ar.deep)ar.deep={};ar.deep[_tab]=combined;aiPanelResults[_tab]=combined;saveStudy(true);if(aiActiveTab===_tab)renderAIPanelContent(_tab);toast('Added deeper detail');
+    }
+  }catch(e){
+    if(_timer)clearTimeout(_timer);
+    if(e&&e.name==='AbortError')toast('Go Deeper timed out after 2 minutes. Your existing result is unchanged — try again.');
+    else toast('Go Deeper failed: '+e.message);
+  }
   btn.style.opacity='';btn.style.pointerEvents='';lbl.textContent='Go Deeper \u2014 full scholarly detail';_expandRunning=false;
 }
 /**
@@ -1776,6 +1940,7 @@ async function continueCurrentTool(){
   var existing=aiPanelResults[ck]||(ar.deep&&ar.deep[ck])||'';
   if(!existing){toast('Run the tool first');return;}
   _continueRunning=true;
+  var _timerC=null;
   var btn2=document.getElementById('btn-continue');var lbl2=document.getElementById('continue-btn-label');
   if(btn2){btn2.style.opacity='.5';btn2.style.pointerEvents='none';}
   if(lbl2)lbl2.textContent='Continuing...';
@@ -1784,21 +1949,35 @@ async function continueCurrentTool(){
     var builtC=await buildPrompt(base,ar.reference,trans2,scope);
     var contPrompt=builtC.prompt+'\n\n--- YOUR RESPONSE SO FAR (was cut off mid-way) ---\n'+existing+'\n--- END PARTIAL RESPONSE ---\n\nContinue EXACTLY from where the partial response above left off. Do not repeat, restate, or re-summarize anything already shown. Do not restart headers or numbering already given. Pick up mid-sentence or mid-section if needed and provide only the remaining content.';
     var _rc4=_reasoningConfigFor(base,2048);
-    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc4.reasoning},{role:'user',content:contPrompt}],max_tokens:_rc4.maxTokens,temperature:0.2,frequency_penalty:0.3})});
+    // v4.50.0 (finding AB): same 120-second timeout and repetition check as Go Deeper; on either, the new text is
+    // discarded and the existing result is left as it was.
+    var _ctl2=new AbortController();
+    _timerC=setTimeout(function(){_ctl2.abort();},EXPAND_TIMEOUT_MS);
+    var res2=await fetch(WORKER_URL+'/groq',{method:'POST',signal:_ctl2.signal,headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':base},body:JSON.stringify({model:'openai/gpt-oss-120b-Turbo',messages:[{role:'system',content:'Reasoning: '+_rc4.reasoning},{role:'user',content:contPrompt}],max_tokens:_rc4.maxTokens,temperature:0.2,frequency_penalty:0.3})});
     if(!res2.ok){var err2=await res2.json().catch(function(){return{};});throw new Error(err2.error?err2.error.message:'HTTP '+res2.status);}
     var data2=await res2.json();
+    clearTimeout(_timerC);_timerC=null;
     var addition=data2.choices&&data2.choices[0]&&data2.choices[0].message&&data2.choices[0].message.content||'';
     var finishReason3=data2.choices&&data2.choices[0]&&data2.choices[0].finish_reason;
-    if(builtC.ground)addition=verifyGroundedOutput(base,addition,builtC.ground,ar.reference);
-    var merged=existing+addition;
-    aiPanelResults[ck]=merged;
-    if(!ar.deep)ar.deep={};
-    ar.deep[ck]=merged;saveStudy(true);
-    _truncatedTabs[ck]=(finishReason3==='length');
-    renderAIPanelContent(ck);
-    updateContinueBtn();
-    toast(_truncatedTabs[ck]?'Continued \u2014 still cut off, tap Continue again':'Continued');
-  }catch(e){toast('Continue failed: '+e.message);}
+    if(addition&&_looksLooping(addition)){
+      logError('AI Study Tool: Continue loop discarded ('+base+')',new Error('runaway repetition, '+addition.length+' chars'));
+      toast('Continue returned a garbled result and it was discarded. Your existing result is unchanged \u2014 try again.');
+    }else{
+      if(builtC.ground)addition=verifyGroundedOutput(base,addition,builtC.ground,ar.reference);
+      var merged=existing+addition;
+      aiPanelResults[ck]=merged;
+      if(!ar.deep)ar.deep={};
+      ar.deep[ck]=merged;saveStudy(true);
+      _truncatedTabs[ck]=(finishReason3==='length');
+      if(aiActiveTab===ck)renderAIPanelContent(ck);
+      updateContinueBtn();
+      toast(_truncatedTabs[ck]?'Continued \u2014 still cut off, tap Continue again':'Continued');
+    }
+  }catch(e){
+    if(_timerC)clearTimeout(_timerC);
+    if(e&&e.name==='AbortError')toast('Continue timed out after 2 minutes. Your existing result is unchanged \u2014 try again.');
+    else toast('Continue failed: '+e.message);
+  }
   _continueRunning=false;
   if(btn2){btn2.style.opacity='';btn2.style.pointerEvents='';}
   if(lbl2)lbl2.textContent='Continue \u2014 response was cut off';
