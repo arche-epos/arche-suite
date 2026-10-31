@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.49.3';
+} from './utils.js?v=4.49.4';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.3';
-import { syncToGist } from './sync.js?v=4.49.3';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.3';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.3';
-import { decodeMorph, shortGloss } from './morph.js?v=4.49.3';
-import { hebrewVerses } from './versemap.js?v=4.49.3';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.4';
+import { syncToGist } from './sync.js?v=4.49.4';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.4';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.4';
+import { decodeMorph, shortGloss } from './morph.js?v=4.49.4';
+import { hebrewVerses } from './versemap.js?v=4.49.4';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -430,7 +430,8 @@ var _groundCache={};
 var GROUND_BOOK_WORD_CAP=40;      // max distinct words sent to the model for book-scope Word Study
 var GROUND_BOOK_CROSSREF_CAP=30;  // max cross-refs sent to the model for book-scope Cross-References
 var GROUND_PASSAGE_CROSSREF_CAP=15; // max cross-refs sent to the model for passage-scope Cross-References
-var LEX_OCCURRENCE_TEXT_CAP=10;   // of up to 30 real refs from occurrences.json, how many get real fetched verse text (rest listed as reference-only, to avoid 30 sequential verse fetches per lookup)
+var LEX_OCCURRENCE_PAGE=10;       // v4.49.4: the stored refs (up to 30) are shown 10 per page; verse text is fetched one page at a time, never all 30 at once
+var LEX_OCC_STORED_CAP=30;        // occurrences.json stores at most this many verse refs per Strong's number
 // v2 (spec-ai-tools-grounding-v2-structured-display.md §4, Boss decision Sep 26 2026):
 // Word Study's facts panel and prompt reference list are filtered to content words only
 // (noun/verb/adjective/adverb/untranslated-term) -- articles, conjunctions, prepositions,
@@ -484,6 +485,8 @@ async function getStrongsDict(testament){return fetchGroundData('strongs/'+testa
 async function getGlossIndex(){return fetchGroundData('strongs/gloss-index.json');}
 /** Strong's number -> up to 30 real verse references where it occurs. */
 async function getOccurrenceIndex(){return fetchGroundData('strongs/occurrences.json');}
+/** Strong's number -> total verse count, only for numbers with more verses than the stored refs (v4.49.4). */
+async function getOccurrenceCounts(){return fetchGroundData('strongs/occurrence-counts.json');}
 /** Resolves the correct dictionary ('greek'|'hebrew') for a Strong's number string like "G26"/"H430". */
 function _dictForStrongs(sn){return /^H/i.test(sn)?'hebrew':'greek';}
 
@@ -2137,7 +2140,7 @@ function openLexiconModalFor(context){
   if(inp){inp.value='';inp.focus&&setTimeout(function(){inp.focus();},200);}
   if(res)res.innerHTML='';
   document.getElementById('lex-save-bar').style.display='none';
-  _lexLastResult=null;
+  _lexLastResult=null;_lexLive=null;
 }
 /**
  * Closes the lexicon lookup overlay.
@@ -2297,15 +2300,13 @@ async function _lexFullLookup(query,btn,res,bar){
     }
     var occIndex=await getOccurrenceIndex();
     var refs=occIndex[sn]||[];
-    // Real verse text (KJV) fetched for the first LEX_OCCURRENCE_TEXT_CAP refs via the
-    // app's existing translation API — never model-generated. Remaining refs (data caps
-    // at 30) are listed reference-only, to avoid a 30-fetch storm on one lookup.
-    var toFetch=refs.slice(0,LEX_OCCURRENCE_TEXT_CAP);
-    var fetched=await Promise.all(toFetch.map(function(ref){
-      return getBibleAPI(ref,'kjv').then(function(t){return t.replace(/^\[\d+\]\s*/,'');}).catch(function(){return '';});
-    }));
-    var occurrences=toFetch.map(function(ref,i){return {ref:ref,text:fetched[i]};})
-      .concat(refs.slice(LEX_OCCURRENCE_TEXT_CAP).map(function(ref){return {ref:ref,text:''};}));
+    // v4.49.4: total verse count comes from a small side file. If it is unavailable (offline, or the CDN has not
+    // picked it up yet) the label falls back to "first 30 verses" rather than claiming 30 is the total.
+    var occTotal=refs.length<LEX_OCC_STORED_CAP?refs.length:0;
+    try{var occCounts=await getOccurrenceCounts();if(occCounts&&occCounts[sn]>refs.length)occTotal=occCounts[sn];}catch(e){/* label falls back */}
+    // Real verse text (KJV) is fetched through the app's existing translation API, one page at a time
+    // (lexOccShow), never model-generated.
+    var occurrences=refs.map(function(ref){return {ref:ref,text:'',tried:false};});
     // v4.46.3: no AI call here any more. Everything below is fixed dictionary + occurrence data; the old
     // AI "Explanation" paragraph was the last AI prose in Look Up Word and has been retired.
     var lex={
@@ -2318,12 +2319,15 @@ async function _lexFullLookup(query,btn,res,bar){
       primaryDefinition:entry.kjv_def||'',
       strongsDefinition:entry.strongs_def||'',
       scholarlyEntry:'', // retired v4.46.3; renderLexiconEntry skips an empty one, and Explanations on already-saved words still render
-      occurrences:occurrences
+      occurrences:occurrences,
+      occurrenceTotal:occTotal
     };
-    var html=renderLexiconEntry(lex,query);
-    res.innerHTML=html;
-    _lexLastResult={query:lex.originalWord||lex.transliteration||query,englishGloss:lex.primaryDefinition||'',strongsNumber:lex.strongsNumber||'',html:html,reference:(activeRef()&&activeRef().reference)||''};
+    _lexLive={lex:lex,query:query,page:0,seq:0};
+    res.innerHTML=renderLexiconEntry(lex,query,true);
+    // The saved copy of a word is a plain static list (no page buttons); it is rebuilt as pages load (_lexOccSyncSaved).
+    _lexLastResult={query:lex.originalWord||lex.transliteration||query,englishGloss:lex.primaryDefinition||'',strongsNumber:lex.strongsNumber||'',html:renderLexiconEntry(lex,query,false),reference:(activeRef()&&activeRef().reference)||''};
     bar.style.display='';
+    lexOccShow(0);
   }catch(e){
     logError('Lexicon Lookup',e);
     res.innerHTML='<p style="color:var(--crimsonbright);font-size:13px;">'+groqErrMsg(e.message)+'</p>';
@@ -2331,14 +2335,73 @@ async function _lexFullLookup(query,btn,res,bar){
   }finally{btn.disabled=false;btn.textContent='Look up';}
 }
 
+
+// ── Concordance paging (v4.49.4) ──────────────────────────────────────────
+var _lexLive=null; // live Look Up Word result: {lex, query, page, seq}
+/** Concordance heading: says plainly how many verses exist and how many are listed. */
+function _lexOccTitle(lex){
+  var n=lex.occurrences.length,t=lex.occurrenceTotal;
+  if(t&&t>n)return 'Concordance &mdash; first '+n+' of '+t+' Verses (KJV)';
+  if(!t&&n>=LEX_OCC_STORED_CAP)return 'Concordance &mdash; first '+n+' Verses (KJV)';
+  return 'Concordance &mdash; '+n+' Verse'+(n!==1?'s':'')+' (KJV)';
+}
+function _lexOccRowHTML(occ){
+  var h='<div class="lex-occur"><div class="lex-occur-ref">'+escHtml(occ.ref)+'</div>';
+  if(occ.text)h+='<div class="lex-occur-text">'+escHtml(occ.text)+'</div>';
+  else if(occ.tried)h+='<div class="lex-occur-text" style="font-style:italic;color:var(--txt4)">Verse text unavailable. Check your connection.</div>';
+  else h+='<div class="lex-occur-text" style="font-style:italic;color:var(--txt4)">Loading verse\u2026</div>';
+  return h+'</div>';
+}
+/** Redraws the current concordance page and its Prev / Next row. */
+function _lexOccDraw(live){
+  var body=document.getElementById('lex-conc-body'),nav=document.getElementById('lex-conc-nav');
+  if(!body||_lexLive!==live)return;
+  var occ=live.lex.occurrences,pages=Math.max(1,Math.ceil(occ.length/LEX_OCCURRENCE_PAGE));
+  body.innerHTML=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).map(_lexOccRowHTML).join('');
+  if(nav){
+    nav.innerHTML=pages<2?'':'<button class="btn btn-sm btn-ghost" onclick="lexOccPage(-1)"'+(live.page===0?' disabled':'')+'>&#8249; Prev</button>'
+      +'<span class="lex-occ-pg">Page '+(live.page+1)+' of '+pages+'</span>'
+      +'<button class="btn btn-sm btn-ghost" onclick="lexOccPage(1)"'+(live.page>=pages-1?' disabled':'')+'>Next &#8250;</button>';
+  }
+}
+/** Keeps the version that gets saved with the word in step with the verse text loaded so far. */
+function _lexOccSyncSaved(live){
+  if(_lexLastResult&&_lexLastResult.strongsNumber===live.lex.strongsNumber)_lexLastResult.html=renderLexiconEntry(live.lex,live.query,false);
+}
+/** Shows concordance page p (0-based) and fetches KJV text only for that page's verses. */
+function lexOccShow(p){
+  var live=_lexLive;if(!live)return;
+  var occ=live.lex.occurrences,pages=Math.max(1,Math.ceil(occ.length/LEX_OCCURRENCE_PAGE));
+  live.page=Math.max(0,Math.min(pages-1,p));
+  var seq=++live.seq;
+  _lexOccDraw(live);
+  var need=occ.slice(live.page*LEX_OCCURRENCE_PAGE,(live.page+1)*LEX_OCCURRENCE_PAGE).filter(function(o){return !o.tried;});
+  if(!need.length)return;
+  Promise.all(need.map(function(o){
+    return getBibleAPI(o.ref,'kjv').then(function(t){o.text=String(t||'').replace(/^\[\d+\]\s*/,'');}).catch(function(){o.text='';}).then(function(){o.tried=true;});
+  })).then(function(){
+    if(_lexLive!==live)return;
+    _lexOccSyncSaved(live);
+    if(live.seq===seq)_lexOccDraw(live);
+  });
+}
+/** Prev / Next buttons under the concordance. */
+function lexOccPage(delta){
+  if(!_lexLive)return;
+  lexOccShow(_lexLive.page+delta);
+  var el=document.getElementById('lex-conc');
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:'start'});
+}
+
 /**
  * Renders a parsed lexicon data object into an HTML string for display in the overlay.
  * Sections: header, usage outline, KJV count, Strong's definition, Thayer/BDB entry, concordance.
  * @param {Object} lex - Parsed lexicon JSON from the AI response.
  * @param {string} query - The original user query string (fallback display label).
+ * @param {boolean} [paged] - true for the live view (concordance filled in by lexOccShow, 10 per page); false/omitted renders the full static list used for saved words.
  * @returns {string} Fully-rendered HTML string.
  */
-function renderLexiconEntry(lex,query){
+function renderLexiconEntry(lex,query,paged){
   var h='';
   // ── Header ──
   h+='<div class="lex-header">';
@@ -2392,14 +2455,13 @@ function renderLexiconEntry(lex,query){
   // ── Concordance (real refs from occurrences.json; verse text fetched via the app's
   //    existing translation API for the first LEX_OCCURRENCE_TEXT_CAP, reference-only beyond that) ──
   if(lex.occurrences&&lex.occurrences.length){
-    h+='<div class="lex-section">';
-    h+='<div class="lex-sec-title">Concordance &mdash; '+lex.occurrences.length+' Occurrence'+(lex.occurrences.length!==1?'s':'')+' (KJV)</div>';
-    lex.occurrences.forEach(function(occ){
-      h+='<div class="lex-occur">';
-      h+='<div class="lex-occur-ref">'+occ.ref+'</div>';
-      if(occ.text)h+='<div class="lex-occur-text">'+occ.text+'</div>';
-      h+='</div>';
-    });
+    h+='<div class="lex-section"'+(paged?' id="lex-conc"':'')+'>';
+    h+='<div class="lex-sec-title">'+_lexOccTitle(lex)+'</div>';
+    if(paged){
+      h+='<div id="lex-conc-body"></div><div class="lex-occ-nav" id="lex-conc-nav"></div>';
+    }else{
+      lex.occurrences.forEach(function(occ){h+=_lexOccRowHTML(occ);});
+    }
     h+='</div>';
   }
   h+='<div class="lex-footer">Strong\'s number, definition, and occurrences are sourced data.'+(lex.scholarlyEntry?' The explanation paragraph above is AI-written from that data \u2014 verify against primary sources.':'')+' All theological conclusions are yours.</div>';
@@ -3092,7 +3154,7 @@ export {
   openLexSaveSheet, toggleLexCb, saveLexWord,
   removeWordGlobal, removeWordStudy,
   openLexiconModal, openLexiconModalFor, closeLexiconModal,
-  runLexiconLookup, renderLexiconEntry, pickWordSense,
+  runLexiconLookup, renderLexiconEntry, pickWordSense, lexOccPage,
   // S16 — Resources & OCR
   resCapture, resAddDocPrompt, openAddResModal, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,

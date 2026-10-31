@@ -498,7 +498,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.3',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.49.4',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Look Up Word said \u201C30 Occurrences\u201D for words that appear far more often (for example H8441 appears in 112 verses). The Concordance now says how many verses there really are and how many are listed, such as \u201Cfirst 30 of 112 Verses\u201D.",
+      "change: the Concordance is now paged, 10 verses per page with Prev and Next buttons. Verse text loads for the page you are on, so every listed verse now shows its text. Before, only the first 10 did.",
+      "change: removed the old \u201CAI provides lexical data only\u201D line under Save Word. Look Up Word has not used AI since v4.46.3.",
+      "note: a saved word keeps the full list of listed verses (the page buttons are not saved). Verse text is saved for the pages you opened before saving. The total count comes from a new small data file (occurrence-counts.json); until it reaches the data CDN the heading reads \u201Cfirst 30 Verses\u201D. Nothing in your studies, sync or backups changes. Cache-buster bumped to 4.49.4."
+    ]
+  },
+  {
+    version:'4.49.3',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Bible Tools now opens with Cross-References, Translation Comparison and Interlinear all closed, so you choose which one to open. Before, it always opened Cross-References first. Opening from the Read tab after tapping a verse number still pre-selects that verse in Translation Comparison and Interlinear.",
