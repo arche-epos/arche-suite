@@ -29,9 +29,10 @@ data updates). See `spec-ai-tools-grounding-v1.md` for the tools that consume th
   (derived from `macula/`, one entry per verse, canonical book order). Used to ground the Word
   Study lexicon lookup's "occurrences" list — the app fetches the actual verse text for these refs
   via its existing translation API rather than having the model generate it.
-- `strongs/occurrence-counts.json` — Strong's number → total number of verses where it occurs, only for
-  numbers with more than 30 (the cap in `occurrences.json`). Derived from `macula/` (distinct verses).
-  Lets Look Up Word say "first 30 of 112 verses" instead of implying 30 is the total (v4.49.4).
+- `strongs/occurrence-index.json` — EVERY verse where each Strong's number occurs (v4.49.5), as compact verse
+  numbers (gzip ≈ 440 KB). Derived from `macula/` by `data/build-occurrence-index.py`; Old Testament verses are
+  converted from Hebrew to English (KJV) numbering with the verse map. Look Up Word pages through the whole list
+  10 verses at a time. `occurrences.json` (first 30 only) stays as the fallback if this file cannot load.
 
 ## Verse map (not a data file here)
 

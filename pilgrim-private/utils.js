@@ -498,7 +498,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.4',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.49.5',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Look Up Word now lists EVERY verse where a word occurs, not just the first 30. The Concordance heading shows the real total (for example \u201C112 Verses (KJV)\u201D) and you page through it 10 verses at a time. On long lists there are First and Last buttons and a Go to page box.",
+      "fix: Old Testament verses in the Concordance now use the English (KJV) verse numbers. Before, they used the Hebrew numbers, so in the Psalms, Joel and a few other places the verse text could be the wrong verse.",
+      "note: the word list is a new compact data file (occurrence-index.json, smaller than the file it supplements). If it cannot load, Look Up Word falls back to the first 30 verses and says so. A saved word still keeps only the first 30 verses (with the text of the pages you opened), so saved words do not grow. Nothing in your studies, sync or backups changes. Cache-buster bumped to 4.49.5."
+    ]
+  },
+  {
+    version:'4.49.4',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Look Up Word said \u201C30 Occurrences\u201D for words that appear far more often (for example H8441 appears in 112 verses). The Concordance now says how many verses there really are and how many are listed, such as \u201Cfirst 30 of 112 Verses\u201D.",

@@ -652,7 +652,7 @@ input[type="range"]{accent-color:var(--gold)}
 .lex-occur:last-child{border-bottom:none;padding-bottom:0;}
 .lex-occur-ref{font-family:var(--font-body);font-size:calc(12px * var(--content-scale));font-weight:700;color:var(--gold);margin-bottom:3px;}
 .lex-occur-text{font-size:calc(13px * var(--content-scale));color:var(--txt2);line-height:1.65;font-family:var(--font-body);}
-.lex-occ-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}.lex-occ-nav:empty{display:none}.lex-occ-pg{font-size:calc(12px * var(--content-scale));color:var(--txt3);font-family:var(--font-body)}
+.lex-occ-nav{margin-top:10px}.lex-occ-nav:empty{display:none}.lex-occ-row{display:flex;align-items:center;justify-content:space-between;gap:6px}.lex-occ-jump{justify-content:center;margin-top:8px;font-size:calc(12px * var(--content-scale));color:var(--txt3);font-family:var(--font-body)}.lex-occ-jump input{width:64px;background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);color:var(--txt1);font-family:var(--font-body);font-size:14px;padding:5px 8px;text-align:center}.lex-occ-pg{font-size:calc(12px * var(--content-scale));color:var(--txt3);font-family:var(--font-body)}
 .lex-footer{font-family:var(--font-body);font-size:calc(11px * var(--content-scale));color:var(--txt4);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);}
 </style>
 </head>
@@ -1930,7 +1930,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.49.4"></script>
+<script type="module" src="app.js?v=4.49.5"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
