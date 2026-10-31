@@ -13,14 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.50.0';
+} from './utils.js?v=4.51.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.50.0';
-import { syncToGist } from './sync.js?v=4.50.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.50.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.50.0';
-import { decodeMorph, shortGloss } from './morph.js?v=4.50.0';
-import { hebrewVerses } from './versemap.js?v=4.50.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.51.0';
+import { openConfirm } from './media.js?v=4.51.0';
+import { syncToGist } from './sync.js?v=4.51.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.51.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.51.0';
+import { decodeMorph, shortGloss } from './morph.js?v=4.51.0';
+import { hebrewVerses } from './versemap.js?v=4.51.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -627,6 +628,18 @@ async function buildLexicalFactsHtml(ref,scope){
     +'</details>';
   }).join('');
   return '<div style="margin-bottom:14px">'+rows+'</div>';
+}
+
+/**
+ * v4.51.0 (finding X): the Word Study rows for the Study PDF, built from the same source dictionary data as the panel.
+ * Nothing is stored. Passage scope only.
+ * @param {string} ref - Passage reference.
+ * @returns {Promise<Array<{ref:string,strongs:string,translit:string,strongsDef:string,kjvDef:string}>>} Content words only; [] if the reference cannot be parsed.
+ */
+async function buildWordStudyExportRows(ref){
+  var parsed=parseRef(ref);if(!parsed)return [];
+  var lg=await buildLexicalGround(parsed.book,parsed,false);
+  return (lg.wordEntries||[]).filter(function(e){return e.isContent;});
 }
 
 /**
@@ -1361,7 +1374,7 @@ async function buildPrompt(tool,ref,trans,scope){
   var prompts={
     historical:base2+intro+' Provide a solid historical overview -- accessible to a general reader but substantive, not superficial. Do not truncate:\n\nSUMMARY\n[3-5 sentence overview: when this was likely written, by whom, and the key historical backdrop]\n\nTIME PERIOD & AUTHOR\n[If the date or authorship is genuinely debated, list the main positions, each with its approximate date range and a general description of who holds it (e.g., \"a traditional view\", \"many critical scholars\"), in 3-5 sentences. Do not call any single date \"the conservative position\" — conservative and evangelical scholars themselves hold more than one. Keep the date of the events described separate from the date the text was written or compiled. State a date or author as settled only where there is broad scholarly consensus and no significant debate]\n\nPOLITICAL & HISTORICAL LANDSCAPE\n[The empires, rulers, and major historical events shaping this period — a full paragraph]\n\nAUTHOR BACKGROUND\n[What is known or traditionally held about the author\'s identity and relationship to the events, in 2-3 sentences]\n\nORIGINAL AUDIENCE\n[Who originally received this and why it mattered to them, in 2-3 sentences]\n\nARCHAEOLOGICAL ATTESTATION\n[Brief note on well-established archaeological findings relevant to this book, if any]\n\nComplete all sections with real substance, in accessible language. Reserve extended scholarly debate, minority positions, and exhaustive named-scholar citations for a follow-up request.'+noC,
     cultural:base2+intro+' Provide a concise cultural overview -- readable for someone without seminary background, do not truncate:\n\nSUMMARY\n[2-4 sentence plain-language overview of the cultural setting most relevant to understanding this text]\n\nCULTURAL CUSTOMS & IDIOMS\n[The 2-3 most important customs or idioms in the passage, briefly explained]\n\nSOCIAL STRUCTURES\n[Brief note on hierarchies or social dynamics relevant to the text]\n\nComplete all sections in plain, accessible language.'+noC,
-    geography:base2+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification and describe in general terms who holds it (e.g. "a traditional identification", "many archaeologists"). Do not name specific scholars, books, or atlases. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey).\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
+    geography:base2+intro+' Identify and describe every geographical location, region, or landmark mentioned in '+subject+' (if more than 6 locations appear, cover the 6 most significant and note that others exist without detailing them).\n\nIf the passage involves travel between locations, START with a JOURNEY SUMMARY section, before any individual locations:\n- Route: [most attested ancient path between the points]\n- Total distance: [miles and km]\n- Terrain: [what a traveler would encounter]\n\nThen, for EACH location covered, provide ALL of the following:\n\nLOCATION: [Name as it appears in the text]\n- Ancient names: [all known names in biblical literature]\n- Modern identification: [modern country and site name]\n- 📍 [View on Map](https://maps.google.com/?q=LOCATION+NAME+COUNTRY)\n- Terrain & description: [elevation, topography, water features, notable physical characteristics]\n- Archaeological attestation: [physical evidence confirming identification — clearly note if absent or limited]\n- Certainty: CONFIRMED | PROBABLE | CONTESTED\n  — If CONTESTED or PROBABLE: list each proposed identification and describe in general terms who holds it (e.g. "a traditional identification", "many archaeologists"). Do not name specific scholars, books, or atlases. Do not present any contested identification as settled.\n\nFor the View on Map link, replace LOCATION+NAME+COUNTRY with the actual location name using + for spaces (e.g. Mount+of+Olives+Jerusalem or Antioch+Turkey). Include the View on Map line ONLY for a real, specific place (a city, mountain, river, sea, region or building). For the heavens, the sky, the earth, the deep, the waters, darkness or any other cosmic, conceptual or non-place term, leave the View on Map line out entirely.\n\nPresent only confirmed geographical and archaeological data. Do not infer routes or distances not supported by sources. Complete all covered locations.'+noC
   };
   // v4.50.0 (finding Z): ground the original-language words these three tools may mention (layer 1 = the verified
   // list in the prompt, layer 2 = the sets verifyGroundedOutput() checks the answer against).
@@ -1777,6 +1790,29 @@ function switchAITab(ck){
   updateExpandBtn();
   updateContinueBtn();
 }
+/** v4.51.0 (finding T): names the AI sometimes lists as "locations" that are not places. Whole-name match only. */
+var NON_PLACE_NAMES=['heavens','heaven','sky','firmament','expanse','earth','deep','abyss','waters','water','darkness','light','void','chaos','formlessness','sun','moon','stars','day','night','evening','morning','dry land','seas'];
+/** v4.51.0: true if every part of a location name (split on / , ; and) is a non-place word like "The Heavens". */
+function _isNonPlaceName(name){
+  var parts=String(name).toLowerCase().replace(/\([^)]*\)/g,' ').split(/[\/,;]|\band\b/);
+  var clean=parts.map(function(p){return p.replace(/[*_\[\]]/g,'').replace(/^\s*(the|a|an)\s+/,'').replace(/[^a-z ]/g,'').trim();}).filter(Boolean);
+  return clean.length>0&&clean.every(function(p){return NON_PLACE_NAMES.indexOf(p)>-1;});
+}
+/**
+ * v4.51.0 (finding T): removes the "View on Map" line under a LOCATION entry whose name is not a place. Display only;
+ * the stored result is never changed, so old saved results get the same cleanup.
+ * @param {string} md - Places & Geography markdown.
+ * @returns {string}
+ */
+function _stripNonPlacePins(md){
+  var curName=null;
+  return String(md).split('\n').filter(function(line){
+    var m=line.match(/^\s*[#*\s-]*LOCATION\s*:\s*(.+)$/i);
+    if(m){curName=m[1];return true;}
+    if(curName!==null&&/View on Map/i.test(line)&&_isNonPlaceName(curName))return false;
+    return true;
+  }).join('\n');
+}
 /**
  * Renders the markdown content for the given result key into the AI panel body.
  * Adds a scope suffix ("— Whole Book" or "— This Passage") to the panel title.
@@ -1788,7 +1824,7 @@ function renderAIPanelContent(ck){
   var sl=ck.endsWith('_book')?' <span style="font-size:11px;color:var(--golddim)">— Whole Book</span>':' <span style="font-size:11px;color:var(--golddim)">— This Passage</span>';
   var titleEl=document.getElementById('aipanel-title');if(titleEl)titleEl.innerHTML=(TOOL_LABELS[base]||base)+sl;
   var content=aiPanelResults[ck]||(ar&&ar.deep&&ar.deep[ck])||'';
-  var html=mdToHtml(content);
+  var html=mdToHtml(base==='geography'?_stripNonPlacePins(content):content);
   var contentEl=document.getElementById('aipanel-content');if(!contentEl)return;
   // v2 structured display (spec-ai-tools-grounding-v2-structured-display.md §4/§8):
   // for tools with a facts panel, render it above the AI commentary. Facts are never
@@ -2737,6 +2773,7 @@ function openAddResModal(){if(!cur){toast('Open a study first');return;}document
  */
 function resHandleDoc(input){
   var file=input.files[0];if(!file)return;
+  closeOverlay('addres-overlay'); // v4.51.0 (finding AE)
   var name=file.name;
   var ext=name.split('.').pop().toLowerCase();
   toast('Reading '+name+'...');
@@ -2789,7 +2826,7 @@ function resAddDocResource(filename,text){
  * Compresses each image before attaching it as a resource.
  * @param {HTMLInputElement} input - The file input element.
  */
-function resHandleFile(input){if(!input.files||!input.files.length)return;Array.prototype.forEach.call(input.files,function(file){var reader=new FileReader();reader.onload=function(e){resCompressImage(e.target.result,function(c){resAddResource(c);});};reader.readAsDataURL(file);});}
+function resHandleFile(input){if(!input.files||!input.files.length)return;closeOverlay('addres-overlay');Array.prototype.forEach.call(input.files,function(file){var reader=new FileReader();reader.onload=function(e){resCompressImage(e.target.result,function(c){resAddResource(c);});};reader.readAsDataURL(file);});}
 /**
  * Compresses an image data URL to a max of 900px on either dimension at 72% JPEG quality.
  * @param {string} dataUrl - Base64 image data URL to compress.
@@ -2823,8 +2860,14 @@ async function resRunOCR(id){
     if(!resp.ok){var err=await resp.json().catch(function(){return{};});var msg=(err.error&&err.error.message)||err.message||('HTTP '+resp.status);throw new Error(msg);}
     var data=await resp.json();
     var text=data.text;
-    res.ocrText=text||'No text could be extracted.';res.ocrStatus='done';
-    saveStudy();renderResources();toast('Text extracted');
+    if(text&&String(text).trim()){
+      res.ocrText=text;res.ocrStatus='done';
+      saveStudy();renderResources();toast('Text extracted');
+    }else{
+      // v4.51.0 (finding AC): the service answered with no text. Say so instead of a false success (uses the existing error status; Re-extract stays available).
+      res.ocrText='No text was found in this image. Try Re-extract.';res.ocrStatus='error';
+      saveStudy();renderResources();toast('No text found');
+    }
     resRefreshOpenView(id);
   }catch(e){logError('OCR Text Extraction',e);res.ocrStatus='error';res.ocrText='Text extraction error: '+e.message;saveStudy();renderResources();resRefreshOpenView(id);}
 }
@@ -2832,7 +2875,16 @@ async function resRunOCR(id){
  * Permanently removes a resource from the current study by id.
  * @param {string} id - Resource id to remove.
  */
-function resDeleteResource(id){if(!cur||!cur.resources)return;cur.resources=cur.resources.filter(function(r){return r.id!==id;});saveStudy();renderResources();toast('Resource removed');}
+function resDeleteResource(id){
+  if(!cur||!cur.resources)return;
+  var res=cur.resources.find(function(r){return r.id===id;});if(!res)return;
+  // v4.51.0 (finding AF): ask first; deleting also removes the extracted text and cannot be undone
+  openConfirm('Delete this resource?','This removes \u201c'+(res.title||'this resource')+'\u201d and its extracted text from this study. It cannot be undone.','Delete','btn btn-danger',function(){
+    if(!cur||!cur.resources)return;
+    cur.resources=cur.resources.filter(function(r){return r.id!==id;});saveStudy();renderResources();toast('Resource removed');
+    var ov=document.getElementById('res-view-overlay');if(ov&&ov.dataset.resId===id)ov.classList.remove('on');
+  });
+}
 /**
  * Resets a resource's OCR status to pending and re-runs OCR.
  * @param {string} id - Resource id to retry.
@@ -2887,7 +2939,7 @@ function resEditTitle(id){if(!cur||!cur.resources)return;var res=cur.resources.f
  * Confirms renaming the pending resource (stored in _renameResId) with the input value.
  * Saves the study and re-renders resources after the rename.
  */
-function confirmRenameRes(){if(!_renameResId||!cur||!cur.resources)return;var res=cur.resources.find(function(r){return r.id===_renameResId;});if(res){var t=document.getElementById('rename-res-input').value.trim();if(t){res.title=t;saveStudy();renderResources();}}  _renameResId=null;closeOverlay('rename-res-overlay');}
+function confirmRenameRes(){if(!_renameResId||!cur||!cur.resources)return;var res=cur.resources.find(function(r){return r.id===_renameResId;});if(res){var t=document.getElementById('rename-res-input').value.trim();if(t){res.title=t;saveStudy();renderResources();resRefreshOpenView(res.id);}}  _renameResId=null;closeOverlay('rename-res-overlay');}
 /**
  * Renders the full resources panel: all image and document resources attached to the current study.
  * Shows an empty state with action buttons if no resources exist.
@@ -3235,6 +3287,8 @@ function _btCmpHydrate(){
 function _btCmpLoadRow(t,cit,sel){
   var x=_btCtx,el=document.getElementById('bt-c-'+t);if(!x||!el)return;
   if(t==='ylt'&&x.sec.book<=39){el.innerHTML='<span class="bt-na">Not available for the Old Testament in this source (YLT covers the New Testament only).</span>';return;}
+  // v4.51.0 (finding U): the free source returns unrelated licensing text for the NIV, so show Not available instead.
+  if(t==='niv'){el.innerHTML='<span class="bt-na">Not available in this source (the NIV text is licensed and cannot be shown here).</span>';return;}
   el.textContent='Loading…';
   var alive=function(){return _btCtx===x&&x.cmpSel===sel&&x.tool==='cmp';};
   _btLoadTextFor(cit,t,alive).then(function(html){
@@ -3399,5 +3453,6 @@ export {
   resCapture, resAddDocPrompt, openAddResModal, resHandleDoc, resAddDocResource,
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
-  resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText
+  resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
+  buildWordStudyExportRows
 };

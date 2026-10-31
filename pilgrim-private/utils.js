@@ -245,8 +245,18 @@ function mdToHtml(md){
   // Applies bold, italic, code, and hyperlink markdown to a single text line
   function inlineM(s){return s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none;border-bottom:1px solid var(--golddim)">$1</a>').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--goldpale)">$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/`(.*?)`/g,'<code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:12px">$1</code>');}
   // Emits closing tags; resetOl=true resets the OL sequence counter (on headings/paragraphs only)
+  // v4.51.0 (finding Y): renders a parsed markdown pipe table as a real HTML table (scrolls sideways on a phone)
+  function tableHtml(t){
+    function cell(c){return inlineM(String(c).replace(/<br\s*\/?>/gi,'\u0001')).replace(/\u0001/g,'<br>');}
+    var th='padding:6px 8px;border:1px solid var(--border);vertical-align:top;';
+    var h='<div style="overflow-x:auto;margin:8px 0;"><table style="border-collapse:collapse;width:100%;font-size:13px;color:var(--txt2);line-height:1.5;"><thead><tr>'
+      +t.head.map(function(c){return '<th style="text-align:left;font-weight:600;color:var(--gold);background:var(--bg3);'+th+'">'+cell(c)+'</th>';}).join('')+'</tr></thead><tbody>';
+    t.rows.forEach(function(r){h+='<tr>'+t.head.map(function(_,i){return '<td style="'+th+'">'+cell(r[i]||'')+'</td>';}).join('')+'</tr>';});
+    return h+'</tbody></table></div>';
+  }
   function closeLists(resetOl){if(inUl){html+='</ul>';inUl=false;}if(inOl){html+='</ol>';inOl=false;}if(resetOl)olSeq=0;}
-  String(md).split('\n').forEach(function(line){
+  _mdGroupTables(md).forEach(function(line){
+    if(line&&typeof line==='object'){closeLists(true);html+=tableHtml(line);return;} // v4.51.0: markdown pipe table
     if(/^#{1,6}\s/.test(line)){closeLists(true); // Heading: close lists, reset OL counter, render as styled div
     html+='<div style="font-family:\'EB Garamond\',serif;font-size:16px;color:var(--gold);margin:10px 0 4px;">'+inlineM(line.replace(/^#+\s/,''))+'</div>';return;}
     if(/^\d+\.\s/.test(line)){if(!inOl){if(inUl){html+='</ul>';inUl=false;} // Ordered list: use start attr to continue count across bullet interruptions
@@ -258,6 +268,43 @@ function mdToHtml(md){
   });
   closeLists(true);
   return html;
+}
+/** v4.51.0: true if a line is a markdown table separator row such as |---|:--:|. */
+function _mdIsTableSep(l){return /^\s*\|[\s:\-|]+\|?\s*$/.test(l)&&l.indexOf('-')>-1;}
+/** v4.51.0: splits a markdown table row into trimmed cell strings (outer pipes dropped). */
+function _mdSplitRow(l){var t=l.trim();if(t.charAt(0)==='|')t=t.slice(1);if(t.charAt(t.length-1)==='|')t=t.slice(0,-1);return t.split('|').map(function(c){return c.trim();});}
+/**
+ * v4.51.0: splits markdown into lines, grouping each pipe table (header + separator + rows) into one object
+ * {table:true, head:[...], rows:[[...]]}. Everything else stays a plain string line.
+ * @param {string} md - Markdown text.
+ * @returns {Array<string|{table:boolean,head:string[],rows:string[][]}>}
+ */
+function _mdGroupTables(md){
+  var src=String(md).split('\n'),out=[],i=0;
+  while(i<src.length){
+    var l=src[i];
+    if(/^\s*\|/.test(l)&&i+1<src.length&&_mdIsTableSep(src[i+1])){
+      var head=_mdSplitRow(l),rows=[];i+=2;
+      while(i<src.length&&/^\s*\|/.test(src[i])){rows.push(_mdSplitRow(src[i]));i++;}
+      out.push({table:true,head:head,rows:rows});continue;
+    }
+    out.push(l);i++;
+  }
+  return out;
+}
+/**
+ * v4.51.0 (finding Y, PDF side): turns markdown pipe tables into plain text lines ("- Header: value; Header: value")
+ * so the PDF never shows raw pipe characters. Non-table text is returned unchanged.
+ * @param {string} str - Markdown text.
+ * @returns {string}
+ */
+function pdfTablesToText(str){
+  var out=[];
+  _mdGroupTables(str).forEach(function(p){
+    if(p&&typeof p==='object'){p.rows.forEach(function(r){out.push('- '+p.head.map(function(h,i){var v=(r[i]||'').trim();return v?(h?h+': ':'')+v:'';}).filter(Boolean).join('; '));});}
+    else out.push(p);
+  });
+  return out.join('\n');
 }
 /**
  * Sanitizes a string for safe PDF output by replacing non-ASCII characters.
@@ -498,7 +545,22 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.50.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.51.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Cultural Context tables now show as real tables instead of rows of | and --- characters. In the PDF, each table row is written as a plain line (Header: value; Header: value).",
+      "fix: Places & Geography no longer shows a View on Map pin for things that are not places (the heavens, earth, the deep). The prompt now asks the AI to leave those out and the screen also hides any it still writes. Saved results are not changed.",
+      "new: the Study PDF can now include Places & Geography, and a Word Study section built from the source dictionary when you export (Strong\u2019s number, transliteration, definition, KJV renderings). It needs a connection and nothing new is saved.",
+      "fix: deleting a resource (photo or document) and clearing an AI result now ask you to confirm first.",
+      "fix: reading a photo with no readable text no longer says \u201CText extracted\u201D. It says no text was found and offers Re-extract.",
+      "fix: Translation Comparison shows \u201CNot available\u201D for the NIV instead of unrelated licensing text from the source.",
+      "fix: renaming a resource updates the title in the open viewer right away, and the Add Files sheet closes after you pick a file.",
+      "change: removed the old \u201CAI provides linguistic, historical, and cultural data only\u201D line and the \u201CAI study tools included\u201D line in Settings Share.",
+      "note: no storage keys, saved data or backups changed. Cache-buster bumped to 4.51.0."
+    ]
+  },
+  {
+    version:'4.50.0',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Historical, Cultural and Places & Geography no longer name scholars, books or atlases. The old prompts asked for them and the AI invented some that do not exist. Positions are now described in general terms.",
@@ -2635,7 +2697,7 @@ export {
   // Section 03 — utilities
   closeOverlay, _tt, toast, toastSuccess, htmlToText, setAppHeight,
   todayStr, updateOffline, bookOrder, fmtDate, escHtml, mdToHtml,
-  pdfSafe, prevDay, TEMPLATES, activeTagFilter, obStep, mfBlob,
+  pdfSafe, pdfTablesToText, prevDay, TEMPLATES, activeTagFilter, obStep, mfBlob,
   // Section 07 partial — pure data model
   makeRef, migrateStudy, activeRef,
   // Section 07 — additional ref management (extracted session 6)

@@ -18,7 +18,7 @@ import {
   setPendingDeleteId, setPendingDeleteRefIdx, setTags,
   // Section 03 — utilities
   toast, toastSuccess, closeOverlay, escHtml, mdToHtml, htmlToText,
-  fmtDate, todayStr, pdfSafe, setAppHeight, updateOffline, bookOrder,
+  fmtDate, todayStr, pdfSafe, pdfTablesToText, setAppHeight, updateOffline, bookOrder,
   mfBlob, prevDay,
   // Section 07 — data model
   makeRef, migrateStudy, activeRef, TEMPLATES, TAG_PALETTE, DEFAULT_TAGS,
@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.50.0';
+} from './utils.js?v=4.51.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.50.0';
+} from './storage.js?v=4.51.0';
 
 import {
-  mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh
-} from './media.js?v=4.50.0';
+  mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
+} from './media.js?v=4.51.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.50.0';
+} from './tts.js?v=4.51.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.50.0';
+} from './sync.js?v=4.51.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -71,12 +71,12 @@ import {
   resHandleFile, resCompressImage, resAddResource, resRunOCR,
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
-  aiActiveTab, aiPanelResults
-} from './studyTools.js?v=4.50.0';
+  aiActiveTab, aiPanelResults, buildWordStudyExportRows
+} from './studyTools.js?v=4.51.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.50.0';
+} from './memory.js?v=4.51.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1416,7 +1416,7 @@ function openExportModal(){
   var allRefs=cur.refs&&cur.refs.length?cur.refs:[];
   var list=document.getElementById('exp-tools-list');list.innerHTML='';
   // Only render a tool row if at least one ref has a result saved for it
-  ['lexical','grammar','historical','cultural','crossrefs'].forEach(function(k){
+  ['lexical','grammar','historical','cultural','crossrefs','geography'].forEach(function(k){
     var hp=allRefs.some(function(r){return !!(r.deep&&r.deep[k]);});
     var hb=allRefs.some(function(r){return !!(r.deep&&r.deep[k+'_book']);});
     if(!hp&&!hb)return;
@@ -1426,6 +1426,13 @@ function openExportModal(){
     list.appendChild(div);
   });
   if(!list.children.length)list.innerHTML='<p style="font-size:13px;color:var(--txt3);font-style:italic;padding:8px 0">No AI tools have been run yet.</p>';
+  // v4.51.0 (finding X): Word Study is source-dictionary data, built when the PDF is made (nothing saved), so it is always offered
+  if(allRefs.length){
+    var wsDiv=document.createElement('div');
+    wsDiv.style.cssText='background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:11px 12px;margin-bottom:8px';
+    wsDiv.innerHTML='<div style="font-size:14px;color:var(--txt1);font-family:Crimson Pro,serif;font-weight:500;margin-bottom:5px">Word Study (dictionary)</div><div style="font-size:11px;color:var(--txt3);margin-bottom:8px">Strong\'s numbers, transliterations and definitions for each passage. Built when you export; needs a connection.</div><div class="exp-scope-pills"><div class="exp-pill" id="exp-wordstudy-passage" onclick="expToggle(this)"><div class="exp-pill-dot"></div><span>This Passage</span></div></div>';
+    list.appendChild(wsDiv);
+  }
   document.getElementById('export-overlay').classList.add('on');
 }
 /**
@@ -1455,6 +1462,12 @@ function expIsOn(id){var el=document.getElementById(id);return el&&el.classList.
  */
 function deleteAIResult(){
   if(!aiActiveTab)return;
+  // v4.51.0 (finding AG): ask first; running the tool again costs another AI call and may read differently
+  openConfirm('Clear this AI result?','This removes the saved result from this study. You can run the tool again, but that uses another AI call and the new wording may differ.','Clear','btn btn-danger',_doDeleteAIResult);
+}
+/** Performs the clear after the user confirms (see deleteAIResult). */
+function _doDeleteAIResult(){
+  if(!aiActiveTab)return;
   var ar=activeRef();
   if(ar&&ar.deep&&ar.deep.hasOwnProperty(aiActiveTab)){delete ar.deep[aiActiveTab];}
   delete aiPanelResults[aiActiveTab];
@@ -1474,7 +1487,8 @@ function runExport(){
   closeOverlay('export-overlay');
   // Build opts from current pill toggle states; each AI tool has passage + book sub-flags
   var opts={scripture:expIsOn('exp-scripture'),fieldNotes:expIsOn('exp-fieldnotes'),outline:expIsOn('exp-outline'),resources:expIsOn('exp-resources'),conclusions:expIsOn('exp-conclusions'),tools:{}};
-  ['lexical','grammar','historical','cultural','crossrefs'].forEach(function(k){opts.tools[k]={passage:expIsOn('exp-'+k+'-passage'),book:expIsOn('exp-'+k+'-book')};});
+  ['lexical','grammar','historical','cultural','crossrefs','geography'].forEach(function(k){opts.tools[k]={passage:expIsOn('exp-'+k+'-passage'),book:expIsOn('exp-'+k+'-book')};});
+  opts.wordStudy=expIsOn('exp-wordstudy-passage'); // v4.51.0 (finding X)
   exportPDF(opts);
 }
 
@@ -1488,7 +1502,7 @@ function runExport(){
 async function exportPDF(opts){
   if(!cur){toast('No study to export');return;}syncFromInputs(true);
   var ar=activeRef();
-  if(!opts)opts={scripture:true,fieldNotes:true,outline:true,resources:true,conclusions:true,tools:{lexical:{passage:true,book:true},grammar:{passage:true,book:true},historical:{passage:true,book:true},cultural:{passage:true,book:true},crossrefs:{passage:true,book:true}}};
+  if(!opts)opts={scripture:true,fieldNotes:true,outline:true,resources:true,conclusions:true,tools:{lexical:{passage:true,book:true},grammar:{passage:true,book:true},historical:{passage:true,book:true},cultural:{passage:true,book:true},crossrefs:{passage:true,book:true},geography:{passage:true,book:true}}};
   toast('Generating PDF...');
   try{
     var jsPDF=window.jspdf.jsPDF;
@@ -1636,7 +1650,7 @@ async function exportPDF(opts){
     }
     // ── PASS 2: AI STUDY TOOLS, GROUPED BY REFERENCE ──────────────────
     var refsWithTools=allRefs.filter(function(r){
-      return ['lexical','grammar','historical','cultural','crossrefs'].some(function(k){
+      return ['lexical','grammar','historical','cultural','crossrefs','geography'].some(function(k){
         var cp=r.deep&&r.deep[k],cb=r.deep&&r.deep[k+'_book'];
         return (cp&&opts.tools[k]&&opts.tools[k].passage)||(cb&&opts.tools[k]&&opts.tools[k].book);
       });
@@ -1653,13 +1667,27 @@ async function exportPDF(opts){
         }
         np(14);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
         doc.text(pdfSafe(r.reference||'Passage'),mgL,y);y+=lh(13)+3;
-        ['lexical','grammar','historical','cultural','crossrefs'].forEach(function(k){
+        ['lexical','grammar','historical','cultural','crossrefs','geography'].forEach(function(k){
           var cp=r.deep&&r.deep[k];
           var cb=r.deep&&r.deep[k+'_book'];
-          if(cp&&opts.tools[k]&&opts.tools[k].passage){softsection(TOOL_LABELS[k]+' \u2013 Passage');txtBlocks(pdfSafe(cp.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
-          if(cb&&opts.tools[k]&&opts.tools[k].book){softsection(TOOL_LABELS[k]+' \u2013 Whole Book');txtBlocks(pdfSafe(cb.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
+          if(cp&&opts.tools[k]&&opts.tools[k].passage){softsection(TOOL_LABELS[k]+' \u2013 Passage');txtBlocks(pdfSafe(pdfTablesToText(cp).replace(/^.*View on Map.*\n?/gm,'').replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
+          if(cb&&opts.tools[k]&&opts.tools[k].book){softsection(TOOL_LABELS[k]+' \u2013 Whole Book');txtBlocks(pdfSafe(pdfTablesToText(cb).replace(/^.*View on Map.*\n?/gm,'').replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/^#+\s/gm,'')),9,'normal',[35,28,18]);}
         });
       });
+    }
+    // ── WORD STUDY (SOURCE DICTIONARY) ── v4.51.0 (finding X): built now from the same data as the panel; nothing is stored
+    if(opts.wordStudy){
+      var wsStarted=false;
+      for(var wi=0;wi<allRefs.length;wi++){
+        var wRef=allRefs[wi],wRows=[];
+        try{wRows=await buildWordStudyExportRows(wRef.reference||'');}catch(wErr){wRows=null;}
+        if(wRows&&!wRows.length)continue;
+        if(!wsStarted){pb();section('Word Study (source dictionary)');wsStarted=true;}
+        np(14);doc.setFontSize(13);doc.setFont('helvetica','bold');doc.setTextColor(120,85,15);
+        doc.text(pdfSafe(wRef.reference||'Passage'),mgL,y);y+=lh(13)+3;
+        if(!wRows){txtBlocks('Word Study data could not be loaded for this passage. Check your connection and export again.',9,'normal',[35,28,18]);continue;}
+        txtBlocks(pdfSafe(wRows.map(function(e){return e.strongs+' ('+e.translit+') ['+e.ref+'] - '+e.strongsDef+(e.kjvDef?' KJV renderings: '+e.kjvDef:'');}).join('\n\n')),9,'normal',[35,28,18]);
+      }
     }
     // ── MY CONCLUSIONS ────────────────────────────────────────────────
     var concl=(_qConcl&&_qConcl.root.innerHTML)||(cur.deep&&cur.deep.conclusions)||'';

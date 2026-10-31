@@ -13,7 +13,7 @@
 
 import {
   ACTIVE_USER, cur, toast, toastSuccess, escHtml, logError, closeOverlay
-} from './utils.js?v=4.50.0';
+} from './utils.js?v=4.51.0';
 
 var DB_VERSION = 1;
 var STORES = ['transcripts', 'recordings', 'meta'];
@@ -535,7 +535,7 @@ export function trDelete() {
 }
 
 // ── shared confirm overlay (#tr-confirm-overlay) ────────────────────────────
-function openConfirm(title, msg, okLabel, okClass, fn) {
+export function openConfirm(title, msg, okLabel, okClass, fn) {
   var ov = $('tr-confirm-overlay'); if (!ov) return;
   $('tr-confirm-title').textContent = title;
   $('tr-confirm-msg').textContent = msg;
