@@ -498,7 +498,18 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.6',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.49.7',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: tapping Listen with nothing to read (empty Notes, Conclusions, Outline, or no passage loaded) crashed with \u201Ctoast is not a function\u201D. It now shows a short message instead.",
+      "fix: Listen on AI results no longer reads out symbols such as stars, hashes and dashes.",
+      "change: the Read bar and the Scripture bar now have their own Repeat switches. Turning one on no longer turns on the other. Repeat in Practice always starts off.",
+      "change: in Practice, \u201CMake it easier\u201D at the easiest level now says so instead of silently greying out.",
+      "note: text and playback only. Nothing stored or changed. Cache-buster bumped to 4.49.7."
+    ]
+  },
+  {
+    version:'4.49.6',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: in Look Up Word, many Concordance verses showed \u201CVerse text unavailable\u201D. Ten verses were being requested from the Bible text service at once, which it refuses. The text now loads one chapter at a time (a page of ten verses is usually one to five requests), so the verses load reliably.",

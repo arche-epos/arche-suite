@@ -890,7 +890,7 @@ input[type="range"]{accent-color:var(--gold)}
       <button id="scr-skip-prev" onclick="scrSkipVerse(-1)" title="Previous verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏮</button>
       <button id="listen-scr-btn" onclick="ttsToggleScr()" style="background:none;border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-family:'Crimson Pro',serif;font-size:13px;padding:0 12px;cursor:pointer;height:44px;display:flex;align-items:center;gap:5px;flex-shrink:0"><svg id="listen-scr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="listen-scr-label">Listen</span></button>
       <button id="scr-skip-next" onclick="scrSkipVerse(1)" title="Next verse" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">⏭</button>
-      <button id="scr-repeat-btn" onclick="toggleTTSRepeat()" title="Repeat this reference" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">🔁</button>
+      <button id="scr-repeat-btn" onclick="toggleTTSRepeat('scr')" title="Repeat this reference" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;font-size:18px">🔁</button>
       <button id="tts-restart-scr" onclick="ttsRestart('scr')" title="Restart from beginning" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);padding:0;cursor:pointer;height:44px;width:44px;flex:0 0 44px;align-items:center;justify-content:center;font-size:18px">↺</button>
       <select id="scr-speed-sel" onchange="setTTSRate(parseFloat(this.value))" title="Playback speed" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:13px;padding:0 4px;height:44px;width:54px;flex:0 0 54px;cursor:pointer;text-align:center;text-align-last:center">
         <option value="0.5">0.5×</option>
@@ -1930,7 +1930,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.49.6"></script>
+<script type="module" src="app.js?v=4.49.7"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

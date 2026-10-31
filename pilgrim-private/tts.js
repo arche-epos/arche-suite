@@ -11,8 +11,9 @@ import {
   htmlToText,
   activeRef,
   trackEvent,
-  logError
-} from './utils.js?v=4.49.6';
+  logError,
+  toast
+} from './utils.js?v=4.49.7';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).
@@ -50,7 +51,8 @@ export var _ttsSession = 0;
 var _ttsErrRun = 0;      // consecutive non-interruption speech errors (v4.42.2 runaway guard)
 var _ttsPlayStart = 0;   // Date.now() when the current ttsPlay() began
 var _ttsLastStart = 0;   // index of the last utterance that actually started speaking
-export var _ttsRepeat = false;
+export var _ttsRepeat = false; // legacy flag, kept for compatibility
+var _ttsRepeatRead = false, _ttsRepeatScr = false; // v4.49.7: separate Repeat per bar
 
 // ── Setters for cross-module writes ─────────────────────────────────────────
 export function setTtsActive(v)  { _ttsActive  = v; }
@@ -85,8 +87,24 @@ function _ttsCharCount(chunks,startIdx){var n=0;for(var i=startIdx||0;i<chunks.l
  * @param {string} source - TTS source key.
  * @returns {string} Plain text to read aloud, or empty string if unavailable.
  */
+/** Removes markdown symbols so the voice does not read them aloud. @param {string} t @returns {string} */
+function _ttsStripMd(t){
+  return String(t||'')
+    .replace(/```[\s\S]*?```/g,' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g,'$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm,'')
+    .replace(/^\s*>\s?/gm,'')
+    .replace(/^\s*([-*+]|\d+\.)\s+/gm,'')
+    .replace(/^\s*([-*_]\s*){3,}$/gm,' ')
+    .replace(/(\*\*|__)(.+?)\1/g,'$2')
+    .replace(/(\*|_)(?=\S)(.+?)(?<=\S)\1/g,'$2')
+    .replace(/`([^`]*)`/g,'$1')
+    .replace(/[*#`|]+/g,' ')
+    .replace(/[ \t]+/g,' ');
+}
 function ttsGetText(source){
-  if(source==='ai'){if(!_aiActiveTab())return '';var ar=activeRef();return(_aiResults()[_aiActiveTab()]||(ar&&ar.deep&&ar.deep[_aiActiveTab()])||'');}
+  if(source==='ai'){if(!_aiActiveTab())return '';var ar=activeRef();return _ttsStripMd(_aiResults()[_aiActiveTab()]||(ar&&ar.deep&&ar.deep[_aiActiveTab()])||'');}
   if(source==='fn'){return (_qFN()&&_qFN().getText().trim())||htmlToText(cur&&cur.fieldNotes)||'';}
   if(source==='concl'){return (_qConcl()&&_qConcl().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.conclusions)||'';}
   if(source==='outline'){return (_qOutline()&&_qOutline().getText().trim())||htmlToText(cur&&cur.deep&&cur.deep.outline)||'';}
@@ -157,7 +175,7 @@ function ttsPlay(source,fromIdx,charOffset){
       // Repeat takes priority over auto-advance: loop the currently loaded reference
       // (verse 0) rather than continuing into the next chapter. Only applies to the
       // verse-chunked sources tied to a reference box ('read', 'scr').
-      if(_ttsActive&&_ttsRepeat&&_ttsIdx>=_ttsSentences.length&&(source==='read'||source==='scr')){
+      if(_ttsActive&&((source==='read'&&_ttsRepeatRead)||(source==='scr'&&_ttsRepeatScr))&&_ttsIdx>=_ttsSentences.length){
         _ttsIdx=0;resumeOffset=0;speakNext();return;
       }
       // Reached the end naturally (still active, not paused/stopped) while reading —
@@ -393,16 +411,16 @@ function updateTTSVolumeUI(){
  * Shared global flag, mirrored by both players' Repeat buttons — same pattern
  * as rate/voice/volume, which are already single shared globals across players.
  */
-function toggleTTSRepeat(){_ttsRepeat=!_ttsRepeat;updateTTSRepeatUI();}
+function toggleTTSRepeat(which){if(which==='scr')_ttsRepeatScr=!_ttsRepeatScr;else _ttsRepeatRead=!_ttsRepeatRead;updateTTSRepeatUI();}
 /**
  * Syncs both Repeat buttons (Read player, Scripture panel mini-player) to the
  * current _ttsRepeat state — gold/active when on, dim/default when off.
  */
 function updateTTSRepeatUI(){
-  ['read-repeat-btn','scr-repeat-btn'].forEach(function(id){
-    var btn=document.getElementById(id);
+  [['read-repeat-btn',_ttsRepeatRead],['scr-repeat-btn',_ttsRepeatScr]].forEach(function(p){
+    var btn=document.getElementById(p[0]);
     if(!btn)return;
-    if(_ttsRepeat){btn.style.color='var(--gold)';btn.style.borderColor='var(--gold)';}
+    if(p[1]){btn.style.color='var(--gold)';btn.style.borderColor='var(--gold)';}
     else{btn.style.color='var(--txt3)';btn.style.borderColor='var(--border)';}
   });
 }
@@ -473,6 +491,8 @@ function setTTSPracticeGap(n){n=parseInt(n,10);if(n>=3&&n<=5){_ttsPracGap=n;save
 /** @returns {boolean} Whether Practice Repeat is on (this session only). */
 function getTTSPracticeRepeat(){return _ttsPracRepeat;}
 /** Flips Practice Repeat and returns the new value. @returns {boolean} */
+/** Turns Practice Repeat off (called whenever Practice opens). */
+function resetTTSPracticeRepeat(){_ttsPracRepeat=false;}
 function toggleTTSPracticeRepeat(){_ttsPracRepeat=!_ttsPracRepeat;return _ttsPracRepeat;}
 
 // ── Named exports ────────────────────────────────────────────────────────────
@@ -482,5 +502,5 @@ export {
   ttsRestart, loadTTSSett, saveTTSSett, setTTSRate, updateTTSRateUI,
   adjustTTSRate, initTTSVoices, setTTSVoice, setTTSVolume, updateTTSVolumeUI,
   toggleTTSRepeat, updateTTSRepeatUI,
-  ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat
+  ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat
 };

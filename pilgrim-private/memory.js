@@ -9,13 +9,13 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.49.6';
-import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat } from './tts.js?v=4.49.6';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.49.7';
+import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat } from './tts.js?v=4.49.7';
 import {
   memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
   memGradeAttempt, memNextChunkState, memLogPracticeAttempt, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.49.6';
+} from './memory-core.js?v=4.49.7';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
@@ -220,6 +220,7 @@ function memPracticeVerse(id) {
       ? s.reference + ', verses ' + s.chunk.verseStart + ' through ' + s.chunk.verseEnd
       : s.reference;
   });
+  resetTTSPracticeRepeat(); // Repeat always starts off when Practice opens
   _memQuiz = { mode: 'solo', queue: steps, idx: 0, answeredThisStep: false, results: [], hideAll: false, stepVisible: true };
   var ov = document.getElementById('mem-quiz-overlay');
   if (ov) ov.classList.add('on');
@@ -275,6 +276,7 @@ function _memRenderPracticePanel(state) {
     '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;">' +
       '<button type="button" class="btn btn-sec btn-sm" style="' + btnCss + '"' + (eff <= 0 ? ' disabled' : '') + ' onclick="memEaseStep(-1)">Make it easier</button>' +
+      (eff <= 0 ? '<span style="font-size:11px;color:var(--txt4);">Already at the easiest level.</span>' : '') +
       ((step.ease || 0) > 0 ? '<button type="button" class="btn btn-ghost btn-sm" style="' + btnCss + '" onclick="memEaseStep(0)">Back to my level</button>' : '') +
       '<span style="font-size:11px;color:var(--txt4);">Easier is for this session only — your saved level doesn’t change.</span>' +
     '</div>';
