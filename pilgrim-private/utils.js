@@ -498,7 +498,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.49.2',date:'Oct 29, 2026',label:'Latest \u2014 untested',
+    version:'4.49.3',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Bible Tools now opens with Cross-References, Translation Comparison and Interlinear all closed, so you choose which one to open. Before, it always opened Cross-References first. Opening from the Read tab after tapping a verse number still pre-selects that verse in Translation Comparison and Interlinear.",
+      "note: text and look only. Nothing stored or changed. Cache-buster bumped to 4.49.3."
+    ]
+  },
+  {
+    version:'4.49.2',date:'Oct 29, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: pasted Scripture text without verse numbers now shows in the Scripture panel (it was saved but the panel stayed blank), and it reads aloud.",

@@ -13,14 +13,14 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.49.2';
+} from './utils.js?v=4.49.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.2';
-import { syncToGist } from './sync.js?v=4.49.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.2';
-import { decodeMorph, shortGloss } from './morph.js?v=4.49.2';
-import { hebrewVerses } from './versemap.js?v=4.49.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.49.3';
+import { syncToGist } from './sync.js?v=4.49.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.49.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.49.3';
+import { decodeMorph, shortGloss } from './morph.js?v=4.49.3';
+import { hebrewVerses } from './versemap.js?v=4.49.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -2707,7 +2707,7 @@ function _btInSec(sec,c,v){
  * Opens the Bible Tools sheet for a section.
  * @param {string} ref - Section reference, e.g. "John 3" or "Romans 8:1-4".
  * @param {string} trans - Translation code for verse text (the caller's current one).
- * @param {string|null} focusKey - "chapter:verse" to auto-expand and scroll to, or null.
+ * @param {string|null} focusKey - "chapter:verse" to preselect in Translation Comparison and Interlinear, or null. (v4.49.3: the sheet opens with every tool collapsed; it no longer auto-opens Cross-References.)
  * @param {{c:number,nums:number[]}|null} verseNums - Verse numbers actually displayed for a
  *   single chapter, so verses with no cross-references still get a (count 0) row.
  */
@@ -2715,7 +2715,7 @@ async function openBibleTools(ref,trans,focusKey,verseNums){
   var sec=_btParseSection(ref);
   if(!sec){toast('Bible Tools works within one book — pick a chapter or verse range');return;}
   if(!online){toast('Bible Tools needs a connection');return;}
-  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,tool:'xref',open:{},focus:focusKey||null,state:'loading',nums:verseNums||null,cmpSel:focusKey||null,cmpEdit:false};
+  _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,tool:null,open:{},focus:null,state:'loading',nums:verseNums||null,cmpSel:focusKey||null,cmpEdit:false};
   document.getElementById('bt-overlay').classList.add('on');
   _btRender();
   await _btLoad();

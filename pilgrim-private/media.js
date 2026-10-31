@@ -13,7 +13,7 @@
 
 import {
   ACTIVE_USER, cur, toast, toastSuccess, escHtml, logError, closeOverlay
-} from './utils.js?v=4.49.2';
+} from './utils.js?v=4.49.3';
 
 var DB_VERSION = 1;
 var STORES = ['transcripts', 'recordings', 'meta'];
