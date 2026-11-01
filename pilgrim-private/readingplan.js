@@ -8,12 +8,12 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.1';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.58.0';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.0';
+} from './readingplan-core.js?v=4.58.1';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.1';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;

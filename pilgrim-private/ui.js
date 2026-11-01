@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.58.0';
+} from './utils.js?v=4.58.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.58.0';
+} from './storage.js?v=4.58.1';
 
 import {
-  mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.58.0';
+  mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
+} from './media.js?v=4.58.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.58.0';
+} from './tts.js?v=4.58.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.58.0';
+} from './sync.js?v=4.58.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.58.0';
+} from './studyTools.js?v=4.58.1';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.58.0';
-import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard } from './readingplan.js?v=4.58.0';
+} from './memory.js?v=4.58.1';
+import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard } from './readingplan.js?v=4.58.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -973,9 +973,12 @@ function renderLib(){
     var tagChips=(s.tags||[]).map(function(tid){var t=tagById(tid);if(!t)return '';return '<span style="display:inline-flex;align-items:center;gap:3px;border-radius:50px;padding:2px 7px;font-size:10px;font-weight:600;background:'+(t.bg||(t.color?hexToRgba(t.color,.18):'transparent'))+';color:'+t.color+';border:1px solid '+t.color+'40"><span style="width:5px;height:5px;border-radius:50%;background:'+t.color+';flex-shrink:0;display:inline-block"></span>'+t.label+'</span>';}).join('');
     var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';
     var trans0=(s.refs&&s.refs[0]&&(s.refs[0].pastedTranslation||s.refs[0].translation))||(s.pastedTranslation||s.translation||'ESV');
+    // Attachment badge (v4.58.1): resources (photos/docs) + transcript + recording; sync lookups only
+    var attN=(s.resources&&s.resources.length||0)+(mediaHasTranscript(s.id)?1:0)+(mediaHasRecording(s.id)?1:0);
+    var attBadge=attN?'<span class="sc-att" title="'+attN+' attachment'+(attN!==1?'s':'')+'" aria-label="'+attN+' attachment'+(attN!==1?'s':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>'+attN+'</span>':'';
     var extraRefs=(s.refs&&s.refs.length>1)?'<span class="ttag" style="margin-left:4px">+'+( s.refs.length-1)+'</span>':''; // e.g. "+2" badge for multi-passage studies
     return '<div class="studycard" onclick="openStudy(\''+s.id+'\')">'+
-      '<div class="sc-date">'+fmtDate(s.date)+'</div>'+
+      '<div class="sc-date">'+fmtDate(s.date)+attBadge+'</div>'+
       (s.series?'<div style="font-size:10px;color:var(--txt4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px">'+escHtml(s.series)+'</div>':'')+
       '<div class="sc-title">'+(s.title||'Untitled Study')+'</div>'+
       '<div class="sc-ref">'+(ref0||'No reference')+' <span class="ttag">'+trans0.toUpperCase()+'</span>'+extraRefs+'</div>'+

@@ -13,7 +13,7 @@
 
 import {
   ACTIVE_USER, cur, toast, toastSuccess, escHtml, logError, closeOverlay
-} from './utils.js?v=4.58.0';
+} from './utils.js?v=4.58.1';
 
 var DB_VERSION = 1;
 var STORES = ['transcripts', 'recordings', 'meta'];
@@ -104,6 +104,10 @@ function hasRoom(bytes) {
     }
   } catch (e) {}
   return Promise.resolve(true);
+}
+
+export function mediaHasRecording(studyId) {
+  return !!(_meta[studyId] && _meta[studyId].hasRecording);
 }
 
 export function mediaHasTranscript(studyId) {

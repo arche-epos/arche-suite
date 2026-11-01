@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.58.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.58.1',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: paperclip on Library cards. Any study with an attachment (photos or documents in Resources, a class transcript, or a recording) shows a small paperclip and the number of attachments beside its date.",
+      "note: display only. No saved data changed. Cache-buster bumped to 4.58.1."
+    ]
+  },
+  {
+    version:'4.58.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Reading Plan. Open the Progress tab and tap Open plan on the Reading Plan card. Story Flow walks you through the whole Bible in story order: Genesis to the Law, the Land, the kingdom years with each prophet beside the king he served, exile and return, the four Gospels as one story, then Acts with each letter where it was written. Tap a chapter to check it off. Chapters are grouped, and each part and group opens and closes so you never scroll the whole list.",
