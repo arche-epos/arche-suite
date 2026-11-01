@@ -131,10 +131,10 @@ that avoids the excluded list.
 - What Pilgrim Guide does → answers "how do I…" questions about the app, and
   helps find a Bible passage from a topic or a partly remembered quote (every
   reference is checked against the real text before it is shown). It does not
-  interpret Scripture or give theology, and the chat is not saved — it clears
-  when the page reloads.
+  interpret Scripture or give theology. The chat is kept on this device (the last
+  30 messages) so it is still there after a reload, and Clear All Data removes it.
 - On a Scripture Finder result → tap a result for **Open in Read** or
-  **Start a Study**; **Deeper Dive** finds further matches and **Search All
+  **Start a Study**; **More** finds further matches and **Search All
   Translations** broadens the search.
 
 ### Navigation

@@ -101,7 +101,8 @@ var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TA
 var SK_OB='bsn_ob_done', SK_TAB_HINTS='bsn_tab_hints_shown';
 var SK_UPDATE_SKIP='bsn_update_skip'; // Intentionally NOT namespaced in activateUser() — tracks which app version this browser dismissed the update banner for, not per-user study data (same treatment as bsn_active_user)
 var SK_STREAK='bsn_streak', SK_TTS_SETT='bsn_tts_sett', SK_WORDS='bsn_words_global', SK_MEM='bsn_memverses'; // SK_MEM: Scripture Memory store (v4.36.0) — new key, no legacy un-suffixed data to migrate
-var SK_TOUR_STUDY_SEEN='bsn_tour_study_seen', SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen'; // Guided Tours "seen" flags — namespaced per-user below, same as the other SK_* keys
+var SK_TOUR_STUDY_SEEN='bsn_tour_study_seen', SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen';
+var SK_PGCHAT='bsn_pgchat'; // Pilgrim Guide chat (v4.53.0): last ~30 messages, per user. NOT in backups or the safety copy; removed by Clear All through the existing per-user suffix rule. New key, no legacy data to migrate. // Guided Tours "seen" flags — namespaced per-user below, same as the other SK_* keys
 
 // ════════════════════════════════════════════════════════
 
@@ -489,6 +490,7 @@ function activateUser(userId){
   SK_MEM='bsn_memverses_'+userId;
   SK_TOUR_STUDY_SEEN='bsn_tour_study_seen_'+userId;
   SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen_'+userId;
+  SK_PGCHAT='bsn_pgchat_'+userId;
   migrateLegacyKey('bsn_studies_v2',SK);
   migrateLegacyKey('bsn_settings_v1',SK_SETT);
   migrateLegacyKey('bsn_tags_v1',SK_TAGS);
@@ -545,7 +547,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.52.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.53.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Pilgrim Guide now keeps your chat when you reload the page or come back later. The last 30 messages are saved on this device for your account only, and Scripture Finder results come back exactly as they were shown. Clear All Data removes the chat. It is not part of backups or Study Sync.",
+      "change: Scripture Finder cards now show the reference and the real verse text only. The short description line the AI used to write under the reference is gone, and the verse text is no longer cut off.",
+      "change: the Deeper Dive button on Scripture Finder results is now called More. It still skips verses you were already shown, and now says so plainly when there is nothing new to show.",
+      "change: the Clear All Data warning now lists the Pilgrim Guide chat."
+    ]},
+  {
+    version:'4.52.0',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: Bible Tools > Interlinear now shows the English for each word in context. Old Testament words used to show a dictionary definition (Gen 1:1 gave \u201Cgods in the ordinary sense\u201D and \u201Cself\u201D); they now show MACULA Hebrew\u2019s gloss (\u201CGod\u201D, \u201C(et)\u201D, \u201Cthe heavens\u201D). New Testament words keep MACULA Greek\u2019s gloss.",
@@ -2697,7 +2708,7 @@ export {
   WORKER_URL, ACTIVE_USER, trackEvent, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   APP_SHARE_URL,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
-  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN,
+  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_PGCHAT,
   SK_UPDATE_SKIP,
   // Section 02 — state
   studies, cur, online, sett, _diagResults, hdrCollapsed, scrCollapsed,

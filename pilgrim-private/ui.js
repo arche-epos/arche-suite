@@ -7,7 +7,7 @@ import {
   // Section 01 — constants
   WORKER_URL, APP_SHARE_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
-  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_UPDATE_SKIP,
+  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_PGCHAT, SK_UPDATE_SKIP,
   SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_ERROR_LOG,
   logError, loadErrorLog, clearErrorLog, beaconDiagnostics,
   // Section 02 — state
@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.52.0';
+} from './utils.js?v=4.53.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.52.0';
+} from './storage.js?v=4.53.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.52.0';
+} from './media.js?v=4.53.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.52.0';
+} from './tts.js?v=4.53.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.52.0';
+} from './sync.js?v=4.53.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.52.0';
+} from './studyTools.js?v=4.53.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.52.0';
+} from './memory.js?v=4.53.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -381,10 +381,11 @@ function fabMenuPilgrimGuide(){
 // user ever sees them. Word Study isn't wired up yet — the build-status note
 // appended below tells the model to say so rather than guess, a hard rule
 // regardless of build phase.
-// No conversation history is persisted to localStorage or any KV store —
-// _pgMessages is in-memory only and resets on page reload. Server-side usage
-// tracking already covers this call generically via X-Tool-Name, same as
-// every other AI Study Tool — no extra client-side tracking needed here.
+// The chat is kept on this device only (v4.53.0): the last PG_CHAT_MAX_MSGS messages are
+// saved under the per-user key SK_PGCHAT after each completed turn (see _pgSaveChat /
+// _pgLoadChat). It is never sent anywhere new, is not in backups or the safety copy,
+// and Clear All Data removes it. Server-side usage tracking already covers the AI call
+// generically via X-Tool-Name, same as every other AI Study Tool.
 var _pgMessages=[]; // {role, content, display?, type?, results?, sourceQuery?, altLoading?, altLoaded?}
 var _pgReferenceDoc=null;
 var _pgLoading=false;
@@ -397,6 +398,9 @@ var _pgShownRefs=[];        // normalized (lower/trimmed) refs already verified+
                              // Dive had already shown it; got a false "didn't check out" error because
                              // this exclusion used to apply unconditionally on every turn).
 var _pgShownRefsDisplay=[]; // same refs, original casing — used as the exclusion hint sent back to the model
+var PG_CHAT_MAX_MSGS=30;    // most recent messages kept on this device
+var PG_CHAT_MAX_CHARS=40000; // hard size cap for the saved chat; oldest messages are dropped first so it can never crowd out study saves
+var _pgChatLoadedFor=null;  // ACTIVE_USER the in-memory chat was loaded for (a user switch reloads the page anyway)
 var PG_ALT_TRANS=['kjv','nasb','niv','esv']; // preference order for "Search All Translations"; current default is filtered out at use time
 
 /**
@@ -418,7 +422,78 @@ async function _pgFetchReference(){
   return _pgReferenceDoc;
 }
 
+/**
+ * Saves the most recent Guide messages to this user's own key. Best effort and
+ * never throws: if the write fails (storage full) the saved chat is removed to
+ * free its space and the chat simply stays in memory for this session. Trims
+ * oldest-first to PG_CHAT_MAX_MSGS and PG_CHAT_MAX_CHARS, always starting on a
+ * user message so the history sent to the model stays well-formed.
+ */
+function _pgSaveChat(){
+  try{
+    var msgs=_pgMessages.slice(-PG_CHAT_MAX_MSGS).map(function(m){
+      var c={};for(var k in m){if(k!=='altLoading')c[k]=m[k];}
+      return c;
+    });
+    while(msgs.length&&msgs[0].role!=='user')msgs.shift();
+    var json=JSON.stringify(msgs);
+    while(json.length>PG_CHAT_MAX_CHARS&&msgs.length>2){
+      msgs.shift();
+      while(msgs.length&&msgs[0].role!=='user')msgs.shift();
+      json=JSON.stringify(msgs);
+    }
+    if(!msgs.length||json.length>PG_CHAT_MAX_CHARS){localStorage.removeItem(SK_PGCHAT);return;}
+    localStorage.setItem(SK_PGCHAT,json);
+  }catch(e){
+    try{localStorage.removeItem(SK_PGCHAT);}catch(e2){}
+  }
+}
+
+/**
+ * Restores this user's saved Guide chat once per page load. Anything unreadable
+ * or malformed is dropped (and the bad key removed), never thrown, so a damaged
+ * chat can never stop the Guide or the app from opening. Also rebuilds the
+ * "already shown" reference lists from restored result cards so More keeps
+ * skipping them after a reload.
+ */
+function _pgLoadChat(){
+  if(_pgChatLoadedFor===ACTIVE_USER)return;
+  _pgChatLoadedFor=ACTIVE_USER;
+  try{
+    var raw=localStorage.getItem(SK_PGCHAT);
+    if(!raw)return;
+    var arr=JSON.parse(raw);
+    if(!Array.isArray(arr))throw new Error('saved chat is not a list');
+    var ok=[];
+    arr.forEach(function(m){
+      if(!m||(m.role!=='user'&&m.role!=='assistant')||typeof m.content!=='string')return;
+      if(m.type==='scripture-results'){
+        if(!Array.isArray(m.results))return;
+        var good=m.results.every(function(r){return r&&typeof r.ref==='string'&&typeof r.trans==='string'&&typeof r.text==='string';});
+        if(!good)return;
+        m.results.forEach(function(r){if(!Array.isArray(r.alt))r.alt=[];});
+        m.altLoading=false;
+      }
+      ok.push(m);
+    });
+    _pgMessages=ok;
+    _pgShownRefs=[];_pgShownRefsDisplay=[];
+    ok.forEach(function(m){
+      if(m.type!=='scripture-results')return;
+      m.results.forEach(function(r){
+        var ref=String(r.ref).trim();
+        _pgShownRefs.push(ref.toLowerCase().replace(/\s+/g,' '));
+        _pgShownRefsDisplay.push(ref);
+      });
+    });
+  }catch(e){
+    _pgMessages=[];_pgShownRefs=[];_pgShownRefsDisplay=[];
+    try{localStorage.removeItem(SK_PGCHAT);}catch(e2){}
+  }
+}
+
 function openPilgrimGuide(){
+  _pgLoadChat();
   document.getElementById('pilgrim-guide-overlay').classList.add('on');
   _pgRenderMessages();
   setTimeout(function(){
@@ -448,7 +523,7 @@ function _pgRenderMessages(){
 
 /**
  * Renders one Scripture Finder results bubble: a tappable card per verified
- * reference (real fetched snippet, never AI-recalled text) plus Deeper Dive
+ * reference (real fetched text, never AI-recalled text) plus More
  * and Search All Translations actions. Tapping a card opens a small inline
  * action menu (Open in Read / Start a Study) rather than acting immediately —
  * see _pgToggleResultMenu. "Start a Study" uses the result's already-fetched
@@ -461,8 +536,7 @@ function _pgRenderResultsMsg(m,i){
     }).join('')+'</div>':'';
     return '<div class="pg-scr-card" onclick="_pgToggleResultMenu('+i+','+ri+')">'+
       '<div class="pg-scr-ref">'+escHtml(r.ref)+' <span style="color:var(--txt4);font-weight:400;font-size:11px">'+escHtml(r.trans.toUpperCase())+'</span></div>'+
-      (r.why?'<div class="pg-scr-why">'+escHtml(r.why)+'</div>':'')+
-      '<div class="pg-scr-snippet">'+escHtml(r.text.slice(0,220))+(r.text.length>220?'\u2026':'')+'</div>'+
+      '<div class="pg-scr-snippet">'+escHtml(r.text)+'</div>'+
       altHtml+
       '<div class="pg-scr-menu" id="pg-scr-menu-'+i+'-'+ri+'">'+
         '<button class="btn btn-sec btn-sm" data-ref="'+escHtml(r.ref)+'" data-trans="'+escHtml(r.trans)+'" onclick="event.stopPropagation();_pgOpenInRead(this.dataset.ref,this.dataset.trans)">Open in Read</button>'+
@@ -474,7 +548,7 @@ function _pgRenderResultsMsg(m,i){
     (m.altLoaded?'':'<button class="btn btn-sec btn-sm" onclick="_pgSearchAllTranslations('+i+')">Search All Translations</button>');
   return '<div class="pg-msg scripture-results">'+cards+
     '<div class="pg-scr-actions">'+
-      '<button class="btn btn-sec btn-sm" onclick="_pgDeeperDive('+i+')">Deeper Dive</button>'+
+      '<button class="btn btn-sec btn-sm" onclick="_pgDeeperDive('+i+')">More</button>'+
       altBtn+
     '</div></div>';
 }
@@ -541,7 +615,6 @@ async function _pgVerifyCandidates(candidates,excludeShown){
     var ref=typeof c==='string'?c:(c&&c.ref);
     if(!ref)continue;
     ref=String(ref).trim();
-    var why=(c&&typeof c==='object'&&c.why)?c.why:'';
     var norm=ref.toLowerCase().replace(/\s+/g,' ');
     attempted.push(ref);
     if(seen[norm])continue;
@@ -559,7 +632,7 @@ async function _pgVerifyCandidates(candidates,excludeShown){
     try{
       var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
       if(!text)continue;
-      results.push({ref:ref,why:why,trans:trans,text:text,alt:[]});
+      results.push({ref:ref,trans:trans,text:text,alt:[]});
       if(range)acceptedRanges.push(range);
       _pgShownRefs.push(norm);
       _pgShownRefsDisplay.push(ref);
@@ -591,7 +664,7 @@ async function _pgSearchAllTranslations(idx){
       }catch(e){/* skip that translation for this ref */}
     }
   }
-  m.altLoading=false;m.altLoaded=true;_pgRenderMessages();
+  m.altLoading=false;m.altLoaded=true;_pgSaveChat();_pgRenderMessages();
 }
 
 /**
@@ -737,11 +810,15 @@ async function _pgRunTurn(apiContent,display,sourceQuery,excludeShown){
         _pgMessages.push({role:'assistant',type:'scripture-results',
           content:'Proposed candidates: '+v.attempted.join('; ')+'.',
           results:v.results,sourceQuery:sourceQuery||display,altLoading:false,altLoaded:false});
+      }else if(excludeShown){
+        _pgMessages.push({role:'assistant',content:'No further matches found for that search. Try rephrasing it, or ask about something different.'});
       }else if(v.allAlreadyShown){
         _pgMessages.push({role:'assistant',content:'That\u2019s already been shown earlier in this conversation \u2014 scroll up to see it, or ask about something else.'});
       }else{
         _pgMessages.push({role:'assistant',content:'None of those references checked out against the real text \u2014 try rephrasing, or give me a bit more to go on.'});
       }
+    }else if(excludeShown){
+      _pgMessages.push({role:'assistant',content:'No further matches found for that search. Try rephrasing it, or ask about something different.'});
     }else{
       _pgMessages.push({role:'assistant',content:env.reply||'No response received.'});
     }
@@ -749,6 +826,7 @@ async function _pgRunTurn(apiContent,display,sourceQuery,excludeShown){
     logError('Pilgrim Guide: send',e);
     _pgMessages.push({role:'assistant',content:groqErrMsg(e.message)});
   }finally{
+    _pgSaveChat();
     _pgLoading=false;
     if(sendBtn)sendBtn.disabled=false;
     var lr=document.getElementById('pg-loading-row');
@@ -789,6 +867,7 @@ function pilgrimGuideSend(){
   if(canned){
     _pgMessages.push({role:'user',content:text,display:text});
     _pgMessages.push({role:'assistant',content:canned});
+    _pgSaveChat();
     _pgRenderMessages();
     return;
   }

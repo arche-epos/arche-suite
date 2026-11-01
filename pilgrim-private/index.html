@@ -1814,7 +1814,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="overlay" id="clearall-overlay">
   <div class="modal">
     <div class="modal-title">Clear All Data?</div>
-    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete everything stored for your account on this device: all studies, notes, AI results, photos and resources, transcripts and audio, your Memory verses, saved words, tags, settings (including voice and appearance), streak, tutorial progress, and the error log. You stay signed in. A one-time safety copy of your studies, tags, words, Memory and settings is kept so you can undo from Settings &gt; Data &amp; Storage (transcripts and audio are not in it).</p>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete everything stored for your account on this device: all studies, notes, AI results, photos and resources, transcripts and audio, your Memory verses, saved words, tags, your Pilgrim Guide chat, settings (including voice and appearance), streak, tutorial progress, and the error log. You stay signed in. A one-time safety copy of your studies, tags, words, Memory and settings is kept so you can undo from Settings &gt; Data &amp; Storage (transcripts and audio are not in it).</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('clearall-overlay')">Cancel</button>
       <button class="btn btn-danger" style="flex:1" onclick="confirmClearAll()">Delete Everything</button>
@@ -1932,7 +1932,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.52.0"></script>
+<script type="module" src="app.js?v=4.53.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
