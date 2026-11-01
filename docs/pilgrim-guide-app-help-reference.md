@@ -171,7 +171,7 @@ that avoids the excluded list.
   and a banner says "N verses due for review"). You type the verse from memory,
   tap **Check**, and see a percentage with missed words marked. How you do
   sets when it comes back and how much of a hint you get next time.
-- Practice every verse without affecting the schedule → **Practice All**
+- Practice every verse without affecting the schedule → **Practice All** (nothing is saved, same as single-verse Practice; only **Test Me** changes the schedule)
 - Practice just one verse → the **Practice** button on that verse's card. It
   opens only that verse, starting at the level you have reached. Nothing is saved,
   so your schedule does not change.
@@ -199,7 +199,7 @@ that avoids the excluded list.
 - Save the passage to Memory → **Save Passage to Memory** (appears once text is
   loaded)
 - See cross-references for a verse (no AI — from a fixed dataset) → tap a verse
-  number, then the **Bible Tools** button in the Read player bar (it stays
+  (text or number; tap it again to clear), then the **Bible Tools** button in the Read player bar (it stays
   greyed out until a verse is selected). Opens the Bible Tools sheet listing the
   chapter, one row per verse with a reference count; the tapped verse opens
   automatically. Tap any verse row to see its cross-references ranked by votes,

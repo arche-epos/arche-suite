@@ -228,10 +228,18 @@ function htmlToText(html){if(!html)return '';var d=document.createElement('div')
  */
 function setAppHeight(){document.documentElement.style.setProperty('--app-height',window.innerHeight+'px');}
 /**
- * Returns today's date as a YYYY-MM-DD string.
- * @returns {string} Today's ISO date (date portion only).
+ * Formats a Date as YYYY-MM-DD in the device's LOCAL time zone.
+ * v4.55.0: replaces toISOString() for calendar dates, which is UTC and gave "tomorrow" after
+ * about 7 PM Central.
+ * @param {Date} [dt] - Defaults to now.
+ * @returns {string} Local date (YYYY-MM-DD).
  */
-function todayStr(){return new Date().toISOString().split('T')[0];}
+function localDateStr(dt){var d=dt||new Date();var m=d.getMonth()+1,day=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day;}
+/**
+ * Returns today's date as a YYYY-MM-DD string in the device's local time zone.
+ * @returns {string} Today's local date.
+ */
+function todayStr(){return localDateStr(new Date());}
 /**
  * Toggles the offline badge visibility based on the global `online` flag.
  * Badge is shown when offline, hidden when online.
@@ -243,7 +251,7 @@ function updateOffline(){document.getElementById('offbadge').classList.toggle('s
  * @param {string} ref - A passage reference string (e.g. "Romans 1:1").
  * @returns {number} Zero-based index of the matching book, or 999 if not found.
  */
-function bookOrder(ref){if(!ref)return 999;var r=ref.trim();for(var i=0;i<BIBLE_BOOKS.length;i++){if(r.toLowerCase().startsWith(BIBLE_BOOKS[i].toLowerCase()))return i;}return 999;}
+function bookOrder(ref){if(!ref)return 999;var r=ref.trim().replace(/^psalm\b(?!s)/i,'Psalms');for(var i=0;i<BIBLE_BOOKS.length;i++){if(r.toLowerCase().startsWith(BIBLE_BOOKS[i].toLowerCase()))return i;}return 999;}
 /**
  * Formats a YYYY-MM-DD date string to a human-readable US locale date.
  * Uses noon local time to avoid timezone off-by-one errors near midnight.
@@ -350,7 +358,7 @@ function pdfSafe(str){var s=String(str).replace(/\u2022/g,'-').replace(/\u2013|\
  * @param {string} d - ISO date string (YYYY-MM-DD).
  * @returns {string} The previous day as a YYYY-MM-DD string.
  */
-function prevDay(d){var dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()-1);return dt.toISOString().split('T')[0];}
+function prevDay(d){var dt=new Date(d+'T12:00:00');dt.setDate(dt.getDate()-1);return localDateStr(dt);}
 
 
 var TEMPLATES={
@@ -572,7 +580,26 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.54.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.55.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Test Me no longer marks a verse wrong because of an apostrophe. A typed straight apostrophe now matches the curly one in the saved verse (\u201Cname\u2019s\u201D), so a perfect answer can reach 100%.",
+      "fix: when a phrase repeats in a verse (for example \u201Cin Christ Jesus\u201D twice), the marked-missed words now land on the right one instead of the first.",
+      "change: Practice All no longer saves anything, the same as single-verse Practice. Only Test Me changes your schedule. Practice entries already saved on this device are left exactly as they are.",
+      "change: a verse you add to Memory now saves as \u201CPsalms\u201D even if you typed \u201CPsalm\u201D, and adding the same verse under either spelling says it is already in Memory. Names already saved are not changed.",
+      "fix: the date on a new study, \u201Clast opened\u201D and your daily streak now use your own local date. Before, after about 7 PM Central they used tomorrow\u2019s date. Your streak is kept.",
+      "fix: \u201CPsalm 23\u201D now sorts with the Psalms in the Library instead of at the end.",
+      "new: in Read, tap anywhere on a verse to select it (the verse number still works). Tap the selected verse again to clear it. Pressing and dragging to copy text still works.",
+      "fix: the Bible picker no longer accepts text such as \u201Cxyz\u201D as a verse. It asks for a verse number (for example 1-5).",
+      "fix: tapping Use This Text with nothing pasted now says to paste the verse text first. Saving a word you already saved now says it is already saved.",
+      "fix: Esc closes the Bible Tools sheet.",
+      "fix: Look Up Word now lists the most common meaning first (searching \u201Clove\u201D puts agapao first) and no longer cuts descriptions off mid-word.",
+      "fix: the floating Guide button no longer sits on top of Start a Study from this Passage, Save Passage to Memory, or the buttons in the Add a Verse form.",
+      "note: no saved Memory verses, words, studies or backups were rewritten. No setting, sync, or backup format changed. Help reference updated. Cache-buster bumped to 4.55.0."
+    ]
+  },
+  {
+    version:'4.54.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Template prompts in Study Notes, Conclusions and Outline now keep their line breaks. Before, they ran together on one line when the editor loaded. Notes you already saved are not changed.",
@@ -2754,7 +2781,7 @@ export {
   TOOL_LABELS, TOOL_DESCS, DEFAULT_TAGS, TAGS, TAG_PALETTE, FONT_OPTIONS, FONT_SCALE_STEPS,
   // Section 03 — utilities
   closeOverlay, _tt, toast, toastSuccess, htmlToText, plainNotesToHtml, imgFitSize, setAppHeight,
-  todayStr, updateOffline, bookOrder, fmtDate, escHtml, mdToHtml,
+  todayStr, localDateStr, updateOffline, bookOrder, fmtDate, escHtml, mdToHtml,
   pdfSafe, pdfTablesToText, prevDay, TEMPLATES, activeTagFilter, obStep, mfBlob,
   // Section 07 partial — pure data model
   makeRef, migrateStudy, activeRef,

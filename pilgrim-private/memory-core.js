@@ -99,6 +99,29 @@ function memNormRefKey(reference, translation) {
 }
 
 /**
+ * v4.55.0: standard book name for a NEW save. "Psalm 23" becomes "Psalms 23" (the name the
+ * picker, Read and Study saves already write). Only the leading word changes; nothing else is
+ * touched, and already-saved items are never passed through this.
+ * @param {string} reference
+ * @returns {string}
+ */
+function memCanonRefName(reference) {
+  return String(reference || '').trim().replace(/^psalm\b(?!s)/i, 'Psalms');
+}
+
+/**
+ * v4.55.0: duplicate key used ONLY when adding a verse (memAddVerse). Same as memNormRefKey but
+ * "Psalm" and "Psalms" count as the same book, so a typed "Psalm 23:1" is caught against a saved
+ * "Psalms 23:1". memMerge keeps using memNormRefKey unchanged.
+ * @param {string} reference
+ * @param {string} translation
+ * @returns {string}
+ */
+function memAddKey(reference, translation) {
+  return memNormRefKey(memCanonRefName(reference), translation);
+}
+
+/**
  * Builds a new MemoryVerse record with Stage 1 fields inert and Stage 2 chunks built fresh.
  * @param {{reference:string,translation:string,text:string,source:string}} v
  * @param {string} id
@@ -108,7 +131,7 @@ function memMakeItem(v, id, nowISO) {
   var text = String(v.text || '').trim();
   return {
     id: id,
-    reference: String(v.reference || '').trim(),
+    reference: memCanonRefName(v.reference),
     translation: String(v.translation || '').trim(),
     text: text,
     source: v.source || 'manual',
@@ -211,10 +234,15 @@ function memNormalizeChunk(raw, fallbackId) {
 
 // ── Stage 2: grading (spec §2) ────────────────────────────────────────────────
 
-/** Lowercases, strips [n] markers and punctuation (keeps internal apostrophes), splits to words. */
+/**
+ * Lowercases, strips [n] markers and punctuation (keeps internal apostrophes), splits to words.
+ * v4.55.0: curly/modifier apostrophes become a straight one first, so stored "name’s" matches
+ * a typed "name's" (before, the curly one was turned into a space and split the word).
+ */
 function _memGradeWords(text) {
   return String(text || '')
     .replace(/\[\d+\]/g, ' ')
+    .replace(/[‘’‛ʼ′]/g, "'")
     .toLowerCase()
     .replace(/[^a-z0-9'\s]/gi, ' ')
     .split(/\s+/)
@@ -227,21 +255,24 @@ function _memGradeWords(text) {
  */
 function _memLCS(a, b) {
   var n = a.length, m = b.length;
+  // v4.55.0: suffix table (dp[i][j] = LCS of a[i..] and b[j..]) walked front to back, so when a
+  // phrase repeats the EARLIER target words claim the earlier typed words. The old back-to-front
+  // walk matched the later occurrence and marked the first one missed.
   var dp = [];
   for (var i = 0; i <= n; i++) dp.push(new Array(m + 1).fill(0));
-  for (i = 1; i <= n; i++) {
-    for (var j = 1; j <= m; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  for (i = n - 1; i >= 0; i--) {
+    for (var j = m - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
   var mask = new Array(n).fill(false);
-  i = n; var j2 = m;
-  while (i > 0 && j2 > 0) {
-    if (a[i - 1] === b[j2 - 1]) { mask[i - 1] = true; i--; j2--; }
-    else if (dp[i - 1][j2] >= dp[i][j2 - 1]) i--;
-    else j2--;
+  i = 0; var j2 = 0;
+  while (i < n && j2 < m) {
+    if (a[i] === b[j2]) { mask[i] = true; i++; j2++; }
+    else if (dp[i + 1][j2] >= dp[i][j2 + 1]) i++;
+    else j2++;
   }
-  return { length: dp[n][m], matchedMask: mask };
+  return { length: dp[0][0], matchedMask: mask };
 }
 
 /**
@@ -559,7 +590,7 @@ function memJoinVerses(verses) {
 
 export {
   TOMBSTONE_TTL_MS, MEM_CHUNK_SIZE, MEM_INTERVAL_LADDER, MEM_LEVEL_MAX,
-  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
+  memEmptyStore, memNormalizeStore, memNormRefKey, memCanonRefName, memAddKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses,
   memParseVerseTexts, memMakeChunks, memNormalizeChunk, memGradeAttempt,
   memNextChunkState, memLogPracticeAttempt, memGetDueChunks, memGetAllChunks,

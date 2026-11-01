@@ -133,6 +133,29 @@ import(tmp).then((m) => {
   eq('grade: positional diff flags the right word', g.words.map((w) => w.ok), [true, false, true, true]);
   g = m.memGradeAttempt('', 'anything');
   eq('grade: empty target = 0/0', [g.pct, g.total], [0, 0]);
+  // v4.55.0: curly vs straight apostrophes (S5b-3)
+  g = m.memGradeAttempt('who restores his name’s sake', "who restores his name's sake");
+  eq('grade: stored curly apostrophe matches typed straight one = 100%', g.pct, 100);
+  g = m.memGradeAttempt("the Lord's day", 'the Lord’s day');
+  eq('grade: stored straight apostrophe matches typed curly one = 100%', g.pct, 100);
+  g = m.memGradeAttempt('the “word” was God', 'the "word" was god');
+  eq('grade: curly vs straight double quotes = 100%', g.pct, 100);
+  // v4.55.0: repeated phrase alignment (S5-1): earlier occurrence claims the earlier typed words
+  g = m.memGradeAttempt('in Christ Jesus we are in Christ Jesus', 'in christ jesus we are');
+  eq('grade: repeated phrase, missing tail marks the LAST occurrence missed', g.words.map((w) => w.ok), [true, true, true, true, true, false, false, false]);
+  g = m.memGradeAttempt('in Christ Jesus we are in Christ Jesus', 'we are in christ jesus');
+  eq('grade: repeated phrase, missing head marks the FIRST occurrence missed', g.words.map((w) => w.ok), [false, false, false, true, true, true, true, true]);
+  g = m.memGradeAttempt('one two three four', 'one three four');
+  eq('grade: LCS length unchanged by the new walk', [g.pct, g.matched], [75, 3]);
+
+  // v4.55.0: Psalm/Psalms naming for NEW saves only (N2)
+  eq('canon: Psalm -> Psalms', m.memCanonRefName('Psalm 23:1'), 'Psalms 23:1');
+  eq('canon: lowercase psalm -> Psalms', m.memCanonRefName('  psalm 117 '), 'Psalms 117');
+  eq('canon: Psalms left alone', m.memCanonRefName('Psalms 51'), 'Psalms 51');
+  eq('canon: other books untouched', [m.memCanonRefName('John 3:16'), m.memCanonRefName('1 Samuel 3')], ['John 3:16', '1 Samuel 3']);
+  eq('add key: Psalm and Psalms match', m.memAddKey('Psalm 23:1', 'esv'), m.memAddKey('Psalms 23:1', 'ESV'));
+  eq('merge key (memNormRefKey) is unchanged: Psalm and Psalms stay different', m.memNormRefKey('Psalm 23:1', 'esv') === m.memNormRefKey('Psalms 23:1', 'esv'), false);
+  eq('new item stores the standard name', m.memMakeItem({ reference: 'Psalm 117', translation: 'esv', text: 'Praise the Lord', source: 'manual' }, 'p1', iso(T)).reference, 'Psalms 117');
 
   // memNextChunkState — interval/level transitions
   const freshChunk = m.memMakeChunks('one two three', 'x')[0];

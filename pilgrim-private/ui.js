@@ -18,7 +18,7 @@ import {
   setPendingDeleteId, setPendingDeleteRefIdx, setTags,
   // Section 03 — utilities
   toast, toastSuccess, closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml, imgFitSize,
-  fmtDate, todayStr, pdfSafe, pdfTablesToText, setAppHeight, updateOffline, bookOrder,
+  fmtDate, todayStr, localDateStr, pdfSafe, pdfTablesToText, setAppHeight, updateOffline, bookOrder,
   mfBlob, prevDay,
   // Section 07 — data model
   makeRef, migrateStudy, activeRef, TEMPLATES, TAG_PALETTE, DEFAULT_TAGS,
@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.54.0';
+} from './utils.js?v=4.55.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.54.0';
+} from './storage.js?v=4.55.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.54.0';
+} from './media.js?v=4.55.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.54.0';
+} from './tts.js?v=4.55.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.54.0';
+} from './sync.js?v=4.55.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.54.0';
+} from './studyTools.js?v=4.55.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.54.0';
+} from './memory.js?v=4.55.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2213,6 +2213,7 @@ function bpUpdatePreview(){
 function bpConfirm(){
   var v=document.getElementById('bp-verse-input').value.trim();
   if(!v){toast('Please enter a verse or range');return;}
+  if(!/^\d+(\s*[-\u2013]\s*\d+)?$/.test(v)){toast('Enter a verse number (e.g. 1-5)');return;} // v4.55.0: block text like "xyz"
   var ref=_bpBook+' '+_bpChapter+':'+v;
   if(_bpMode==='read'){
     var rref=document.getElementById('read-ref');
@@ -2444,7 +2445,7 @@ function renderReadChapter(targetVerse){
       var label=b.newBook?(b.book+' '+b.chapter):('Chapter '+b.chapter);
       divider='<div class="read-chapter-break">'+label+'</div>';
     }
-    return divider+'<span class="readverse" id="read-v-'+i+'"><sup class="vnum" onclick="readSelectVerse('+i+')" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+    return divider+'<span class="readverse" id="read-v-'+i+'" onclick="readVerseTap('+i+')"><sup class="vnum" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('read-display').innerHTML='<div class="scrtext">'+html+'</div>';
   var scr=document.getElementById('read-scroll');
@@ -2549,6 +2550,27 @@ function readSelectVerse(idx){
   _readSelectedIdx=idx;
   var bt=document.getElementById('read-bibletools-btn');if(bt){bt.disabled=false;bt.style.color='var(--gold)';bt.style.borderColor='var(--gold)';}
   highlightReadVerse(idx);
+}
+/**
+ * v4.55.0: click/tap handler for the whole verse (text and number). Selects the verse like the
+ * number used to; tapping the selected verse again clears the selection (Bible Tools goes back
+ * to disabled). Does nothing while the user is dragging/holding to select text, so copying still
+ * works, and never deselects while Read audio is playing.
+ * @param {number} idx - Index into the Read verse list.
+ */
+function readVerseTap(idx){
+  var sel=window.getSelection&&window.getSelection();
+  if(sel&&String(sel).length>0)return;
+  var playing=(_ttsSource==='read'&&_ttsActive);
+  if(!playing&&_readSelectedIdx===idx){readDeselectVerse();return;}
+  readSelectVerse(idx);
+}
+/** Clears the Read tab's selected verse and disables Bible Tools (it needs a selected verse). */
+function readDeselectVerse(){
+  _readSelectedIdx=null;
+  clearReadFocus();
+  var bt=document.getElementById('read-bibletools-btn');
+  if(bt){bt.disabled=true;bt.style.color='var(--txt3)';bt.style.borderColor='var(--border)';}
 }
 /**
  * Scrolls to and visually "focuses" the verse at the given TTS chunk index — called
@@ -2920,12 +2942,14 @@ function skipOnboarding(){
  */
 function trackOpen(s){
   if(!s)return;
-  s.lastOpened=new Date().toISOString().split('T')[0];
+  s.lastOpened=todayStr(); // v4.55.0: local date (was UTC)
   // Update streak tracking key
   var today=todayStr();
   var sk=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-  // Three cases: same day (no-op), consecutive day (increment), gap (reset to 1)
+  // Cases: same day (no-op), consecutive day (increment), gap (reset to 1).
+  // v4.55.0: a stored lastDay AHEAD of local today (saved earlier as a UTC date) is pulled back to today, keeping the streak.
   if(sk.lastDay===today){/* already tracked today */}
+  else if(sk.lastDay>today){sk.lastDay=today;}
   else if(sk.lastDay===prevDay(today)){sk.streak=(sk.streak||0)+1;sk.lastDay=today;}
   else{sk.streak=1;sk.lastDay=today;}
   localStorage.setItem(SK_STREAK,JSON.stringify(sk));
@@ -2943,7 +2967,7 @@ function renderStats(){
   var today=todayStr();
   // Streak expires if lastDay wasn't today or yesterday
   var streakVal=sk.streak||0;
-  if(sk.lastDay&&sk.lastDay!==today&&sk.lastDay!==prevDay(today))streakVal=0;
+  if(sk.lastDay&&sk.lastDay<prevDay(today))streakVal=0; // v4.55.0: ISO dates compare as text; a lastDay ahead of local today still counts
 
   var totalWords=studies.reduce(function(a,s){var w=(s.fieldNotes||'').trim().split(/\s+/).filter(function(x){return x.length>0;});return a+(s.fieldNotes&&s.fieldNotes.trim()?w.length:0);},0);
 
@@ -3218,7 +3242,7 @@ window.addEventListener('resize',function(){
  * Progress-tab seed studies so they look like real recent activity.
  * @param {number} daysAgo - Number of days before today.
  */
-function tourOffsetDate(daysAgo){var dt=new Date();dt.setDate(dt.getDate()-daysAgo);return dt.toISOString().split('T')[0];}
+function tourOffsetDate(daysAgo){var dt=new Date();dt.setDate(dt.getDate()-daysAgo);return localDateStr(dt);}
 /**
  * Saves a canned "Archē" word-study result to the global Word List, tagged
  * _tourDemo:true. Uses fixed demo content rather than a live Groq lookup so
@@ -4297,6 +4321,13 @@ function forceRefreshApp(){
 // ════════════════════════════════════════════════════════
 
 // ── Export block ────────────────────────────────────────────────────────────
+// v4.55.0: Esc closes the Bible Tools sheet (outside tap and the Close button already did).
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var bt=document.getElementById('bt-overlay');
+  if(bt&&bt.classList.contains('on'))closeOverlay('bt-overlay');
+});
+
 export {
   // S05 — Editor Setup: Quill instances + dirty flags (read by storage.js, tts.js via window.*)
   _qFN, _qConcl, _qOutline,
@@ -4336,7 +4367,7 @@ export {
   // S23a — Read Tab (Bible Reader)
   fetchReadChapter, readPrevChapter, readNextChapter, startStudyFromReading, saveReadVerseToMemory, getReadText,
   memAutoFetchVerseText,
-  getReadVerseChunks, getReadStartIdx, readSelectVerse, openBibleToolsFromRead, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
+  getReadVerseChunks, getReadStartIdx, readSelectVerse, readVerseTap, readDeselectVerse, openBibleToolsFromRead, highlightReadVerse, clearReadFocus, readSkipVerse, readAutoAdvance,
   toggleVolumePopout, closeVolumePopoutOnce,
   // S24 — Onboarding
   openExportBackupModal, updateExportSelCount, toggleExportSelectAll, confirmExport,

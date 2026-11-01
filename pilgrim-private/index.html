@@ -699,7 +699,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div style="padding:16px 16px 0;"><button class="btn btn-sec btn-sm" style="width:100%;gap:6px" onclick="openLexiconModalFor('global')">✦ Look Up Word &amp; Save to Word List</button></div>
     <div id="word-list" style="padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
   </div>
-  <div class="scroll" id="lib-memory-panel" style="display:none;">
+  <div class="scroll" id="lib-memory-panel" style="display:none;padding-bottom:88px;">
     <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:8px;">
       <div id="mem-due-banner" style="display:none;font-size:13px;color:var(--gold);text-align:center;padding:4px;"></div>
       <div style="display:flex;gap:8px;">
@@ -782,7 +782,7 @@ input[type="range"]{accent-color:var(--gold)}
   <div class="scroll" id="read-scroll">
     <div id="read-display"><div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above, or tap the book icon to browse</p></div></div>
   </div>
-  <div style="padding:0 16px 20px">
+  <div style="padding:0 16px 88px"><!-- v4.55.0: extra bottom room so the floating Guide button never covers these buttons -->
     <button class="btn btn-primary btn-full" id="read-start-study-btn" style="display:none" onclick="startStudyFromReading()">Start a Study from this Passage</button>
     <button class="btn btn-sec btn-full" id="read-save-mem-btn" style="display:none;margin-top:8px" onclick="saveReadVerseToMemory()">Save Passage to Memory</button>
   </div>
@@ -1849,7 +1849,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.54.0"></script>
+<script type="module" src="app.js?v=4.55.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

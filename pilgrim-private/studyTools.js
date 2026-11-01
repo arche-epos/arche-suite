@@ -13,15 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.54.0';
+} from './utils.js?v=4.55.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.54.0';
-import { openConfirm } from './media.js?v=4.54.0';
-import { syncToGist } from './sync.js?v=4.54.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.54.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.54.0';
-import { decodeMorph } from './morph.js?v=4.54.0';
-import { hebrewVerses } from './versemap.js?v=4.54.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.55.0';
+import { openConfirm } from './media.js?v=4.55.0';
+import { syncToGist } from './sync.js?v=4.55.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.55.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.55.0';
+import { decodeMorph } from './morph.js?v=4.55.0';
+import { hebrewVerses } from './versemap.js?v=4.55.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -344,7 +344,7 @@ function openPasteModal(){
  */
 function confirmPaste(){
   var t=document.getElementById('paste-input').value.trim();
-  if(!t)return;
+  if(!t){toast('Paste the verse text first');return;} // v4.55.0: was a silent no-op
   var transEl=document.getElementById('paste-trans');
   var pastedTrans=(transEl&&transEl.value.trim())||'';
   if(pastedTrans){sett.lastPasteTrans=pastedTrans;localStorage.setItem(SK_SETT,JSON.stringify(sett));} // Remember last pasted label so the next paste modal pre-fills it
@@ -2278,12 +2278,13 @@ function saveLexWord(){
     var gWords=[];try{gWords=JSON.parse(localStorage.getItem(SK_WORDS)||'[]');}catch(e){}
     var ar2=activeRef();
     var gWord={id:String(Date.now()+Math.random()),query:_lexLastResult.query,englishGloss:_lexLastResult.englishGloss||'',strongsNumber:_lexLastResult.strongsNumber||'',html:_lexLastResult.html,reference:ar2?ar2.reference:'',savedAt:new Date().toISOString(),inGlobal:true,inStudy:false,_studyId:null,_studyTitle:'(no study)'};
+    var gDup=gWords.some(function(w){return w.query===gWord.query;}); // v4.55.0: tell the user when the word was already saved
     gWords=gWords.filter(function(w){return w.query!==gWord.query;}); // Remove prior entry for same word before re-adding
     gWords.push(gWord);
     try{localStorage.setItem(SK_WORDS,JSON.stringify(gWords));}catch(e){toast('Storage full');return;}
     closeOverlay('lex-save-overlay');
     if(libTab==='words')renderWordList(); // v4.49.2: show the new word immediately
-    toast('Word saved to Word List');
+    toast(gDup?'That word is already saved':'Word saved to Word List');
     return;
   }
   var ar=activeRef();
@@ -2302,6 +2303,7 @@ function saveLexWord(){
   // Merge by query string — if the word was already saved, update its flags rather than overwriting
   // This preserves both inGlobal and inStudy if either was already set on a prior save
   var existing=cur.words.find(function(w){return w.query===word.query;});
+  var alreadySaved=!!existing&&(!toGlobal||!!existing.inGlobal)&&(!toStudy||!!existing.inStudy); // v4.55.0: nothing new to add
   if(existing){
     if(toGlobal)existing.inGlobal=true;
     if(toStudy)existing.inStudy=true;
@@ -2317,7 +2319,7 @@ function saveLexWord(){
   if(toStudy)renderStudyWords();
   if(libTab==='words')renderWordList();
   closeOverlay('lex-save-overlay');
-  toast('Word saved'+(toGlobal&&toStudy?' to both lists':toGlobal?' to Word List':' to study'));
+  toast(alreadySaved?'That word is already saved':'Word saved'+(toGlobal&&toStudy?' to both lists':toGlobal?' to Word List':' to study'));
   if(online)setTimeout(function(){syncToGist(true);},800);
 }
 /**
@@ -2431,15 +2433,39 @@ async function _lexClassify(query){
   if(!nums||!nums.length)return [];
   var greek=null,hebrew=null;
   var out=[];
+  var q=query.toLowerCase().trim();
   for(var i=0;i<nums.length;i++){
     var sn=nums[i];
     var dictName=_dictForStrongs(sn);
     if(dictName==='greek'){if(!greek)greek=await getStrongsDict('greek');}else{if(!hebrew)hebrew=await getStrongsDict('hebrew');}
     var entry=(dictName==='greek'?greek:hebrew)[sn];
     if(!entry)continue;
-    out.push({strongsNumber:sn,originalWord:entry.lemma||'',transliteration:entry.translit||'',differentiator:(entry.strongs_def||'').trim().slice(0,90)});
+    // v4.55.0 ranking tier: 0 = Strong's own definition uses the searched word ("to love ..."), 1 = only a KJV rendering does ("(be-)love(-ed)"), 2 = neither
+    var inDef=(entry.strongs_def||'').toLowerCase().split(/[^a-z]+/).indexOf(q)>=0;
+    var inKjv=(entry.kjv_def||'').toLowerCase().split(/[^a-z]+/).indexOf(q)>=0;
+    out.push({strongsNumber:sn,originalWord:entry.lemma||'',transliteration:entry.translit||'',differentiator:_lexTrimWords((entry.strongs_def||'').trim(),90),_tier:inDef?0:inKjv?1:2,_idx:i,_verses:0});
   }
+  // v4.55.0 ranking: tier first, then the word used in the most verses (counted from the occurrence index), then the
+  // original order. If the index cannot load, only the tier rule applies. (Tested on love, faith, peace, word, spirit, sin.)
+  try{
+    var oi=await fetchGroundData('strongs/occurrence-index.json');
+    out.forEach(function(s){var enc=oi&&oi.o&&oi.o[s.strongsNumber];s._verses=enc?enc.split(',').length:0;});
+  }catch(e){}
+  out.sort(function(a,b){return (a._tier-b._tier)||(b._verses-a._verses)||(a._idx-b._idx);});
   return out;
+}
+/**
+ * v4.55.0: shortens text to at most `max` characters WITHOUT cutting a word in half; adds an ellipsis when shortened.
+ * @param {string} str
+ * @param {number} max
+ * @returns {string}
+ */
+function _lexTrimWords(str,max){
+  if(str.length<=max)return str;
+  var cut=str.slice(0,max);
+  var sp=cut.lastIndexOf(' ');
+  if(sp>max*0.5)cut=cut.slice(0,sp);
+  return cut.replace(/[\s,;:(\[-]+$/,'')+'\u2026';
 }
 
 /**

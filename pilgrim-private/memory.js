@@ -1,5 +1,5 @@
 // memory.js — Pilgrim Private ES Module (v4.37.0)
-// Scripture Memory. Stage 1: the store + the Library "Memory" tab. Stage 2 (this version):
+// Scripture Memory. Stage 1: the store + the Library "Memory" tab. Stage 2:
 // spaced-recall quizzes — "Test Me" (due chunks, updates schedule) and "Practice All"
 // (any chunk, schedule untouched) — spec-scripture-memory-stage2-v1.md. Pure logic lives
 // in memory-core.js; this module owns storage I/O, the Memory tab UI, and the quiz overlay.
@@ -9,13 +9,13 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.54.0';
-import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat } from './tts.js?v=4.54.0';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.55.0';
+import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat } from './tts.js?v=4.55.0';
 import {
-  memEmptyStore, memNormalizeStore, memNormRefKey, memMakeItem, memMerge, memBuildVerseRef,
+  memEmptyStore, memNormalizeStore, memAddKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
-  memGradeAttempt, memNextChunkState, memLogPracticeAttempt, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.54.0';
+  memGradeAttempt, memNextChunkState, MEM_LEVEL_MAX
+} from './memory-core.js?v=4.55.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
@@ -89,8 +89,8 @@ function memReplaceFromRemote(remote) {
 function memAddVerse(v) {
   if (!v || !String(v.reference || '').trim() || !String(v.text || '').trim()) return 'invalid';
   var store = memLoad();
-  var key = memNormRefKey(v.reference, v.translation);
-  var dup = store.items.some(function(it) { return memNormRefKey(it.reference, it.translation) === key; });
+  var key = memAddKey(v.reference, v.translation); // v4.55.0: "Psalm" and "Psalms" count as the same book here
+  var dup = store.items.some(function(it) { return memAddKey(it.reference, it.translation) === key; });
   if (dup) return 'duplicate';
   store.items.push(memMakeItem(v, _memNewId(), new Date().toISOString()));
   if (!memSave(store)) return 'failed';
@@ -305,8 +305,8 @@ function memPracticeGap(v) {
 
 /**
  * Opens the quiz overlay. mode 'due' = "Test Me" (due chunks only, grading updates the
- * schedule). mode 'all' = "Practice All" (every chunk, grading is logged but never
- * changes level/interval/nextReviewDate).
+ * schedule). mode 'all' = "Practice All" (every chunk, nothing is written: v4.55.0 stopped
+ * logging practice-only history, so neither Practice mode saves anything).
  * @param {'due'|'all'} mode
  */
 function memOpenQuiz(mode) {
@@ -379,7 +379,7 @@ function _memRenderQuizStep() {
   var solo = _memQuiz.mode === 'solo';
   var effLevel = solo ? _memEffLevel(step) : chunk.level;
   if (progress) progress.textContent = (_memQuiz.idx + 1) + ' of ' + _memQuiz.queue.length +
-    (solo ? ' \u00b7 Practice (not saved)' : _memQuiz.mode === 'all' ? ' \u00b7 Practice' : ' \u00b7 Test Me');
+    (_memQuiz.mode === 'due' ? ' \u00b7 Test Me' : ' \u00b7 Practice (not saved)');
   var cueNote = effLevel === 0 ? 'Read it aloud, then type it below from memory.'
     : effLevel >= MEM_LEVEL_MAX ? 'No cue \u2014 type the whole thing from memory.'
     : 'Fill in the blanks from memory.';
@@ -430,10 +430,8 @@ function memSubmitQuizAnswer() {
   var typed = ta ? ta.value : '';
   ttsPracticeStop();
   var grade = memGradeAttempt(step.chunk.text, typed);
-  if (_memQuiz.mode !== 'solo') { // Practice (solo) is free practice: nothing is written to the store
-    var updated = _memQuiz.mode === 'all'
-      ? memLogPracticeAttempt(step.chunk, grade.pct)
-      : memNextChunkState(step.chunk, grade.pct);
+  if (_memQuiz.mode === 'due') { // v4.55.0: only Test Me writes. Practice and Practice All are free practice: nothing is saved
+    var updated = memNextChunkState(step.chunk, grade.pct);
     _memUpdateChunk(step.itemId, step.chunkId, updated);
     step.chunk = updated;
   }
@@ -448,7 +446,7 @@ function memSubmitQuizAnswer() {
     resultEl.innerHTML =
       '<div style="font-size:16px;font-weight:600;color:' + (grade.pct >= 100 ? 'var(--gold)' : grade.pct < 50 ? 'var(--crimsonbright)' : 'var(--txt1)') + ';margin-bottom:8px;">' + grade.pct + '% correct</div>' +
       '<div style="font-family:var(--font-body);font-size:14px;line-height:1.7;color:var(--txt2);">' + diffHtml + '</div>' +
-      (_memQuiz.mode === 'solo' ? '<div style="font-size:11px;color:var(--txt4);margin-top:10px;font-style:italic;">Practice only \u2014 nothing was saved to your schedule.</div>' : '');
+      (_memQuiz.mode !== 'due' ? '<div style="font-size:11px;color:var(--txt4);margin-top:10px;font-style:italic;">Practice only \u2014 nothing was saved to your schedule.</div>' : '');
   }
   var ta2 = document.getElementById('mem-quiz-input');
   if (ta2) ta2.disabled = true;
