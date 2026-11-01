@@ -308,7 +308,10 @@ that avoids the excluded list.
 - Export a study as a PDF → **Export Study to PDF…** at the bottom of the Study
   Tools tab: choose which sections and tools to include, then export
 - Send someone a link to a study → **Share Study Link** (bottom of the Study
-  Tools tab), or **Share** on the study's card in Library
+  Tools tab), or **Share** on the study's card in Library. The link opens
+  Pilgrim Private: the other person signs in with their PIN and sees an Import
+  card. The study (without scripture text, AI results or photos) is kept for 14
+  days, then the link says it has expired and you share again.
 
 ### Progress
 - See my study streak, totals, most-studied books, or recent activity →

@@ -95,6 +95,8 @@ function parseRef(ref){
   return{book:bookId,chapter:parseInt(m[2]),startVerse:m[3]?parseInt(m[3]):null,endVerse:m[4]?parseInt(m[4]):null};
 }
 var APP_SHARE_URL='https://www.archestudytools.com/pilgrim-public/';
+/** v4.57.0: where shared STUDY links point (Pilgrim Private; recipients sign in with their PIN). */
+var PRIVATE_APP_URL='https://archestudytools.com/pilgrim-private/';
 var SK_DIAG='bsn_diag_log';
 var SK_ERROR_LOG='bsn_error_log';
 var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TAGS_DEL='bsn_tags_deleted_v1';
@@ -581,7 +583,18 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.56.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.57.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Share Study Link now works. The link opens Pilgrim Private (sign in with your PIN, then you see the usual Import card). Before, the link pointed at the offline public page and could not be opened. A shared study is kept on the server for 14 days, then the link says it has expired and asks you to share again.",
+      "fix: the Import card now treats the title, reference and teacher of a shared study as plain text.",
+      "new: the feedback form has a \u201CThis is a test. Do not send a report.\u201D switch. With it on, the form is checked but nothing is sent to GitHub. It turns off by itself and is not saved.",
+      "note: Share Study Link, the test switch, the characters-read-aloud count and the diagnostics truncation fix need the updated server file (arche-proxy) and a new SHARE_LINKS store. Until it is deployed, sharing falls back to a long link and the test switch will still send a report, so deploy the server first.",
+      "note: no saved studies, Memory verses, words, settings or backups were changed. A shared study contains no scripture text, AI results or photos. Cache-buster bumped to 4.57.0."
+    ]
+  },
+  {
+    version:'4.56.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: wording. Diagnostics and sync messages no longer say Groq, Gist or Push; they now say AI Study Tools, backup and Restore. New Error Log entries are named Backup (Sync), Restore (Sync) and Force Restore (Sync). Entries already in your log keep their old names.",
@@ -2783,7 +2796,7 @@ function undoSafetyCopy(){
 export {
   // Section 01 — constants
   WORKER_URL, ACTIVE_USER, trackEvent, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
-  APP_SHARE_URL,
+  APP_SHARE_URL, PRIVATE_APP_URL,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_PGCHAT,
   SK_UPDATE_SKIP,

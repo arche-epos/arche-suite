@@ -5,7 +5,7 @@
 
 import {
   // Section 01 — constants
-  WORKER_URL, APP_SHARE_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
+  WORKER_URL, APP_SHARE_URL, PRIVATE_APP_URL, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
   SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_PGCHAT, SK_UPDATE_SKIP,
   SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_ERROR_LOG,
@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.56.0';
+} from './utils.js?v=4.57.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.56.0';
+} from './storage.js?v=4.57.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.56.0';
+} from './media.js?v=4.57.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.56.0';
+} from './tts.js?v=4.57.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.56.0';
+} from './sync.js?v=4.57.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.56.0';
+} from './studyTools.js?v=4.57.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.56.0';
+} from './memory.js?v=4.57.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1788,7 +1788,7 @@ function shareStudyLinkById(id){
     // Try a short server-side link first (fixes Gmail/native-target 400 on long URLs);
     // fall back to the raw base64 hash link if the proxy call fails for any reason.
     _getShortShareUrl(encoded).then(function(shortUrl){
-      var url=shortUrl||(APP_SHARE_URL+'#study='+encoded);
+      var url=shortUrl||(PRIVATE_APP_URL+'#study='+encoded);
       _dispatchShare(url,title,shareText);
     });
   }catch(e){logError('Generate Share Link',e);toast('Could not generate link: '+e.message);}
@@ -1802,7 +1802,7 @@ function shareStudyLinkById(id){
 function _getShortShareUrl(encoded){
   return fetch(WORKER_URL+'/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:encoded})})
     .then(function(r){if(!r.ok)throw new Error('share http '+r.status);return r.json();})
-    .then(function(d){return d&&d.slug?'https://archestudytools.com/s/'+d.slug:null;})
+    .then(function(d){return d&&d.slug?PRIVATE_APP_URL+'#share='+d.slug:null;})
     .catch(function(){return null;});
 }
 /**
@@ -1860,21 +1860,55 @@ function copyLinkFromModal(){
  * If found, decodes the base64 payload and opens the import confirmation overlay.
  */
 function checkImportHash(){
+  var hash=window.location.hash||'';
+  if(hash.indexOf('#share=')===0){_importFromShareSlug(hash.slice(7));return;}
   try{
-    var hash=window.location.hash;
-    if(!hash||!hash.startsWith('#study='))return;
-    var encoded=hash.slice(7);
+    if(!hash.startsWith('#study='))return;
     // Reverse of the share encode: atob → escape → decodeURIComponent handles non-ASCII
-    var json=decodeURIComponent(escape(atob(encoded)));
-    var s=JSON.parse(json);
-    if(!s||!s.id)return;
-    _importPending=s;
-    var preview=document.getElementById('import-preview');
-    if(preview){var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';preview.innerHTML='<strong style="color:var(--txt1);font-family:\'EB Garamond\',serif;font-size:16px">'+(s.title||'Untitled Study')+'</strong><br><span style="color:var(--gold);font-size:13px">'+(ref0||'No reference')+'</span>'+(s.teacher?'<br><span style="font-size:12px;color:var(--txt3)">'+escHtml(s.teacher)+'</span>':'')+'<br><span style="font-size:11px;color:var(--txt4)">'+fmtDate(s.date)+'</span>';}
-    document.getElementById('import-overlay').classList.add('on');
+    _openImportPreview(_decodeSharedStudy(hash.slice(7)));
   }catch(e){ // v4.56.0: a broken #study= link now says so (was silent)
     toast('That share link could not be opened. Ask for a new one.');window.location.hash='';
   }
+}
+/**
+ * Decodes the base64 study payload of a share link. Throws if it is not a valid study.
+ * @param {string} encoded - Base64 payload (from #study= or from the /share route).
+ * @returns {Object} The shared study object.
+ */
+function _decodeSharedStudy(encoded){
+  var s=JSON.parse(decodeURIComponent(escape(atob(encoded))));
+  if(!s||!s.id)throw new Error('not a study');
+  return s;
+}
+/**
+ * Shows the import card for a shared study (title, reference, teacher, date). Text is escaped
+ * because the study comes from another person (v4.57.0).
+ * @param {Object} s - The decoded shared study.
+ */
+function _openImportPreview(s){
+  _importPending=s;
+  var preview=document.getElementById('import-preview');
+  if(preview){var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';preview.innerHTML='<strong style="color:var(--txt1);font-family:\'EB Garamond\',serif;font-size:16px">'+escHtml(s.title||'Untitled Study')+'</strong><br><span style="color:var(--gold);font-size:13px">'+escHtml(ref0||'No reference')+'</span>'+(s.teacher?'<br><span style="font-size:12px;color:var(--txt3)">'+escHtml(s.teacher)+'</span>':'')+'<br><span style="font-size:11px;color:var(--txt4)">'+fmtDate(s.date)+'</span>';}
+  document.getElementById('import-overlay').classList.add('on');
+}
+/**
+ * Opens a short share link (#share=<slug>): fetches the study from the arche-proxy /share route
+ * and shows the normal import card. Says so if the link has expired (14 days) or cannot be reached.
+ * @param {string} slug - The 8-character share code from the link.
+ */
+function _importFromShareSlug(slug){
+  if(!/^[a-z0-9]{8}$/.test(slug)){toast('That share link could not be opened. Ask for a new one.');window.location.hash='';return;}
+  fetch(WORKER_URL+'/share/'+slug)
+    .then(function(r){
+      if(r.status===404){toast('This share link has expired. Ask for a new one.');window.location.hash='';return null;}
+      if(!r.ok)throw new Error('share http '+r.status);
+      return r.json();
+    })
+    .then(function(d){
+      if(!d)return;
+      _openImportPreview(_decodeSharedStudy(d.payload));
+    })
+    .catch(function(e){logError('Open Share Link',e);toast('Could not open that share link. Check your connection and try again.');window.location.hash='';});
 }
 /**
  * Confirms and saves the pending shared study import from _importPending.
@@ -3391,6 +3425,18 @@ function toggleDiagSection(){
 /**
  * Toggles the diagFeedback preference, persists it to settings, and updates the toggle UI.
  */
+/**
+ * Flips the "This is a test" switch in the feedback form (in memory only, never saved).
+ */
+function toggleFbTest(){_fbTest=!_fbTest;updateFbTestUI();}
+/**
+ * Redraws the "This is a test" switch. A div, not a checkbox (Android WebView checkbox rule).
+ */
+function updateFbTestUI(){
+  var row=document.getElementById('diag-fb-test'),box=document.getElementById('diag-fb-test-box');
+  if(box)box.textContent=_fbTest?'\u2713':'';
+  if(row)row.setAttribute('aria-checked',_fbTest?'true':'false');
+}
 function toggleDiagFeedback(){
   sett.diagFeedback=!sett.diagFeedback;
   localStorage.setItem(SK_SETT,JSON.stringify(sett));
@@ -3738,6 +3784,7 @@ function diagFbToggleExtended(){
   else{ta.maxLength=2000;if(ta.value.length>2000)ta.value=ta.value.slice(0,2000);if(counter)counter.textContent=ta.value.length+' / 2,000';}
 }
 var _fbImages=[];
+var _fbTest=false; // v4.57.0: in-memory only; 'This is a test' sends nothing to GitHub
 /**
  * Triggers the image picker input for attaching screenshots to feedback (max 3 images).
  */
@@ -3812,6 +3859,7 @@ function diagFbReset(){
   document.getElementById('diag-fb-text').value='';
   document.getElementById('diag-fb-counter').textContent='0 / 2,000';
   document.getElementById('diag-fb-extended').checked=false;
+  _fbTest=false;updateFbTestUI();
   _fbImages=[];
   diagFbRenderThumbs();
   document.getElementById('diag-send-status').textContent='';
@@ -3926,11 +3974,12 @@ async function submitFeedback(){
       diagnosticResults:_diagResults,
       description:desc,
       images:images,
-      errorLog:loadErrorLog().slice(0,20)
+      errorLog:loadErrorLog().slice(0,20),
+      test:_fbTest
     };
-    await sendFeedback(payload);
+    var sent=await sendFeedback(payload);
     statusEl.style.color='var(--sagebright)';
-    statusEl.textContent='\u2713 Feedback sent!';
+    statusEl.textContent=sent&&sent.test?'\u2713 Test complete. Nothing was sent.':'\u2713 Feedback sent!';
     // Reset pills/text/images after a brief delay so the confirmation is visible first.
     // diagFbReset() also clears diag-send-status — that's fine once the 2s window has passed.
     setTimeout(diagFbReset,2000);
@@ -4381,7 +4430,7 @@ export {
   tourOffsetDate, tourSaveDemoWord, tourSeedProgressData, tourCleanupDemoData,
   TOUR_A_STEPS, TOUR_B_STEPS,
   // S26 — Diagnostics & Feedback
-  _clOpen, _clSectionOpen, clSectionToggle, toggleDiagSection, toggleDiagFeedback,
+  _clOpen, _clSectionOpen, clSectionToggle, toggleDiagSection, toggleDiagFeedback, toggleFbTest,
   updateDiagFeedbackToggleUI, openDiagModal, closeDiagModal,
   runQuickTest, openFeedbackDirect, runDiagnostics,
   loadDiagLog, saveDiagLog, renderDiagLog, diagToggleEntry,
