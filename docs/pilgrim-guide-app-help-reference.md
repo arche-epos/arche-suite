@@ -315,8 +315,37 @@ that avoids the excluded list.
 
 ### Progress
 - See my study streak, totals, most-studied books, or recent activity →
-  **Progress** tab (read-only): Day Streak, Total Studies, Words Written, AI Tools
-  Run, Most Studied Books, and Recent Activity
+  **Progress** tab: Day Streak, Total Studies, Words Written, AI Tools
+  Run, the Reading Plan card, Most Studied Books, and Recent Activity
+
+### Reading Plan (Progress tab)
+- Read the whole Bible in story order and track it → **Progress** tab >
+  **Reading Plan: Story Flow** card > **Open plan**. One plan for now, called
+  Story Flow: 8 parts (Beginnings, Exodus and Law, Land, United Kingdom, Divided
+  Kingdom, Exile and Return, Gospels, Acts and the Letters). Prophets sit beside
+  the kings they served, the four Gospels are read as one story, and each letter
+  sits where it was written in Acts.
+- Check off what I have read → tap a chapter. Each part and each group opens and
+  closes with a tap; the part and group holding my place open by themselves. In
+  the Gospels each event is one check (the passages from every Gospel are listed
+  on it). Tap a checked chapter again to uncheck it; **Undo** appears for a few
+  seconds. The date I read each chapter is saved.
+- Find my place → the card says **Last read** (the furthest chapter I have
+  checked) and the plan has **Jump to Last Read**. It does not move when I check
+  an earlier chapter.
+- I skipped some chapters → nothing jumps. The card (and the plan) shows "N
+  unchecked chapters before here"; tap it to list them, check them off in place,
+  or **Jump to group**.
+- Percentages → whole plan, each part and each group. A bar never shows 100%
+  while anything is unchecked; a tick appears only at true 100%. The overall
+  percentage counts the Gospels by their chapters.
+- Chronicles → it retells Samuel and Kings and sits right after the part it
+  parallels. **Hide Chronicles** (top of the plan) removes it from the list and
+  the percentages; what I already checked is kept.
+- Where it is saved → on this device, in my account's backup (Settings > Study
+  Sync > Backup / Restore), in a Back up / Export file, and in the Clear All Data
+  safety copy. **Clear All Data** removes it. Not included: reminders, other
+  plans, tapping a chapter to open it in Read (not built yet).
 
 ### Settings
 Settings sections, top to bottom: Study Sync, Appearance, Listen / Text-to-Speech,

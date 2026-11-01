@@ -103,6 +103,7 @@ var SK='bsn_studies_v2', SK_SETT='bsn_settings_v1', SK_TAGS='bsn_tags_v1', SK_TA
 var SK_OB='bsn_ob_done', SK_TAB_HINTS='bsn_tab_hints_shown';
 var SK_UPDATE_SKIP='bsn_update_skip'; // Intentionally NOT namespaced in activateUser() — tracks which app version this browser dismissed the update banner for, not per-user study data (same treatment as bsn_active_user)
 var SK_STREAK='bsn_streak', SK_TTS_SETT='bsn_tts_sett', SK_WORDS='bsn_words_global', SK_MEM='bsn_memverses'; // SK_MEM: Scripture Memory store (v4.36.0) — new key, no legacy un-suffixed data to migrate
+var SK_READPLAN='bsn_readplan'; // Reading Plans progress (v4.58.0) — new key, no legacy un-suffixed data to migrate; namespaced per user in activateUser()
 var SK_TOUR_STUDY_SEEN='bsn_tour_study_seen', SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen';
 var SK_PGCHAT='bsn_pgchat'; // Pilgrim Guide chat (v4.53.0): last ~30 messages, per user. NOT in backups or the safety copy; removed by Clear All through the existing per-user suffix rule. New key, no legacy data to migrate. // Guided Tours "seen" flags — namespaced per-user below, same as the other SK_* keys
 
@@ -523,6 +524,7 @@ function activateUser(userId){
   SK_TTS_SETT='bsn_tts_sett_'+userId;
   SK_WORDS='bsn_words_global_'+userId;
   SK_MEM='bsn_memverses_'+userId;
+  SK_READPLAN='bsn_readplan_'+userId;
   SK_TOUR_STUDY_SEEN='bsn_tour_study_seen_'+userId;
   SK_TOUR_SETTINGS_SEEN='bsn_tour_settings_seen_'+userId;
   SK_PGCHAT='bsn_pgchat_'+userId;
@@ -583,7 +585,18 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.57.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.58.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Reading Plan. Open the Progress tab and tap Open plan on the Reading Plan card. Story Flow walks you through the whole Bible in story order: Genesis to the Law, the Land, the kingdom years with each prophet beside the king he served, exile and return, the four Gospels as one story, then Acts with each letter where it was written. Tap a chapter to check it off. Chapters are grouped, and each part and group opens and closes so you never scroll the whole list.",
+      "new: Last Read. The furthest chapter you have checked is your bookmark; Jump to Last Read takes you straight there. If you skip ahead, nothing jumps and the Progress card quietly says how many unchecked chapters are before your bookmark, and tapping it lists them so you can check them off in place.",
+      "new: progress bars for the whole plan, each part and each group. A bar never shows 100% while anything is unchecked. In the Gospels every event is one check, and the overall percentage counts the Gospels by their chapters.",
+      "new: Hide Chronicles. Chronicles retells Samuel and Kings, so it sits right after the part it parallels. Turn on Hide Chronicles to remove it from the list and the percentages; anything you already checked is kept. Unchecking a chapter offers Undo. The date you read each chapter is saved.",
+      "note: reading progress is saved on this device, included in Backup and Restore, JSON backups and the safety copy, and removed by Clear All Data. New saved item only: no studies, Memory verses, words, tags or settings were changed. Cache-buster bumped to 4.58.0."
+    ]
+  },
+  {
+    version:'4.57.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Share Study Link now works. The link opens Pilgrim Private (sign in with your PIN, then you see the usual Import card). Before, the link pointed at the offline public page and could not be opened. A shared study is kept on the server for 14 days, then the link says it has expired and asks you to share again.",
@@ -2750,14 +2763,14 @@ var SK_SAFETY_PREFIX='bsn_safety_snapshot_';
 /** @returns {string} localStorage key of the active user's safety copy. */
 function safetyKey(){return SK_SAFETY_PREFIX+ACTIVE_USER;}
 /**
- * Saves one raw copy of the active user's studies, tags, words, Memory, streak and settings.
+ * Saves one raw copy of the active user's studies, tags, words, Memory, reading plan progress, streak and settings.
  * Falls back to a copy without photo bytes when storage is tight. Replaces any earlier safety copy.
  * Transcripts/audio (IndexedDB) are not included.
  * @param {string} label - What triggered it (shown in Settings).
  * @returns {string} 'ok' | 'nophotos' | 'fail'
  */
 function makeSafetyCopy(label){
-  var keys=[SK,SK_TAGS,SK_TAGS_DEL,SK_WORDS,SK_MEM,SK_STREAK,SK_SETT];
+  var keys=[SK,SK_TAGS,SK_TAGS_DEL,SK_WORDS,SK_MEM,SK_READPLAN,SK_STREAK,SK_SETT];
   var snap={t:new Date().toISOString(),label:label||'',keys:{}};
   try{keys.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)snap.keys[k]=v;});}catch(e){return 'fail';}
   try{localStorage.removeItem(safetyKey());}catch(e){}
@@ -2798,7 +2811,7 @@ export {
   WORKER_URL, ACTIVE_USER, trackEvent, BOLLS_TRANS, BOLLS_BOOKS, parseRef,
   APP_SHARE_URL, PRIVATE_APP_URL,
   SK, SK_SETT, SK_TAGS, SK_TAGS_DEL, SK_OB, SK_TAB_HINTS,
-  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_PGCHAT,
+  SK_DIAG, SK_STREAK, SK_TTS_SETT, SK_WORDS, SK_MEM, SK_READPLAN, SK_TOUR_STUDY_SEEN, SK_TOUR_SETTINGS_SEEN, SK_PGCHAT,
   SK_UPDATE_SKIP,
   // Section 02 — state
   studies, cur, online, sett, _diagResults, hdrCollapsed, scrCollapsed,

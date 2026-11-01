@@ -315,6 +315,43 @@ input[type="range"]{accent-color:var(--gold)}
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px 14px;position:relative;overflow:hidden}
 .stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold),var(--golddim))}
+/* Reading Plans (v4.58.0) */
+.rp-bar{background:var(--bg3);border-radius:50px;overflow:hidden;margin-top:8px}
+.rp-bar-fill{height:100%;background:linear-gradient(90deg,var(--golddim),var(--gold));border-radius:50px;transition:width .25s}
+.rp-gapline{font-size:12px;color:var(--txt3);font-style:italic;margin-top:7px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--border)}
+.rp-tog{width:42px;height:24px;border-radius:50px;background:var(--bg3);border:1px solid var(--borderlit);position:relative;cursor:pointer;flex-shrink:0;transition:background .15s}
+.rp-tog::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--txt3);transition:all .15s}
+.rp-tog.on{background:var(--gold);border-color:var(--gold)}
+.rp-tog.on::after{left:20px;background:var(--bg0)}
+.rp-part{margin-bottom:14px}
+.rp-part-head,.rp-group-head{display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px}
+.rp-part-head{font-family:'EB Garamond',serif;font-size:18px;color:var(--gold)}
+.rp-group{margin:4px 0 4px 10px;padding-left:10px;border-left:1px solid var(--border)}
+.rp-group-head{font-size:15px;color:var(--txt1);min-height:40px}
+.rp-part-name,.rp-group-name{flex:1}
+.rp-count{font-size:12px;color:var(--txt3);font-family:'Crimson Pro',serif}
+.rp-chev{width:14px;color:var(--txt3);font-size:13px;flex-shrink:0}
+.rp-tick{color:var(--sagebright);font-size:14px}
+.rp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px}
+.rp-chip{position:relative;min-width:44px;min-height:40px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r);background:var(--bg2);border:1px solid var(--border);color:var(--txt2);font-size:14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.rp-chip.on{background:var(--gold);border-color:var(--gold);color:var(--bg0);font-weight:600}
+.rp-chip.bm{border-color:var(--goldpale);box-shadow:0 0 0 1px var(--goldpale);margin-bottom:14px}
+.rp-chip.bm::after{content:'Last Read';position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;font-size:9px;color:var(--gold);white-space:nowrap;letter-spacing:.04em}
+.rp-sub{font-size:11px;color:var(--txt4);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 2px}
+.rp-evlist{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px}
+.rp-ev{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rp-ev.on{border-color:var(--gold);background:var(--bg3)}
+.rp-ev.bm{box-shadow:0 0 0 1px var(--goldpale)}
+.rp-box{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--borderlit);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--bg0);font-size:14px;font-weight:700;margin-top:1px}
+.rp-ev.on .rp-box{background:var(--gold);border-color:var(--gold)}
+.rp-ev-title{font-size:15px;color:var(--txt1);line-height:1.3}
+.rp-ev-pass{font-size:12px;color:var(--txt3);margin-top:3px;line-height:1.4}
+.rp-ev-note{font-size:11px;color:var(--txt4);font-style:italic;margin-top:3px}
+.rp-badge{font-size:9px;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--golddim);border-radius:50px;padding:1px 6px;vertical-align:middle;white-space:nowrap}
+.rp-gap-group{margin-bottom:14px}
+.rp-gap-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px;color:var(--txt1)}
+.rp-link{font-size:12px;color:var(--gold);cursor:pointer;text-decoration:underline;white-space:nowrap;padding:8px 0}
+.rp-undo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + var(--safe-b));z-index:700;background:var(--bg3);color:var(--txt1);border:1px solid var(--borderlit);border-radius:50px;padding:6px 8px 6px 18px;font-size:14px;display:flex;align-items:center;gap:12px;max-width:92vw;box-shadow:0 4px 18px rgba(0,0,0,.4)}
 .stat-val{font-family:'EB Garamond',serif;font-size:32px;color:var(--gold);line-height:1}
 .stat-label{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;margin-top:5px;font-weight:600}
 .stat-sub{font-size:12px;color:var(--txt4);margin-top:3px}
@@ -1364,6 +1401,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="scr" id="scr-stats">
   <div class="scroll">
     <div class="stats-grid" id="stats-grid"></div>
+    <div id="stats-readplan"></div>
     <div class="seclabel">Most Studied Books</div>
     <div id="stats-books" style="margin-bottom:18px"></div>
     <div class="seclabel">Recent Activity</div>
@@ -1783,7 +1821,7 @@ input[type="range"]{accent-color:var(--gold)}
 <div class="overlay" id="clearall-overlay">
   <div class="modal">
     <div class="modal-title">Clear All Data?</div>
-    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete everything stored for your account on this device: all studies, notes, AI results, photos and resources, transcripts and audio, your Memory verses, saved words, tags, your Pilgrim Guide chat, settings (including voice and appearance), streak, tutorial progress, and the error log. You stay signed in. A one-time safety copy of your studies, tags, words, Memory and settings is kept so you can undo from Settings &gt; Data &amp; Storage (transcripts and audio are not in it).</p>
+    <p style="font-size:14px;color:var(--txt2);margin-bottom:20px;line-height:1.5">This will permanently delete everything stored for your account on this device: all studies, notes, AI results, photos and resources, transcripts and audio, your Memory verses, your reading plan progress, saved words, tags, your Pilgrim Guide chat, settings (including voice and appearance), streak, tutorial progress, and the error log. You stay signed in. A one-time safety copy of your studies, tags, words, Memory, reading plan progress and settings is kept so you can undo from Settings &gt; Data &amp; Storage (transcripts and audio are not in it).</p>
     <div style="display:flex;gap:10px">
       <button class="btn btn-sec" style="flex:1" onclick="closeOverlay('clearall-overlay')">Cancel</button>
       <button class="btn btn-danger" style="flex:1" onclick="confirmClearAll()">Delete Everything</button>
@@ -1852,7 +1890,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.57.0"></script>
+<script type="module" src="app.js?v=4.58.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
@@ -2030,6 +2068,25 @@ input[type="range"]{accent-color:var(--gold)}
   </div>
   <div id="mem-quiz-body" style="flex:1;overflow-y:auto;padding:20px 16px;"></div>
   <div id="mem-quiz-footer" style="padding:12px 16px calc(12px + var(--safe-b));border-top:1px solid var(--border);flex-shrink:0;"></div>
+</div>
+<!-- Reading Plans overlay (v4.58.0) — full-screen, not a bottom sheet -->
+<div class="overlay" id="rp-overlay" style="z-index:450;background:var(--bg0);align-items:stretch;justify-content:stretch;cursor:default;padding-bottom:0;flex-direction:column;">
+  <div style="padding:calc(14px + var(--safe-t)) 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <button class="btn btn-ghost btn-sm" onclick="rpClosePlan()">Close</button>
+      <div style="font-family:'EB Garamond',serif;font-size:19px;color:var(--gold);">&#10022; Story Flow</div>
+      <div id="rp-overall" style="font-family:'EB Garamond',serif;font-size:22px;color:var(--txt1);min-width:48px;text-align:right;"></div>
+    </div>
+    <div id="rp-overall-bar"></div>
+    <div id="rp-overall-sub" style="font-size:12px;color:var(--txt3);margin-top:6px;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;">
+      <button class="btn btn-sec btn-sm" onclick="rpJumpLast()">Jump to Last Read</button>
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);cursor:pointer;" onclick="rpToggleChron()">
+        <span>Hide Chronicles</span><div class="rp-tog" id="rp-chron-tog"></div>
+      </div>
+    </div>
+  </div>
+  <div id="rp-body" style="flex:1;overflow-y:auto;padding:14px 16px calc(24px + var(--safe-b));"></div>
 </div>
 <!-- Snapshot confirm modal (mobile) -->
 <div class="overlay" id="snapshot-overlay">

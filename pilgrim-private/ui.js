@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.57.0';
+} from './utils.js?v=4.58.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.57.0';
+} from './storage.js?v=4.58.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.57.0';
+} from './media.js?v=4.58.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.57.0';
+} from './tts.js?v=4.58.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.57.0';
+} from './sync.js?v=4.58.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.57.0';
+} from './studyTools.js?v=4.58.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.57.0';
+} from './memory.js?v=4.58.0';
+import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard } from './readingplan.js?v=4.58.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1720,6 +1721,8 @@ function importDataFromFile(input){
       }
       // Scripture Memory: merged (never replaces), tombstone-aware. Old backups have no key.
       if(!Array.isArray(payload)&&payload.memoryVerses)memMergeRemote(payload.memoryVerses);
+      // Reading Plans (v4.58.0): merged (never replaces), newest change per item wins. Old backups have no key.
+      if(!Array.isArray(payload)&&payload.readingPlan)rpMergeRemote(payload.readingPlan);
       renderLib();
       // Transcripts: added only to studies that have none locally; never overwritten. Old backups have no key.
       var trP=(!Array.isArray(payload)&&payload.transcripts&&typeof payload.transcripts==='object')
@@ -1957,7 +1960,7 @@ async function fetchAllMissingScripture(s){
 function clearAll(){document.getElementById('clearall-overlay').classList.add('on');}
 /**
  * Confirms clear-all (v4.49.2): saves one safety copy, then removes EVERYTHING stored for the active user
- * (studies, photos, Memory, words, tags + tombstones, settings, TTS settings, streak, tour/onboarding flags,
+ * (studies, photos, Memory, reading plan progress, words, tags + tombstones, settings, TTS settings, streak, tour/onboarding flags,
  * error + diagnostic logs, transcripts/audio) and reloads so the app boots fresh. The login stays.
  * The safety copy is kept so Settings > Data & Storage can undo this.
  */
@@ -2841,6 +2844,7 @@ async function confirmExport(){
   var trs=await mediaExportTranscripts(selected.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;
   if(isAll&&memHasData())payload.memoryVerses=memExportStore(); // Scripture Memory rides along only with a full (all-studies) export (v4.36.0)
+  if(isAll&&rpHasData())payload.readingPlan=rpExportStore(); // Reading Plans progress rides along only with a full export (v4.58.0)
   var fname=isAll?'arche-pilgrim-backup.json':'arche-pilgrim-backup-'+selected.length+'-studies.json';
   var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
@@ -2884,6 +2888,7 @@ async function exportData(){
   var trs=await mediaExportTranscripts(studies.map(function(s){return s.id;}));
   if(Object.keys(trs).length)payload.transcripts=trs;
   if(memHasData())payload.memoryVerses=memExportStore(); // Scripture Memory (v4.36.0) — key only present when there is data
+  if(rpHasData())payload.readingPlan=rpExportStore(); // Reading Plans (v4.58.0) — key only present when there is progress
   var json=JSON.stringify(payload,null,2);
   var blob=new Blob([json],{type:'application/json'});
   var fname='arche-pilgrim-backup.json';
@@ -3046,6 +3051,7 @@ function renderStats(){
       return '<div onclick="openStudy(\''+s.id+'\')" style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="width:3px;align-self:stretch;background:linear-gradient(180deg,var(--gold),var(--golddim));border-radius:2px;flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-family:\'EB Garamond\',serif;font-size:15px;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(s.title||'Untitled Study')+'</div><div style="font-size:11px;color:var(--gold)">'+(ref0||'No reference')+'</div></div><div style="font-size:10px;color:var(--txt4);flex-shrink:0">'+fmtDate(s.lastOpened||s.date||'')+'</div></div>';
     }).join('');
   } else {recentEl.innerHTML='<p style="font-size:13px;color:var(--txt4);font-style:italic">No activity yet.</p>';}
+  rpRenderCard(); // Reading Plan card (v4.58.0)
 }
 /**
  * Returns the HTML string for a single stat card widget.

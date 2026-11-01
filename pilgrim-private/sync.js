@@ -14,10 +14,11 @@ import {
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent,
   stripAiResultsForBackup, carryAiResults, makeSafetyCopy
-} from './utils.js?v=4.57.0';
+} from './utils.js?v=4.58.0';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.57.0';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.57.0';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.58.0';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.58.0';
+import { rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote } from './readingplan.js?v=4.58.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -233,12 +234,16 @@ async function syncToGist(silent){
             _persistDeletedTags();
             // Scripture Memory (v4.36.0): tombstone-aware merge into the local store; the push below then carries the merged result
             if(remote.memoryVerses)memMergeRemote(remote.memoryVerses);
+            // Reading Plans (v4.58.0): per-item newest-change-wins merge; a backup without the key leaves local untouched
+            if(remote.readingPlan)rpMergeRemote(remote.readingPlan);
           }
         }
       }
     }catch(e){/* remote fetch failed — push local only, better than nothing */}
     var streak=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
-    var payload=JSON.stringify({studies:stripAiResultsForBackup(stubResourcesForSync(mergedStudies)),tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak,memoryVerses:memExportStore()},null,2);
+    var payloadObj={studies:stripAiResultsForBackup(stubResourcesForSync(mergedStudies)),tags:mergedTags,deletedTags:_DELETED_TAGS(),streak:streak,memoryVerses:memExportStore()};
+    if(rpHasData())payloadObj.readingPlan=rpExportStore(); // Reading Plans (v4.58.0): key only present when there is progress
+    var payload=JSON.stringify(payloadObj,null,2);
     var body={description:'Arché · Pilgrim Studies',public:false,files:{}};body.files[gistFilename()]={content:payload};
     var res=await fetch(WORKER_URL+'/gist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok){var errBody='';try{errBody=await res.text();}catch(e){}throw new Error('Sync '+res.status+' — '+errBody.slice(0,120));}
@@ -301,6 +306,8 @@ async function syncFromGist(){
     }
     // Scripture Memory (v4.36.0): tombstone-aware merge; a Gist without the key (older backup) leaves local untouched
     if(remote.memoryVerses)memMergeRemote(remote.memoryVerses);
+    // Reading Plans (v4.58.0): newest-change-wins per item; a Gist without the key leaves local untouched
+    if(remote.readingPlan)rpMergeRemote(remote.readingPlan);
     // Merge streak — most recent lastDay wins; tie goes to higher count
     if(remote.streak&&remote.streak.lastDay){
       var localSk=JSON.parse(localStorage.getItem(SK_STREAK)||'{"lastDay":"","streak":0}');
@@ -381,6 +388,7 @@ async function syncFromGistForce(){
     persist();
     if(Array.isArray(remote.tags)&&remote.tags.length){setTags(remote.tags);if(window.persistTags)_persistTags();}
     if(remote.memoryVerses)memReplaceFromRemote(remote.memoryVerses); // Scripture Memory (v4.36.0): only replaced when the backup actually has the key
+    if(remote.readingPlan)rpReplaceFromRemote(remote.readingPlan); // Reading Plans (v4.58.0): only replaced when the backup actually has the key
     if(cur){var fc=studies.find(function(s){return s.id===cur.id;});if(fc){setCur(fc);if(_qFN()){if(cur.fieldNotes)_qFN().clipboard.dangerouslyPasteHTML(cur.fieldNotes);else _qFN().setText('');}if(_qConcl()){var _c=cur.deep&&cur.deep.conclusions?cur.deep.conclusions:'';if(_c)_qConcl().clipboard.dangerouslyPasteHTML(_c);else _qConcl().setText('');}if(_qOutline()){var _o=cur.deep&&cur.deep.outline?cur.deep.outline:'';if(_o)_qOutline().clipboard.dangerouslyPasteHTML(_o);else _qOutline().setText('');}if(window.renderRefs)window.renderRefs();}}
     if(window.renderLib)window.renderLib();
     gistSetStatus('Force restored — '+new Date().toLocaleTimeString(),'var(--sagebright)');

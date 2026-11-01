@@ -33,6 +33,7 @@ const MODULES = [
   { file: 'ui.js',         name: 'UI'         },
   { file: 'media.js',      name: 'Media'      },
   { file: 'memory.js',     name: 'Memory'     },
+  { file: 'readingplan.js', name: 'ReadingPlan' },
 ];
 
 // Native JS/DOM names that appear in inline handlers but are NOT module
