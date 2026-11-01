@@ -249,6 +249,7 @@ input[type="range"]{accent-color:var(--gold)}
 .bt-ilh{font-size:22px}
 .bt-ilg{margin-left:auto;font-size:15px;color:var(--txt1);text-align:right}
 .bt-il2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:3px;font-size:12px;color:var(--txt3);font-family:'Crimson Pro',serif}
+.bt-raw{font-size:10px;color:var(--txt4);font-family:ui-monospace,Menlo,Consolas,monospace}.bt-nog{color:var(--txt4)}
 .bt-chip{font-size:11px;border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:var(--txt3);line-height:1.4}
 .bt-ilhd{font-family:'Crimson Pro',serif;font-size:12px;letter-spacing:.04em;color:var(--gold);border-bottom:1px solid var(--border);padding:10px 2px 4px;margin-top:4px}
 .bt-ilcard{margin:0 0 8px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);padding-top:8px}
@@ -1288,6 +1289,7 @@ input[type="range"]{accent-color:var(--gold)}
       <div class="about-credits">
         <p>Greek New Testament words, glosses and morphology: <a href="https://github.com/Clear-Bible/macula-greek" target="_blank" rel="noopener">MACULA Greek Linguistic Datasets</a>, &copy; Biblica / Clear-Bible. Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
         <p>Hebrew Old Testament words, morphology and verse numbering: Original work of the Open Scriptures Hebrew Bible available at <a href="https://github.com/openscriptures/morphhb" target="_blank" rel="noopener">https://github.com/openscriptures/morphhb</a>. Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</p>
+        <p>Hebrew Old Testament English glosses: <a href="https://github.com/Clear-Bible/macula-hebrew" target="_blank" rel="noopener">MACULA Hebrew Linguistic Datasets</a>, &copy; Clear-Bible, Inc. Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Matched to the Open Scriptures words by script; words that could not be matched safely show a dash.</p>
         <p>Strong&#8217;s Hebrew &amp; Greek Dictionaries: <a href="https://github.com/openscriptures/strongs" target="_blank" rel="noopener">Open Scriptures (openscriptures/strongs)</a>. The Strong&#8217;s text is public domain; the Open Scriptures tagging is licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA</a>.</p>
         <p>Cross-references: <a href="https://www.openbible.info/labs/cross-references/" target="_blank" rel="noopener">OpenBible.info Cross-References</a> (vote-weighted Treasury of Scripture Knowledge). Licensed <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY</a>.</p>
       </div>
@@ -1930,7 +1932,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.51.0"></script>
+<script type="module" src="app.js?v=4.52.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

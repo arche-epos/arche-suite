@@ -13,7 +13,9 @@ data updates). See `spec-ai-tools-grounding-v1.md` for the tools that consume th
     Hebrew Bible** (openscriptures/morphhb) — the same underlying source MACULA Hebrew is itself
     built from. Substituted for MACULA Hebrew directly because that repo's TSV export is
     Git-LFS-hosted and wasn't reachable from the build environment; the lexical/morphological
-    content is the same. `gloss` is empty for OT entries (OSHB does not include English glosses).
+    content is the same. OSHB has no English, so `gloss` for OT entries is filled (v4.52.0) from **MACULA Hebrew**
+    (Clear-Bible/macula-hebrew, `WLC/lowfat`, CC BY 4.0) by `data/build-hebrew-gloss.py`: a word is paired only when its Hebrew
+    consonants are identical, otherwise `gloss` stays empty. Re-run the script to regenerate; nothing else in these files changes.
 - `crossrefs/<NN>.json` — per verse, top-8 cross-references by community vote weight:
   `[[ "Book Chap:Verse", votes ], ...]`. Source: **OpenBible.info Cross-References** (Treasury of
   Scripture Knowledge, vote-weighted), CC BY.
@@ -47,10 +49,10 @@ It lets Interlinear show the right Hebrew words for an English Old Testament ver
 | Source | License |
 |---|---|
 | MACULA Greek Linguistic Datasets, © Biblica/Clear-Bible | CC BY 4.0 |
+| MACULA Hebrew Linguistic Datasets, © Clear-Bible, Inc. (English glosses for the OT, v4.52.0) | CC BY 4.0 |
 | Open Scriptures Hebrew Bible (openscriptures/morphhb) | Public domain text (WLC) + CC BY morphology |
 | OpenBible.info Cross-References | CC BY |
 | Strong's Hebrew & Greek Dictionaries (openscriptures/strongs) | CC BY-SA (tagging) / Public Domain (Strong's text) |
 
 JSON does not support comment blocks, so this file is the attribution record for the data itself;
-a corresponding credit line still needs to be added to the app's About/Credits screen (tracked as
-a Phase 2 item, not yet done).
+the app's Settings > About screen carries the matching credit lines.

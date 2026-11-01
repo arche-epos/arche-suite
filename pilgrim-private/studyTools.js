@@ -13,15 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.51.0';
+} from './utils.js?v=4.52.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.51.0';
-import { openConfirm } from './media.js?v=4.51.0';
-import { syncToGist } from './sync.js?v=4.51.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.51.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.51.0';
-import { decodeMorph, shortGloss } from './morph.js?v=4.51.0';
-import { hebrewVerses } from './versemap.js?v=4.51.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.52.0';
+import { openConfirm } from './media.js?v=4.52.0';
+import { syncToGist } from './sync.js?v=4.52.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.52.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.52.0';
+import { decodeMorph } from './morph.js?v=4.52.0';
+import { hebrewVerses } from './versemap.js?v=4.52.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -3323,8 +3323,9 @@ function btCmpMove(t,dir){
  * dictionary card the Word Study facts panel uses (_dictCardBodyHtml). Words with no Strong's
  * number (mostly Hebrew prefix + pronoun forms) show but do not open.
  * Notes on the data: the transliteration is the dictionary form's (from Strong's), not the inflected
- * word's. OT gloss = short Strong's definition (OSHB has no gloss); Greek gloss = MACULA's, falling
- * back to the same short definition when MACULA leaves it blank. OT word data follows the Hebrew verse numbering; v4.44.0 maps the
+ * word's. The English column is the in-context gloss stored in the data files: MACULA Greek (NT) and MACULA Hebrew
+ * (OT, added to data/macula/01-39.json in v4.52.0 by data/build-hebrew-gloss.py). A word with no gloss shows a dash;
+ * there is no dictionary fallback. The raw parsing code is shown small beside the plain-English chip. OT word data follows the Hebrew verse numbering; v4.44.0 maps the
  * English verse the user picked to its Hebrew verse(s) with versemap.js (headings appear only where the numbering differs).
  */
 function _btIlxHTML(){
@@ -3368,7 +3369,10 @@ async function _btIlxHydrate(){
           translit:(def&&def.translit)||'',
           strongs:w.strongs||'',
           chip:decodeMorph(w.morph,isOT).chip,
-          gloss:w.gloss||shortGloss(def&&def.strongs_def),
+          raw:w.morph||'',
+          // v4.52.0 (fix-plan 3c): the in-context English from the data files only (MACULA Greek / MACULA Hebrew).
+          // No gloss, or MACULA's "-" for an untranslated word, stays empty and shows a dash. Never a dictionary guess.
+          gloss:(function(g){g=String(g||'').trim();return g==='-'?'':g;})(w.gloss),
           rtl:isOT,
           card:def?{translit:def.translit||'',strongsDef:def.strongs_def||'',kjvDef:def.kjv_def||''}:null
         });
@@ -3390,8 +3394,8 @@ function _btIlxRowHTML(r,i){
   if(r.translit)meta.push(escHtml(r.translit));
   if(r.strongs)meta.push(escHtml(r.strongs));
   return (r.head?'<div class="bt-ilhd">'+escHtml(r.head)+'</div>':'')+'<div class="bt-ilr"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
-    +'<span class="bt-il1"><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-ilg">'+escHtml(r.gloss)+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
-    +'<span class="bt-il2">'+(meta.length?'<span class="bt-ilm">'+meta.join(' · ')+'</span>':'')+'<span class="bt-chip">'+escHtml(r.chip)+'</span></span>'
+    +'<span class="bt-il1"><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-ilg">'+(r.gloss?escHtml(r.gloss):'<span class="bt-nog" title="The source gives no English for this word">\u2014</span>')+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
+    +'<span class="bt-il2">'+(meta.length?'<span class="bt-ilm">'+meta.join(' · ')+'</span>':'')+'<span class="bt-chip" title="'+escHtml(r.raw)+'">'+escHtml(r.chip)+'</span>'+(r.raw?'<span class="bt-raw" title="Source parsing code">'+escHtml(r.raw)+'</span>':'')+'</span>'
     +'</button><div class="bt-ilcard" id="bt-ilc-'+i+'" hidden></div></div>';
 }
 /** Opens or closes the dictionary card under one Interlinear row (built the first time it opens). */

@@ -545,7 +545,19 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.51.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    version:'4.52.0',date:'Oct 31, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: Bible Tools > Interlinear now shows the English for each word in context. Old Testament words used to show a dictionary definition (Gen 1:1 gave \u201Cgods in the ordinary sense\u201D and \u201Cself\u201D); they now show MACULA Hebrew\u2019s gloss (\u201CGod\u201D, \u201C(et)\u201D, \u201Cthe heavens\u201D). New Testament words keep MACULA Greek\u2019s gloss.",
+      "change: a word with no English in the source now shows a dash (\u2014) instead of a guess from the dictionary. About 385 of 305,506 Old Testament words and the Greek words MACULA marks \u201C-\u201D are affected.",
+      "new: the raw parsing code (for example HVqp3ms) is shown small beside the plain-English parsing, and in a tooltip.",
+      "new: Settings > About now credits MACULA Hebrew (CC BY 4.0).",
+      "note: the Hebrew English was matched to our word list by script (data/build-hebrew-gloss.py): a word is paired only when its Hebrew consonants are identical, otherwise it stays blank. Grammar markers such as (et) and (dm) are shown as MACULA writes them. No saved data, storage keys or backups changed.",
+      "note: the word data comes from a CDN that can keep the old copy for up to 12 hours after an update, so Old Testament English may show dashes until it refreshes."
+    ]
+  },
+  {
+    version:'4.51.0',date:'Oct 31, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Cultural Context tables now show as real tables instead of rows of | and --- characters. In the PDF, each table row is written as a plain line (Header: value; Header: value).",
