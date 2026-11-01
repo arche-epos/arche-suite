@@ -225,10 +225,10 @@ that avoids the excluded list.
   definitions.
 
 
-### Study — Notes tab
+### Study — Study Notes tab
 - Open or leave a study → tap a study in Library to open it; **Library** (top left)
   goes back. Changes save with **Save**, and the app also saves as you work.
-- Set the study's details → **Study Info** at the top of the Notes tab: Date,
+- Set the study's details → **Study Info** at the top of the Study Notes tab: Date,
   Teacher / Preacher, Scripture Reference (the **Pick** button browses by book
   and chapter), Series, Title, and Tags. Tap the header to hide or show it.
 - Change the passage or translation for this study → type the reference in
@@ -239,8 +239,10 @@ that avoids the excluded list.
   speed controls
 - Take notes during a sermon/quiet time/small group → **Observations & Notes**
   field. **A−** / **A+** change text size here; the full controls are in
-  Settings > Appearance.
-- Look up a word while in a study → "✦ Look Up Word" button, Notes tab
+  Settings > Appearance. Pictures pasted into a note are shrunk to a small size
+  automatically; one that is still too large is removed with a message, so add
+  big images as a Resource instead.
+- Look up a word while in a study → "✦ Look Up Word" button, Study Notes tab
 - See saved word lookups tied to this specific study → **Saved Words**, below
   the notes
 - Attach a photo or document → **Add Photo or Document** (opens "Add Files to
@@ -248,7 +250,7 @@ that avoids the excluded list.
   from photos and documents shows when you tap the tile under **Resources &
   Documents** on the Study Tools tab.
 - Add a class transcript → **Add Photo or Document > Transcript** (TXT, DOCX,
-  PDF, VTT or SRT file). A **Transcript** section then appears on the Notes tab
+  PDF, VTT or SRT file). A **Transcript** section then appears on the Study Notes tab
   with a search box and **Copy**, **Download .txt**, **Replace**, and **Delete**.
   It is stored on this device only: it is included in the JSON backup file but
   not in cloud sync.

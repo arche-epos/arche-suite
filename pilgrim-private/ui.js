@@ -17,7 +17,7 @@ import {
   setStudies, setCur, setActiveRefIdx, setStudyScope,
   setPendingDeleteId, setPendingDeleteRefIdx, setTags,
   // Section 03 — utilities
-  toast, toastSuccess, closeOverlay, escHtml, mdToHtml, htmlToText,
+  toast, toastSuccess, closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml, imgFitSize,
   fmtDate, todayStr, pdfSafe, pdfTablesToText, setAppHeight, updateOffline, bookOrder,
   mfBlob, prevDay,
   // Section 07 — data model
@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.53.0';
+} from './utils.js?v=4.54.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.53.0';
+} from './storage.js?v=4.54.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.53.0';
+} from './media.js?v=4.54.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.53.0';
+} from './tts.js?v=4.54.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.53.0';
+} from './sync.js?v=4.54.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.53.0';
+} from './studyTools.js?v=4.54.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.53.0';
+} from './memory.js?v=4.54.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -114,8 +114,7 @@ function setQFNDirty(v){_qFNDirty=v;}
 function setQConclDirty(v){_qConclDirty=v;}
 /** Sets the Outline dirty flag. @param {boolean} v */
 function setQOutlineDirty(v){_qOutlineDirty=v;}
-/** Original Quill toolbar config, used verbatim on desktop (>900px) so that
- *  layout is unchanged from before the mobile left-rail redesign. */
+/** Quill toolbar config shared by all three editors (classic horizontal toolbar at the top of the editor, all screen sizes). */
 var _qlToolbar=[
   ['bold','italic','underline','strike'],
   [{'header':[1,2,3,false]}],
@@ -124,211 +123,82 @@ var _qlToolbar=[
   ['blockquote'],
   ['clean']
 ];
+/** Largest data-URL image (base64 characters) a note may hold, about 150 KB (v4.54.0). */
+var NOTE_IMG_MAX_CHARS=200000;
+/** Longest side, in px, a note image is shrunk to (v4.54.0). */
+var NOTE_IMG_MAX_SIDE=1000;
 /**
- * Initializes all three Quill rich-text editors: Field Notes, Conclusions, and Outline.
+ * Shrinks a pasted data-URL image to fit the note size limits (v4.54.0).
+ * Re-draws on a white canvas as JPEG, trying smaller sizes and lower quality until it fits.
+ * @param {string} src - data:image/... URL.
+ * @returns {Promise<string|null>} The image to keep (the original if already small), or null if it cannot be made small enough.
+ */
+function _shrinkNoteImage(src){
+  return new Promise(function(resolve){
+    var img=new Image();
+    img.onload=function(){
+      try{
+        if(src.length<=NOTE_IMG_MAX_CHARS&&Math.max(img.naturalWidth,img.naturalHeight)<=NOTE_IMG_MAX_SIDE){resolve(src);return;}
+        var tries=[[NOTE_IMG_MAX_SIDE,0.7],[800,0.6],[600,0.5],[400,0.45]];
+        for(var i=0;i<tries.length;i++){
+          var sz=imgFitSize(img.naturalWidth,img.naturalHeight,tries[i][0]);
+          var c=document.createElement('canvas');c.width=sz.w;c.height=sz.h;
+          var cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,sz.w,sz.h);cx.drawImage(img,0,0,sz.w,sz.h);
+          var out=c.toDataURL('image/jpeg',tries[i][1]);
+          if(out.length<=NOTE_IMG_MAX_CHARS){resolve(out);return;}
+        }
+        resolve(null);
+      }catch(err){logError('Note image shrink',err);resolve(src.length<=NOTE_IMG_MAX_CHARS?src:null);}
+    };
+    img.onerror=function(){resolve(src.length<=NOTE_IMG_MAX_CHARS?src:null);};
+    img.src=src;
+  });
+}
+/**
+ * Keeps pasted/dropped images small in one Quill editor (v4.54.0). Only reacts to the user's own edits
+ * (not to loading a saved note), shrinks each new data-URL image, and swaps it in as an undoable change.
+ * If an image cannot be made small enough it is removed with a toast. Remote (http/https) images are left alone.
+ * @param {Quill} q - The editor to guard.
+ */
+function _guardNoteImages(q){
+  q.on('text-change',function(delta,oldDelta,source){
+    if(source!=='user')return;
+    ((delta&&delta.ops)||[]).forEach(function(op){
+      var src=op.insert&&typeof op.insert==='object'?op.insert.image:null;
+      if(typeof src!=='string'||src.indexOf('data:image/')!==0)return;
+      _shrinkNoteImage(src).then(function(out){
+        if(out===src)return;
+        var pos=0,idx=-1;
+        (q.getContents().ops||[]).some(function(o){
+          if(typeof o.insert==='string'){pos+=o.insert.length;return false;}
+          if(o.insert&&o.insert.image===src){idx=pos;return true;}
+          pos+=1;return false;
+        });
+        if(idx<0)return;
+        if(out===null){q.deleteText(idx,1,'api');toast('That image is too large for a note. Add it as a Resource instead.');return;}
+        var Delta=Quill.import('delta');
+        q.updateContents(new Delta().retain(idx).delete(1).insert({image:out}),'api');
+      }).catch(function(err){logError('Note image guard',err);});
+    });
+  });
+}
+/**
+ * Initializes all three Quill rich-text editors: Study Notes, Conclusions, and Outline.
  * No-ops if the Quill library has not loaded. Attaches a text-change listener on the
- * Field Notes editor to update the word count display on each keystroke.
- * Toolbar choice is decided once at load time by width (NOT re-evaluated on
- * resize — Quill's toolbar binding is fixed at construction, so crossing the
- * breakpoint after load needs a page refresh to pick up the other toolbar):
- *   - width>900:  desktop — Quill's original array config (_qlToolbar),
- *     auto-generating its own horizontal toolbar, untouched by any of the
- *     mobile rail work below.
- *   - width<=900: mobile — the flat 14-icon left-rail (see initCustomToolbar()).
- *     v4.34.30 rebuild: this REPLACES the v4.34.21-28 rail, which had
- *     pop-out flyout groups and a focus-stuck/dead-tap bug on
- *     Outline/Conclusions that survived two root-cause attempts and was
- *     reverted to the classic toolbar in v4.34.29 while a fresh design was
- *     worked out. See session-handoff-sep14-2026-toolbar-focus-bug.md.
+ * Study Notes editor to update the word count display on each keystroke.
+ * All three use the classic horizontal Quill toolbar (_qlToolbar) at every screen size;
+ * the old mobile floating rail was removed in v4.54.0.
  */
 function initEditors(){
   if(typeof Quill==='undefined')return;
-  // Reverted to the classic horizontal Quill toolbar for ALL screen sizes
-  // (v4.34.38). The mobile floating-rail system (v4.34.21-37) accumulated a
-  // long chain of hard-to-diagnose bugs -- most recently, focus getting
-  // forced back to Notes from completely unrelated UI (even the Pilgrim
-  // Guide chat box), which is a level of cross-cutting interference that
-  // static code review can't reliably chase down further. Reverting to
-  // useRail=false restores the exact toolbar config desktop has run this
-  // entire session without a single issue. If the floating rail is revisited,
-  // it should be with live device DevTools (chrome://inspect over USB), not
-  // another guess-and-ship cycle. See session-handoff-sep14-2026-toolbar-
-  // focus-bug.md and the chat history from Sep 14-15, 2026 for the full
-  // history of what was tried.
-  var useRail=false;
-  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:useRail?'#f-notes-toolbar':_qlToolbar}});
+  _qFN=new Quill('#f-notes-editor',{theme:'snow',placeholder:'What stands out in this passage?\nQuestions that arise...\nKey words, phrases, patterns...\nPersonal reflections...',modules:{toolbar:_qlToolbar}});
   _qFN.on('text-change',function(){updateWordCount();if(!_qFNDirty)trackEvent({field:'notes'});_qFNDirty=true;});
-  if(useRail)initCustomToolbar(_qFN,'f-notes-toolbar');
-  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:useRail?'#d-conclusions-toolbar':_qlToolbar}});
+  _qConcl=new Quill('#d-conclusions-editor',{theme:'snow',placeholder:'This space belongs entirely to you.\n\nRecord your own theological conclusions, personal insights, and application.',modules:{toolbar:_qlToolbar}});
   _qConcl.on('text-change',function(){if(!_qConclDirty)trackEvent({field:'conclusions'});_qConclDirty=true;});
-  if(useRail)initCustomToolbar(_qConcl,'d-conclusions-toolbar');
-  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:useRail?'#d-outline-toolbar':_qlToolbar}});
+  _qOutline=new Quill('#d-outline-editor',{theme:'snow',placeholder:'Write out the structural outline of this passage or book.\n\ne.g.\nI. Main Point (v.1-4)\n   A. Sub-point\nII. Main Point (v.5-8)',modules:{toolbar:_qlToolbar}});
   _qOutline.on('text-change',function(){if(!_qOutlineDirty)trackEvent({field:'outline'});_qOutlineDirty=true;});
-  if(useRail)initCustomToolbar(_qOutline,'d-outline-toolbar');
+  _guardNoteImages(_qFN);_guardNoteImages(_qConcl);_guardNoteImages(_qOutline);
 }
-
-// ── Floating rail: keyboard-tracking (v4.34.30) ─────────────────────────────
-// Only one rail is ever showing at a time (mutually exclusive via each
-// editor's own selection-change event), so a single global reference plus a
-// pair of app-wide visualViewport listeners is enough to keep whichever rail
-// is open tracking the keyboard live -- no per-rail listeners needed.
-// visualViewport (not window.innerHeight) is used deliberately: innerHeight
-// only reflects the keyboard if the browser actually shrinks the layout
-// viewport, which was inconsistent across Android Chrome configurations
-// (the direct cause of the v4.34.25/26 "rail lands too high" bug). The
-// visual viewport's own height+offsetTop is the browser's own authoritative
-// answer for "what's actually visible right now," keyboard included,
-// recalculated on every resize/scroll while a rail is open.
-var _activeRailRoot=null;
-function _railReposition(){
-  if(!_activeRailRoot||!window.visualViewport)return;
-  try{
-    var vv=window.visualViewport;
-    var top=vv.height+vv.offsetTop-_activeRailRoot.offsetHeight-4;
-    top=Math.max(8,top);
-    _activeRailRoot.style.bottom='auto';
-    _activeRailRoot.style.top=top+'px';
-  }catch(e){logError('Rail reposition',e);}
-  _updateFabVisibility();
-}
-if(window.visualViewport){
-  window.visualViewport.addEventListener('resize',_railReposition);
-  window.visualViewport.addEventListener('scroll',_railReposition);
-}
-/**
- * Hides the Pilgrim Guide FAB while a rail is showing (v4.34.34). The FAB's
- * fixed position (bottom:68px) and the rail's own keyboard-tracked position
- * ended up overlapping on-device once the rail grew to edge-to-edge width
- * with bigger icons (v4.34.33) -- the FAB visually sat on top of the rail's
- * last button. Hiding the FAB during active editing both fixes the overlap
- * and reclaims that screen space; nobody's reaching for Pilgrim Guide
- * mid-keystroke anyway. Driven off the same _activeRailRoot global used for
- * keyboard-tracking, so it stays in sync automatically.
- */
-/**
- * Hides the Pilgrim Guide FAB while a rail is showing (v4.34.36 — reverted
- * from v4.34.35's reposition-above-rail attempt). Repositioning it dynamically
- * above the rail seemed like a safe compromise, but on the Study Tools screen
- * that placed the FAB at a height that landed directly on top of the
- * Outline/Conclusions box itself -- not just the toolbar -- physically
- * blocking taps there (Notes happened to sit in a spot on-screen where it
- * didn't overlap, which is why only Notes kept working). A fixed-position
- * floating element with a height computed from the keyboard alone can't
- * reliably avoid overlapping arbitrary page content beneath it, so hiding it
- * outright during active editing is the safe choice -- reappears the instant
- * you tap out. See v4.34.34's original version of this function for the
- * first attempt at this same fix.
- */
-function _updateFabVisibility(){
-  try{
-    var fab=document.querySelector('.fab-wrap');
-    if(fab)fab.classList.toggle('rail-active',!!_activeRailRoot);
-  }catch(e){logError('FAB visibility toggle',e);}
-}
-
-/**
- * Wires the floating-visibility + keyboard-tracking behavior for a custom
- * left-rail Quill toolbar built in index.html. Quill's own toolbar module
- * already handles click-to-format and per-button .ql-active state for any
- * element carrying its ql-* classes, regardless of DOM nesting or visibility
- * -- this adds only: showing/hiding the whole rail on that editor's own
- * focus (via Quill's selection-change event -- fires a range on focus, null
- * on blur -- so exactly one rail floats at a time, over whichever field is
- * actually being edited), toggling a left-padding class on that editor
- * while its rail is showing so the floating rail never overlaps the text,
- * and repositioning the rail against the live keyboard via _railReposition().
- * No pop-out/flyout mechanism (removed in the v4.34.30 rebuild -- see
- * initEditors() doc comment) -- every icon is a plain, always-visible,
- * directly-wired button, cutting the JS surface down after the old
- * mechanism couldn't be fully debugged on Outline/Conclusions. Wrapped in
- * try/catch + logError so any failure here writes full detail (this is our
- * own code, not cross-origin, so unlike Quill-internal errors it won't be
- * reported as an opaque "Script error.") to the visible Settings > Errors
- * log instead of failing silently.
- * @param {Quill} quill - the editor instance this toolbar controls.
- * @param {string} toolbarId - id of the toolbar's root .ql-rail element
- *   (relocated to the end of the document, near .fab-wrap — see index.html).
- */
-function initCustomToolbar(quill,toolbarId){
-  var root=document.getElementById(toolbarId);
-  if(!root)return;
-  var wrap=quill.container.closest('.ql-editorwrap');
-  var hideTimer=null;
-  // Native focus/blur on quill.root (v4.34.35), NOT Quill's own selection-change
-  // event -- Quill's Selection class gates ALL selectionchange handling behind a
-  // `mouseDown` flag (set true on document 'mousedown', cleared on 'mouseup';
-  // these are synthesized from touch events on mobile). If that synthetic
-  // mouseup ever fails to fire cleanly after a touch -- plausible on Android
-  // when the touch's own handling changes the DOM underneath it -- mouseDown
-  // gets stuck true and Quill silently stops emitting selection-change for the
-  // rest of the session: no error, nothing throws, it just silently never
-  // fires again. That matches "the rail shows the first time, never again"
-  // exactly. Native focus/blur on the actual contenteditable element bypasses
-  // Quill's internal event system entirely, so this bug can't affect it.
-  // hideTimer debounces the hide by 50ms: Quill's own toolbar buttons (Bold,
-  // etc.) momentarily blur the editor on mousedown (default browser behavior)
-  // then call quill.focus() to restore it right after their click handler
-  // runs -- without debouncing, that transient blur would hide the rail and
-  // immediately reshow it on every single button tap. 50ms comfortably
-  // absorbs that round-trip while staying imperceptible for a real tap-out.
-  function showRail(){
-    try{
-      if(hideTimer){clearTimeout(hideTimer);hideTimer=null;}
-      root.classList.add('showing');
-      if(wrap)wrap.classList.add('rail-open');
-      _activeRailRoot=root;
-      _railReposition();
-    }catch(e){logError('Rail show ('+toolbarId+')',e);}
-  }
-  function hideRail(){
-    hideTimer=setTimeout(function(){
-      try{
-        root.classList.remove('showing');
-        if(wrap)wrap.classList.remove('rail-open');
-        if(_activeRailRoot===root){_activeRailRoot=null;_updateFabVisibility();}
-      }catch(e){logError('Rail hide ('+toolbarId+')',e);}
-    },50);
-  }
-  quill.root.addEventListener('focus',showRail);
-  quill.root.addEventListener('blur',hideRail);
-  _initHeaderCycleBtn(quill,root);
-}
-
-/**
- * Wires the single "H" heading-cycle button (v4.34.32) that replaced the
- * separate H1/H2/H3/Normal buttons removed the same version. Not a plain
- * ql-header button -- it carries no ql-* class, so Quill's toolbar module
- * ignores it entirely (that module only auto-wires elements whose first
- * ql-* class names a format) -- instead each click here directly advances
- * through a fixed cycle (H1 -> H2 -> H3 -> Normal -> H1...) via
- * quill.format('header', ...), and a gold highlight (reusing the existing
- * .ql-active rule) reflects whether the cursor is currently in any heading,
- * via Quill's own editor-change event. Wrapped in try/catch + logError so a
- * failure here writes full detail to Settings > Errors rather than the
- * button silently doing nothing.
- * @param {Quill} quill - the editor instance this button controls.
- * @param {HTMLElement} root - the rail's root .ql-rail element.
- */
-function _initHeaderCycleBtn(quill,root){
-  var btn=root.querySelector('.rail-header-cycle');
-  if(!btn)return;
-  var LEVELS=[1,2,3,false];
-  btn.addEventListener('click',function(e){
-    e.preventDefault();e.stopPropagation();
-    try{
-      var cur=quill.getFormat().header;
-      if(cur!==1&&cur!==2&&cur!==3)cur=false;
-      var next=LEVELS[(LEVELS.indexOf(cur)+1)%LEVELS.length];
-      quill.format('header',next);
-    }catch(err){logError('Header cycle click',err);}
-  });
-  quill.on('editor-change',function(){
-    try{btn.classList.toggle('ql-active',!!quill.getFormat().header);}
-    catch(err){logError('Header cycle active-state',err);}
-  });
-}
-
-
 
 // ════════════════════════════════════════════════════════
 
@@ -880,24 +750,9 @@ document.addEventListener('click',function(e){
 });
 
 /**
- * Force-hides all three floating format rails and clears the matching
- * rail-open padding on their editors. Called from navTo()/switchStudyTab()
- * as a belt-and-suspenders alongside the explicit blur() there — blur()
- * should already trigger Quill's selection-change (which normally handles
- * this), but this guarantees a clean state on every screen switch even if
- * that event doesn't fire synchronously in some mobile browser edge case.
- */
-function hideAllRails(){
-  ['f-notes-toolbar','d-conclusions-toolbar','d-outline-toolbar'].forEach(function(id){
-    var rail=document.getElementById(id);
-    if(rail)rail.classList.remove('showing');
-  });
-  document.querySelectorAll('.ql-editorwrap.rail-open').forEach(function(w){w.classList.remove('rail-open');});
-}
-/**
  * Blurs whatever field currently has focus, deferred by one tick (v4.34.31).
  * Calling blur() synchronously in the same tick as the rest of a tab switch's
- * DOM work (hideAllRails, class toggles, populateField/populateDeep, etc.) was
+ * DOM work (class toggles, populateField/populateDeep, etc.) was
  * suspected of racing Android Chrome's IME/keyboard state machine -- after the
  * v4.34.30 rebuild fixed the actual stuck-focus bug, on-device testing still
  * intermittently found a field's caret blinking with no keyboard after a fast
@@ -935,7 +790,6 @@ function navTo(id){
   // tap on the new screen cleanly acquires focus instead of contending
   // with a stuck-focused field somewhere off-screen.
   _deferBlur();
-  hideAllRails();
   trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
   dismissTabHints();
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
@@ -965,7 +819,6 @@ function switchStudyTab(tab){
   // switching or a focused editor can stay stuck focused after its sub-tab
   // is hidden.
   _deferBlur();
-  hideAllRails();
   trackEvent({screen:'study.'+tab}); // usage tracking — sub-tab visit (spec-usage-tracking-admin-v2.md)
   var notesOn=tab==='notes';
   document.getElementById('scr-field').classList.toggle('on',notesOn);
@@ -1193,7 +1046,7 @@ function populateField(){
   // this.root.focus()` regardless of the SILENT source flag, silently stealing real DOM focus back
   // onto this editor every time it repopulates (v4.34.28 fix -- root cause of the persistent
   // focus-stuck bug from v4.34.25-27; confirmed against actual Quill 1.3.7 source, not guessed).
-  if(_qFN){if(cur.fieldNotes)_qFN.setContents(_qFN.clipboard.convert(cur.fieldNotes),'silent');else _qFN.setText('');_qFNDirty=false;}
+  if(_qFN){if(cur.fieldNotes)_qFN.setContents(_qFN.clipboard.convert(plainNotesToHtml(cur.fieldNotes)),'silent');else _qFN.setText('');_qFNDirty=false;}
   renderStudyWords();
   renderTagPicker();
   renderFieldTiles();
@@ -1701,7 +1554,7 @@ async function exportPDF(opts){
     var outln=(_qOutline&&_qOutline.root.innerHTML)||( cur.deep&&cur.deep.outline)||'';
     if(opts.outline&&outln.replace(/<[^>]*>/g,'').trim()){section('Passage / Book Outline');htmlTxt(outln,10,[30,25,15]);}
     // ── FIELD NOTES ───────────────────────────────────────────────────
-    if(opts.fieldNotes&&cur.fieldNotes&&cur.fieldNotes.replace(/<[^>]*>/g,'').trim()){section('Field Notes & Observations');htmlTxt(cur.fieldNotes,10,[30,25,15]);}
+    if(opts.fieldNotes&&cur.fieldNotes&&cur.fieldNotes.replace(/<[^>]*>/g,'').trim()){section('Study Notes');htmlTxt(cur.fieldNotes,10,[30,25,15]);}
     // ── RESOURCES ─────────────────────────────────────────────────────
     if(opts.resources&&cur.resources&&cur.resources.length){var hasOcr=cur.resources.some(function(r){return r.ocrStatus==='done'&&r.ocrText;});if(hasOcr){section('Resources & Documents');cur.resources.forEach(function(r){if(r.ocrStatus!=='done'||!r.ocrText)return;np(14);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(90,65,20);doc.text(pdfSafe(r.title+' - '+r.date),mgL,y);y+=6;txt(pdfSafe(r.ocrText),9,'normal',[35,28,18]);y+=2;});}}
     // ── PAGE BREAK — into reference groups ───────────────────────────
@@ -3439,7 +3292,7 @@ var TOUR_A_STEPS=[
   {screen:'library',target:'.studycard-new,.empty button[onclick="newStudy()"]',title:'Start a New Study',body:'Tap the New Study card to begin a study. You\'ll pick a template next.'},
   {screen:'library',target:'.fab-wrap',title:'The Round Button',body:'On Library this button offers New Study or Pilgrim Guide. On every other screen it skips straight to Pilgrim Guide — the tooltip always tells you which one it\'ll do.'},
   {screen:'library',before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.add('on');},target:'.tpl-card[onclick*="blank"]',title:'Choose a Template',body:"Pick Blank to start from scratch, or choose a guided template like Sermon or Devotion. We'll use Blank for this walkthrough."},
-  {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
+  {before:function(){var ov=document.getElementById('tpl-overlay');if(ov)ov.classList.remove('on');createFromTemplate('blank');cur._tourDemo=true;},target:null,title:'Your New Study',body:"This is the Study Notes screen — where you'll build out a study from start to finish. Let's fill it in together."},
   {screen:'study',before:function(){switchStudyTab('notes');cur.teacher='Jesse';populateField();},target:'#f-date,#f-teacher',title:'Date & Teacher',body:"Today's date fills in automatically. Add who taught or preached — we've filled in an example name."},
   {screen:'study',before:function(){switchStudyTab('notes');cur.series="How to Use Archē";cur.title='First-Time Study';cur.tags=['study'];populateField();renderTagPicker();},target:'#f-series,#f-title,#f-tags-picker',title:'Series, Title & Tags',body:"Group related studies under a series, give this one a specific title, and tag it to filter and sort later — we filled in examples for all three."},
   {screen:'study',before:function(){switchStudyTab('notes');var ar=activeRef();if(ar)ar.reference='Genesis 1:1';var inp=document.getElementById('f-ref');if(inp)inp.value='Genesis 1:1';renderRefPills('f-ref-pills','field');fetchScr();},target:'#f-ref',title:'Scripture Reference',body:'Type a reference like "Genesis 1:1" directly — we\u2019ve filled it in for you.'},
@@ -3450,7 +3303,7 @@ var TOUR_A_STEPS=[
   {screen:'study',before:function(){switchStudyTab('notes');switchRef(0);},target:'button[onclick*="openBibleToolsFromStudy"]',title:'Bible Tools',body:'Tap Bible Tools to look into this passage with fixed data, no AI: Cross-References (related verses), Translation Comparison, and Interlinear (every Greek or Hebrew word with its meaning and parsing).'},
   {screen:'study',before:function(){switchStudyTab('notes');if(typeof _qFN!=='undefined'&&_qFN){_qFN.clipboard.dangerouslyPasteHTML('<p>In the beginning — God\u2019s first act was creation. Who is the subject? God. What did He do? Created. Why does that matter?</p>');updateWordCount();}},target:'#f-notes-editor',title:'Observations & Notes',body:'A full rich-text editor: bold, italic, underline, strikethrough, lists, indent, blockquote, and a clear-format eraser. We filled in a quick example note.'},
   {screen:'study',before:function(){switchStudyTab('notes');},target:'#listen-fn-btn',title:'Listen',body:'Tap Listen to have your notes read aloud — handy for review or while your hands are busy.'},
-  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word (top of the Notes card) and type an English word or a Strong’s number (like G26 or H430). Results include Strong’s number, definition, transliteration, KJV usage, and where it appears in Scripture. Save to this study or your Words library.'},
+  {screen:'study',before:function(){switchStudyTab('notes');},target:'#field-lookupword-btn',title:'Look Up a Word',body:'Tap ✦ Look Up Word (top of the Study Notes card) and type an English word or a Strong’s number (like G26 or H430). Results include Strong’s number, definition, transliteration, KJV usage, and where it appears in Scripture. Save to this study or your Words library.'},
   {screen:'study',before:function(){switchStudyTab('notes');var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.add('on');var sb=document.getElementById('lex-save-bar');if(sb)sb.style.display='none';var inp=document.getElementById('lexicon-input');if(inp)inp.value="Archē";var res=document.getElementById('lexicon-result');if(res)res.innerHTML='<p><strong>Arch\u0113 (\u1f00\u03c1\u03c7\u03ae)</strong> \u2014 Greek for "beginning" or "origin." Strong\u2019s G746.</p><p>Used in John 1:1 and Genesis 1:1 (LXX). A starting point in time, and a governing first principle.</p>';tourSaveDemoWord();},target:'#lexicon-overlay .modal',title:'Word Lookup Result',body:'Results include Strong’s number, pronunciation, definitions, and usage across Scripture. Save a word to this study, or to the global Word List for later.'},
   {before:function(){var ov=document.getElementById('lexicon-overlay');if(ov)ov.classList.remove('on');},target:'#study-tab-tools',title:'Getting to Study Tools',body:'Tap Study Tools any time to dig deeper — it sits right alongside Notes under the Study tab.'},
   {screen:'study',before:function(){switchStudyTab('tools');},target:null,title:'Study Tools',body:'The same Genesis 1:1 passage and your notes are already here — Study Tools is where you dive deeper: word meanings straight from the source dictionary, plus AI-written background on history, culture, and places.'},

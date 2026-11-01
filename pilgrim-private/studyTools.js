@@ -11,17 +11,17 @@ import {
   TAGS, ACTIVE_USER, TOOL_LABELS, trackEvent,
   cur, studies, sett, activeRef,
   online, studyScope, setStudyScope,
-  closeOverlay, escHtml, mdToHtml, htmlToText,
+  closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.53.0';
+} from './utils.js?v=4.54.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.53.0';
-import { openConfirm } from './media.js?v=4.53.0';
-import { syncToGist } from './sync.js?v=4.53.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.53.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.53.0';
-import { decodeMorph } from './morph.js?v=4.53.0';
-import { hebrewVerses } from './versemap.js?v=4.53.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.54.0';
+import { openConfirm } from './media.js?v=4.54.0';
+import { syncToGist } from './sync.js?v=4.54.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.54.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.54.0';
+import { decodeMorph } from './morph.js?v=4.54.0';
+import { hebrewVerses } from './versemap.js?v=4.54.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -995,7 +995,7 @@ function populateDeep(){
   document.getElementById('d-teacher').textContent=cur.teacher||'';
   var notes=cur.fieldNotes||'';
   var _notesPlain=htmlToText(notes);
-  document.getElementById('d-fnotes').textContent=_notesPlain||'No field notes recorded.';
+  document.getElementById('d-fnotes').textContent=_notesPlain||'No study notes recorded.';
   // Word count badge
   var wc=_notesPlain.trim()?_notesPlain.trim().split(/\s+/).length:0;
   var badge=document.getElementById('fnotes-wc-badge');
@@ -1003,8 +1003,8 @@ function populateDeep(){
   // setContents(clipboard.convert(html),'silent') instead of dangerouslyPasteHTML -- avoids the
   // internal setSelection(0,SILENT) call that silently steals real DOM focus via Quill's
   // Selection.setNativeRange() (v4.34.28 fix -- see matching comment in populateField(), ui.js).
-  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.setContents(_qConcl.clipboard.convert(_cd),'silent');else _qConcl.setText('');if(window.setQConclDirty)window.setQConclDirty(false);}
-  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.setContents(_qOutline.clipboard.convert(_od),'silent');else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
+  if(_qConcl){var _cd=cur.deep?(cur.deep.conclusions||''):'';if(_cd)_qConcl.setContents(_qConcl.clipboard.convert(plainNotesToHtml(_cd)),'silent');else _qConcl.setText('');if(window.setQConclDirty)window.setQConclDirty(false);}
+  if(_qOutline){var _od=cur.deep?(cur.deep.outline||''):'';if(_od)_qOutline.setContents(_qOutline.clipboard.convert(plainNotesToHtml(_od)),'silent');else _qOutline.setText('');if(window.setQOutlineDirty)window.setQOutlineDirty(false);}
   _outlineOpen=false;var ob=document.getElementById('outline-body');var oc=document.getElementById('outline-chev');if(ob)ob.classList.remove('open');if(oc)oc.style.transform='';
   setStudyScope((ar&&ar.deep&&ar.deep.studyScope)||'passage');
   updateScopeBtnLabel();
@@ -2947,7 +2947,7 @@ function confirmRenameRes(){if(!_renameResId||!cur||!cur.resources)return;var re
 function renderResources(){
   var list=document.getElementById('res-list'),status=document.getElementById('res-status');
   if(!list)return;
-  if(!cur||!cur.resources||!cur.resources.length){list.innerHTML='<p style="font-size:12px;color:var(--txt4);font-style:italic">No resources yet. Add photos or documents in the Notes tab.</p>';if(status)status.textContent='';renderFieldTiles();return;}
+  if(!cur||!cur.resources||!cur.resources.length){list.innerHTML='<p style="font-size:12px;color:var(--txt4);font-style:italic">No resources yet. Add photos or documents in the Study Notes tab.</p>';if(status)status.textContent='';renderFieldTiles();return;}
   if(status)status.textContent=cur.resources.length+' resource'+(cur.resources.length!==1?'s':'');
   list.innerHTML='<div class="res-tile-grid">'+cur.resources.map(function(r){
     var badge=r.ocrStatus==='done'&&r.ocrText?'<div class="res-tile-badge" title="Text ready"></div>':'';
@@ -2996,7 +2996,7 @@ function resInsertText(id){
   var res=cur&&cur.resources&&cur.resources.find(function(r){return r.id===id;});
   if(!res||!res.ocrText){toast('No extracted text to insert');return;}
   var fn=window._qFN;
-  if(!fn){toast('Switch to the Notes tab to insert text');return;}
+  if(!fn){toast('Switch to the Study Notes tab to insert text');return;}
   var idx=fn.getLength();
   fn.insertText(idx>1?idx-1:0,'\n['+res.title+']\n'+res.ocrText);
   if(cur)cur.fieldNotes=fn.root.innerHTML;

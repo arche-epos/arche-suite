@@ -190,6 +190,31 @@ function toast(msg){var el=document.getElementById('toast');el.textContent=msg;e
  */
 function toastSuccess(msg){var el=document.getElementById('toast');el.textContent=msg;el.style.background='var(--gold)';el.style.color='var(--bg1)';el.style.fontSize='15px';el.style.borderColor='var(--gold)';el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){el.classList.remove('show');el.style.background='';el.style.color='';el.style.fontSize='';el.style.borderColor='';},2000);}
 /**
+ * Turns plain-text note content (no HTML tags, e.g. a template's prompts) into paragraph HTML so the
+ * editor keeps its line breaks (v4.54.0, findings B/K: Quill's clipboard.convert() collapses "\n" to a space).
+ * Content that already contains HTML tags is returned unchanged, so saved notes are never altered.
+ * @param {string} s - Stored note content.
+ * @returns {string} HTML safe to pass to clipboard.convert().
+ */
+function plainNotesToHtml(s){
+  s=String(s==null?'':s);
+  if(/<\/?[a-z][^>]*>/i.test(s))return s;
+  return s.split(/\r?\n/).map(function(l){return '<p>'+(l===''?'<br>':escHtml(l))+'</p>';}).join('');
+}
+/**
+ * Size an image down so its longest side is at most maxSide, keeping the aspect ratio (v4.54.0, pasted images).
+ * Never enlarges. Always returns whole pixels of at least 1.
+ * @param {number} w - Width in px. @param {number} h - Height in px. @param {number} maxSide - Longest side allowed.
+ * @returns {{w:number,h:number}}
+ */
+function imgFitSize(w,h,maxSide){
+  w=Math.max(1,Math.round(w||1));h=Math.max(1,Math.round(h||1));
+  var m=Math.max(w,h);
+  if(m<=maxSide)return {w:w,h:h};
+  var k=maxSide/m;
+  return {w:Math.max(1,Math.round(w*k)),h:Math.max(1,Math.round(h*k))};
+}
+/**
  * Extracts plain text from an HTML string.
  * Inserts a space before block-level closing tags (p, div, li, br, h1-h6, td, th, tr)
  * to prevent words from running together at element boundaries.
@@ -547,7 +572,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.53.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.54.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Template prompts in Study Notes, Conclusions and Outline now keep their line breaks. Before, they ran together on one line when the editor loaded. Notes you already saved are not changed.",
+      "new: Pictures pasted into a note are shrunk automatically (longest side 1000 px, about 150 KB or less) so notes stay small. You can undo the change. A picture that is still too large is removed with a message to add it as a Resource instead. Pictures already in your notes are left as they are.",
+      "change: The Notes tab, its header on the Study Tools screen, and the Notes row in Export are now called Study Notes. The PDF heading and the empty-notes message now say Study Notes too. Help and tour wording updated to match. Your data is unchanged.",
+      "cleanup: Removed the old unused phone format bar code. The formatting toolbar stays at the top of each editor, as before."
+    ]
+  },
+  {
+    version:'4.53.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Pilgrim Guide now keeps your chat when you reload the page or come back later. The last 30 messages are saved on this device for your account only, and Scripture Finder results come back exactly as they were shown. Clear All Data removes the chat. It is not part of backups or Study Sync.",
@@ -2718,7 +2753,7 @@ export {
   _pendingDeleteTagId, _pendingDeleteRefIdx, _renameResId, _pendingUpdateVersion,
   TOOL_LABELS, TOOL_DESCS, DEFAULT_TAGS, TAGS, TAG_PALETTE, FONT_OPTIONS, FONT_SCALE_STEPS,
   // Section 03 — utilities
-  closeOverlay, _tt, toast, toastSuccess, htmlToText, setAppHeight,
+  closeOverlay, _tt, toast, toastSuccess, htmlToText, plainNotesToHtml, imgFitSize, setAppHeight,
   todayStr, updateOffline, bookOrder, fmtDate, escHtml, mdToHtml,
   pdfSafe, pdfTablesToText, prevDay, TEMPLATES, activeTagFilter, obStep, mfBlob,
   // Section 07 partial — pure data model

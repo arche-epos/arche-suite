@@ -113,7 +113,7 @@ select option{background:var(--bg2);color:var(--txt1)}
 .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0}
 .color-swatch.on{border-color:var(--txt1);box-shadow:0 0 0 2px var(--bg2)}
 .ttag{display:inline-block;background:var(--bg3);color:var(--gold);border:1px solid var(--border);border-radius:3px;font-size:10px;font-weight:600;padding:1px 5px}
-.fab-wrap{position:fixed;bottom:calc(68px + var(--safe-b));right:max(16px,calc((100vw - 480px)/2 + 16px));z-index:60}.fab-wrap.rail-active{display:none}.fab{position:static;width:56px;height:56px;box-sizing:border-box;border-radius:50%;background:var(--gold);color:var(--bg0);border:3px solid var(--bg0);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.45),0 4px 24px rgba(201,168,76,.35);font-size:26px;}.fab-menu{position:absolute;bottom:68px;right:0;display:none;flex-direction:column;align-items:flex-end;gap:8px}.fab-menu.on{display:flex}.fab-menu-item{background:var(--bg2);color:var(--txt1);border:1px solid var(--golddim);border-radius:24px;padding:10px 18px;font-size:14px;font-family:'Crimson Pro',serif;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
+.fab-wrap{position:fixed;bottom:calc(68px + var(--safe-b));right:max(16px,calc((100vw - 480px)/2 + 16px));z-index:60}.fab{position:static;width:56px;height:56px;box-sizing:border-box;border-radius:50%;background:var(--gold);color:var(--bg0);border:3px solid var(--bg0);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.45),0 4px 24px rgba(201,168,76,.35);font-size:26px;}.fab-menu{position:absolute;bottom:68px;right:0;display:none;flex-direction:column;align-items:flex-end;gap:8px}.fab-menu.on{display:flex}.fab-menu-item{background:var(--bg2);color:var(--txt1);border:1px solid var(--golddim);border-radius:24px;padding:10px 18px;font-size:14px;font-family:'Crimson Pro',serif;box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
 .fab:active{transform:scale(.9)}
 .hdrfields{background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0}
 .hdrfields-body{padding:12px 16px}
@@ -535,6 +535,7 @@ input[type="range"]{accent-color:var(--gold)}
    as before the mobile rail redesign — these rules are unchanged from before. */
 .ql-toolbar.ql-snow{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;padding:6px 8px;flex-wrap:wrap;}
 .ql-container.ql-snow{background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);font-family:var(--font-body);font-size:calc(15px * var(--content-scale));color:var(--txt1);}
+.ql-editor img{max-width:100%;height:auto;}
 .ql-editor{min-height:160px;padding:10px 12px;line-height:1.65;color:var(--txt1);}
 .ql-editor.ql-blank::before{color:var(--txt4);font-style:italic;font-family:var(--font-body);}
 .ql-editor p,.ql-editor h1,.ql-editor h2,.ql-editor h3,.ql-editor li,.ql-editor blockquote{color:var(--txt1);}
@@ -552,37 +553,6 @@ input[type="range"]{accent-color:var(--gold)}
 .ql-toolbar.ql-snow .ql-formats button:hover .ql-fill,.ql-toolbar.ql-snow .ql-formats button.ql-active .ql-fill{fill:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover,.ql-toolbar.ql-snow .ql-picker-label.ql-active{color:var(--gold);}
 .ql-toolbar.ql-snow .ql-picker-label:hover .ql-stroke,.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-stroke{stroke:var(--gold);}
-/* Mobile (≤900px): custom floating toolbar (v4.34.31 — horizontal keyboard
-   accessory bar) — plain text/glyph buttons carrying Quill's ql-* classes
-   (listed FIRST in the class attribute — Quill's toolbar.js picks the first
-   class starting with "ql-" to determine the format, so ql-rail-btn must
-   come second) so its toolbar module still handles click-to-format and
-   .ql-active state automatically. Flat list, no pop-out groups (unchanged
-   from v4.34.30) — every one of the 14 buttons is always visible and
-   directly wired.
-   Layout changed from a vertical left-edge column (v4.34.30) to a
-   horizontal bar spanning the width, per Boss's request — a keyboard
-   accessory-bar look rather than a side rail. Buttons no longer wrap
-   (flex-shrink:0 on .ql-rail-btn) and the row scrolls horizontally
-   (overflow-x:auto) since all 14 don't fit one screen width at once.
-   The old .ql-editorwrap.rail-open padding-left:50px hack (made room for
-   the vertical rail overlapping the left edge of the text) is removed —
-   a bar floating above the keyboard doesn't overlap the text at all.
-   Hidden and inert above 900px — desktop binds Quill to the original array
-   toolbar above instead (see initEditors()).
-   The three rail elements live at the end of the document (near .fab-wrap),
-   NOT next to their editors — see the HTML comment there for why
-   (position:fixed inside an overflow:hidden ancestor loses touch events on
-   iOS Safari, and Outline's collapsible wrapper has overflow:hidden
-   permanently). Each is display:none until initCustomToolbar() (ui.js) adds
-   .showing on that editor's own focus, via Quill's selection-change event —
-   so exactly one floats at a time. Vertical positioning is still JS-driven
-   via window.visualViewport (see _railReposition() in ui.js): the visual
-   viewport's own height+offsetTop is the browser's authoritative answer for
-   "what's actually visible right now," keyboard included, recalculated on
-   every resize/scroll while a rail is open. bottom:calc(12px + var(--safe-b))
-   below is the static fallback for browsers without visualViewport support —
-   JS overrides it with an inline top/bottom:auto once available. */
 /* v4.35.5: Observations & Notes header controls. Desktop = one row (order keeps Look Up / info / Listen / A- A+); phone = 2-row grid of 44px targets. */
 .nh-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .nh-ctrls{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
@@ -611,10 +581,6 @@ input[type="range"]{accent-color:var(--gold)}
 .ql-editorwrap{display:flow-root;}
 /* v4.35.5: Quill's snow CSS gives .ql-container height:100% of its parent. The toolbar sits ABOVE the container inside the same wrap, so the container was as tall as the whole wrap and hung one toolbar-height past the bottom, painting over the Saved Words / Photos labels. Height:auto lets the wrap size to toolbar + content. */
 .ql-editorwrap>.ql-container{height:auto;}
-.ql-rail-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt3);font-family:'Crimson Pro',serif;font-size:15px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;}
-.ql-rail-btn.ql-active{border-color:var(--gold);color:var(--gold);}
-.ql-rail{position:fixed;left:4px;right:4px;bottom:calc(4px + var(--safe-b));z-index:58;display:none;flex-direction:row;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.ql-rail.showing{display:flex;}
 @media(max-width:900px){
   .ql-editorwrap>div[id$="-editor"]{min-width:0;}
   .ql-container.ql-snow{border-top:1px solid var(--border);border-radius:var(--r);}
@@ -825,7 +791,7 @@ input[type="range"]{accent-color:var(--gold)}
 <!-- STUDY (merged Notes + Study Tools) -->
 <div class="scr" id="scr-study">
   <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg1);">
-    <button class="lib-tab on" id="study-tab-notes" onclick="switchStudyTab('notes')">Notes</button>
+    <button class="lib-tab on" id="study-tab-notes" onclick="switchStudyTab('notes')">Study Notes</button>
     <button class="lib-tab" id="study-tab-tools" onclick="switchStudyTab('tools')">Study Tools</button>
   </div>
   <div class="study-sub on" id="scr-field">
@@ -833,7 +799,7 @@ input[type="range"]{accent-color:var(--gold)}
     <button class="backbtn" onclick="saveAndGoLib()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="19" height="19"><path d="m15 18-6-6 6-6"/></svg>Library
     </button>
-    <div class="topbar-sub">Notes</div>
+    <div class="topbar-sub">Study Notes</div>
     <button class="btn btn-sm btn-ghost" onclick="showDeleteModal()" style="padding:7px 10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     </button>
@@ -1008,12 +974,12 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="fnotes-collapsible" id="fnotes-collapsible">
       <button class="fnotes-toggle" onclick="toggleFnotes()" id="fnotes-toggle-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        <span>Notes</span>
+        <span>Study Notes</span>
         <span id="fnotes-wc-badge" style="font-size:10px;color:var(--txt4);margin-left:2px"></span>
         <svg id="fnotes-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13" style="margin-left:auto;transition:transform .2s"><path d="m6 9 6 6 6-6"/></svg>
       </button>
       <div class="fnotes-body" id="fnotes-body">
-        <div class="fnotes-body-inner"><p id="d-fnotes" style="font-size:14px;color:var(--txt2);line-height:1.7;white-space:pre-wrap">No field notes recorded.</p></div>
+        <div class="fnotes-body-inner"><p id="d-fnotes" style="font-size:14px;color:var(--txt2);line-height:1.7;white-space:pre-wrap">No study notes recorded.</p></div>
       </div>
     </div>
     <div style="display:flex;align-items:center;margin-bottom:10px"><div class="seclabel" style="margin-bottom:0;flex:1">AI Study Tools</div></div>
@@ -1047,7 +1013,7 @@ input[type="range"]{accent-color:var(--gold)}
       <span style="font-size:14px;color:var(--txt4)" id="snapshot-sub">Places &amp; Geography + Historical · Cultural (book)</span>
     </button>
     <div class="seclabel">Resources &amp; Documents</div>
-    <p style="font-size:12px;color:var(--txt4);font-style:italic;margin-bottom:12px;line-height:1.5">Photos captured in the Notes tab. Tap a tile to view extracted text.</p>
+    <p style="font-size:12px;color:var(--txt4);font-style:italic;margin-bottom:12px;line-height:1.5">Photos captured in the Study Notes tab. Tap a tile to view extracted text.</p>
     <input type="file" id="res-input-camera" accept="image/*" capture="environment" style="display:none" onchange="resHandleFile(this)">
     <input type="file" id="res-input-gallery" accept="image/*" multiple style="display:none" onchange="resHandleFile(this)">
     <input type="file" id="res-input-doc" accept=".txt,.md,.docx,.doc" style="display:none" onchange="resHandleDoc(this)">
@@ -1477,7 +1443,7 @@ input[type="range"]{accent-color:var(--gold)}
     <div class="exp-section" style="margin-top:12px">
       <div class="exp-section-title">Core Content</div>
       <div class="exp-row on" id="exp-scripture" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">Scripture Text</div><div class="exp-row-sub">The passage from your translation</div></div></div>
-      <div class="exp-row on" id="exp-fieldnotes" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">Notes</div><div class="exp-row-sub">Your capture notes</div></div></div>
+      <div class="exp-row on" id="exp-fieldnotes" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">Study Notes</div><div class="exp-row-sub">Your capture notes</div></div></div>
       <div class="exp-row on" id="exp-outline" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">Passage / Book Outline</div><div class="exp-row-sub">Your structural outline</div></div></div>
       <div class="exp-row on" id="exp-resources" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">Resources &amp; Documents</div><div class="exp-row-sub">Extracted text from photos</div></div></div>
       <div class="exp-row on" id="exp-conclusions" onclick="expToggle(this)"><div class="exp-check"><svg class="exp-check-mark" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="2 7 5 10 11 3"/></svg></div><div class="exp-row-text"><div class="exp-row-label">My Conclusions</div><div class="exp-row-sub">Your personal theological conclusions</div></div></div>
@@ -1868,55 +1834,6 @@ input[type="range"]{accent-color:var(--gold)}
     <button onclick="dismissUpdateBanner()">Skip</button>
   </div>
 </div>
-<!-- Floating format rails for Notes/Conclusions/Outline (mobile only).
-     Relocated here (out of each editor's scrolling ancestor tree) so
-     position:fixed works reliably -- see MKB: position:fixed elements
-     inside an overflow:hidden parent lose touch events on iOS Safari,
-     and Outline's collapsible .fnotes-body wrapper has overflow:hidden
-     permanently, which also rules out position:sticky for that editor.
-     Hidden by default; initCustomToolbar() (ui.js) toggles the .showing
-     class via each Quill instance's own selection-change event, so
-     exactly one rail is visible at a time, over whichever field has
-     focus. -->
-<div class="ql-rail" id="f-notes-toolbar">
-  <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
-  <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
-  <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
-  <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
-  <button type="button" class="ql-rail-btn rail-header-cycle" aria-label="Cycle heading style (H1 / H2 / H3 / Normal)">H</button>
-  <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
-  <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
-  <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
-  <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
-</div>
-<div class="ql-rail" id="d-conclusions-toolbar">
-  <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
-  <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
-  <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
-  <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
-  <button type="button" class="ql-rail-btn rail-header-cycle" aria-label="Cycle heading style (H1 / H2 / H3 / Normal)">H</button>
-  <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
-  <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
-  <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
-  <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
-</div>
-<div class="ql-rail" id="d-outline-toolbar">
-  <button type="button" class="ql-bold ql-rail-btn" aria-label="Bold">B</button>
-  <button type="button" class="ql-italic ql-rail-btn" aria-label="Italic">I</button>
-  <button type="button" class="ql-underline ql-rail-btn" aria-label="Underline">U</button>
-  <button type="button" class="ql-strike ql-rail-btn" aria-label="Strikethrough">S</button>
-  <button type="button" class="ql-rail-btn rail-header-cycle" aria-label="Cycle heading style (H1 / H2 / H3 / Normal)">H</button>
-  <button type="button" class="ql-list ql-rail-btn" value="ordered" aria-label="Numbered list">1.</button>
-  <button type="button" class="ql-list ql-rail-btn" value="bullet" aria-label="Bullet list">•</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="-1" aria-label="Decrease indent">⇤</button>
-  <button type="button" class="ql-indent ql-rail-btn" value="+1" aria-label="Increase indent">⇥</button>
-  <button type="button" class="ql-blockquote ql-rail-btn" aria-label="Blockquote">"</button>
-  <button type="button" class="ql-clean ql-rail-btn" aria-label="Clear formatting">Tx</button>
-</div>
 <div class="fab-wrap">
   <div class="fab-menu" id="fab-menu">
     <button class="fab-menu-item" onclick="fabMenuNewStudy()">New Study</button>
@@ -1932,7 +1849,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.53.0"></script>
+<script type="module" src="app.js?v=4.54.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
