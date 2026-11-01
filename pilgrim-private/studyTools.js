@@ -13,15 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.55.0';
+} from './utils.js?v=4.56.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.55.0';
-import { openConfirm } from './media.js?v=4.55.0';
-import { syncToGist } from './sync.js?v=4.55.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.55.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.55.0';
-import { decodeMorph } from './morph.js?v=4.55.0';
-import { hebrewVerses } from './versemap.js?v=4.55.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.56.0';
+import { openConfirm } from './media.js?v=4.56.0';
+import { syncToGist } from './sync.js?v=4.56.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.56.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.56.0';
+import { decodeMorph } from './morph.js?v=4.56.0';
+import { hebrewVerses } from './versemap.js?v=4.56.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -1221,7 +1221,8 @@ function setScope(s){
  * @param {string} ref - A passage reference string (e.g. "Romans 8:1").
  * @returns {string} The canonical book name, or the first word if no match found.
  */
-function getBookFromRef(ref){if(!ref)return '';var r=ref.trim().toLowerCase();for(var i=0;i<BIBLE_BOOKS.length;i++){if(r.startsWith(BIBLE_BOOKS[i].toLowerCase()))return BIBLE_BOOKS[i];}var parts=ref.trim().split(' ');
+function getBookFromRef(ref){if(!ref)return '';var r=ref.trim().toLowerCase();if(/^psalm\b/.test(r))return 'Psalms'; // v4.56.0: "Psalm 23" and "Psalms 23" are one book
+  for(var i=0;i<BIBLE_BOOKS.length;i++){if(r.startsWith(BIBLE_BOOKS[i].toLowerCase()))return BIBLE_BOOKS[i];}var parts=ref.trim().split(' ');
   // Numbered book (e.g. '1 Samuel', '2 Kings'): first token is a single digit
   var isNum=parts[0].length===1&&!isNaN(parseInt(parts[0]));
   if(isNum&&parts.length>=2)return parts[0]+' '+parts[1];

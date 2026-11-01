@@ -558,6 +558,7 @@ function logError(action,err){
     log.unshift({ts:new Date().toISOString(),action:action,message:msg});
     if(log.length>ERROR_LOG_CAP)log=log.slice(0,ERROR_LOG_CAP);
     localStorage.setItem(SK_ERROR_LOG,JSON.stringify(log));
+    if(document.getElementById('errorlog-list')&&typeof window.renderErrorLog==='function')window.renderErrorLog(); // v4.56.0: open panel updates live
     beaconError(action,msg);
   }catch(e){/* logging must never itself throw */}
 }
@@ -580,7 +581,21 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.55.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.56.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: wording. Diagnostics and sync messages no longer say Groq, Gist or Push; they now say AI Study Tools, backup and Restore. New Error Log entries are named Backup (Sync), Restore (Sync) and Force Restore (Sync). Entries already in your log keep their old names.",
+      "fix: the Error Log panel now shows a new error right away, without closing and reopening Settings.",
+      "fix: opening a broken or cut-off study share link now says it could not be opened and to ask for a new one. Before, nothing happened.",
+      "new: adding a transcript over about 1 MB now asks first, because large transcripts are slow to open. Transcripts already saved are not changed.",
+      "fix: the Settings tour now says Backup and Restore instead of pull or push, has an Appearance step, and the Diagnostics step uses current wording.",
+      "fix: removed a leftover narrow-screen style from the old side toolbar that gave the notes editor a doubled border under the toolbar on phones.",
+      "fix: Psalm 23 and Psalms 23 now count as one book in Library stats, the book-scope label and the book-wide AI prompt.",
+      "note: no saved studies, transcripts, Memory verses, words, settings or backups were changed or rewritten. Cache-buster bumped to 4.56.0."
+    ]
+  },
+  {
+    version:'4.55.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Test Me no longer marks a verse wrong because of an apostrophe. A typed straight apostrophe now matches the curly one in the saved verse (\u201Cname\u2019s\u201D), so a perfect answer can reach 100%.",

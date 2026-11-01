@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.55.0';
+} from './utils.js?v=4.56.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.55.0';
+} from './storage.js?v=4.56.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm
-} from './media.js?v=4.55.0';
+} from './media.js?v=4.56.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.55.0';
+} from './tts.js?v=4.56.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.55.0';
+} from './sync.js?v=4.56.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,11 +72,11 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.55.0';
+} from './studyTools.js?v=4.56.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.55.0';
+} from './memory.js?v=4.56.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1872,7 +1872,9 @@ function checkImportHash(){
     var preview=document.getElementById('import-preview');
     if(preview){var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';preview.innerHTML='<strong style="color:var(--txt1);font-family:\'EB Garamond\',serif;font-size:16px">'+(s.title||'Untitled Study')+'</strong><br><span style="color:var(--gold);font-size:13px">'+(ref0||'No reference')+'</span>'+(s.teacher?'<br><span style="font-size:12px;color:var(--txt3)">'+escHtml(s.teacher)+'</span>':'')+'<br><span style="font-size:11px;color:var(--txt4)">'+fmtDate(s.date)+'</span>';}
     document.getElementById('import-overlay').classList.add('on');
-  }catch(e){/* malformed hash — silently ignore */}
+  }catch(e){ // v4.56.0: a broken #study= link now says so (was silent)
+    toast('That share link could not be opened. Ask for a new one.');window.location.hash='';
+  }
 }
 /**
  * Confirms and saves the pending shared study import from _importPending.
@@ -3342,7 +3344,8 @@ var TOUR_A_STEPS=[
 
 // ── TOUR B — "SETTINGS WALKTHROUGH" ──────────────────────────────────────
 var TOUR_B_STEPS=[
-  {target:'#settings-sec-sync',title:'Study Sync',body:'Studies sync automatically after every save. Use Restore or Backup here any time to manually pull or push.'},
+  {target:'#settings-sec-sync',title:'Study Sync',body:'Studies sync automatically after every save. Tap Backup to save your studies now, or Restore to bring your saved backup onto this device.'},
+  {target:'#settings-sec-appearance',title:'Appearance',body:'Choose the Parchment (light) or Original (dark) theme, then pick a font and text size for scripture, notes and study results. The preview shows how it will look.'},
   {target:'#settings-sec-tts',title:'Text-to-Speech',body:'Pick a voice and adjust the reading speed, then tap Test Voice to preview it.'},
   {target:'#settings-sec-trans',title:'Available Translations',body:'Tap any translation to set it as your default — it will be pre-selected whenever you start a new study or add a passage.'},
   {target:'#settings-sec-about-trans',title:'About Translations',body:'Tap any translation here for full detail — history, translation philosophy, producers, and intended audience — arranged from most literal to most interpretive.'},
@@ -3351,7 +3354,7 @@ var TOUR_B_STEPS=[
   {target:'#settings-sec-backup',title:'Manual JSON Backup',body:'Your data syncs automatically, but since Pilgrim is in active beta development we recommend downloading a manual backup every so often — just in case. Tap Download Backup to save a copy to your device any time.'},
   {target:'#settings-sec-about',title:'About',body:'See which version you are on, tap Check for updates to find out if a newer one is live, or Force refresh to clear cached app files if the app looks out of date. Force refresh never touches your studies or settings. Data-source credits are at the bottom.'},
   {target:'#settings-sec-changelog',title:'What\u2019s New',body:'The full history of changes to Arch\u0113 \u00b7 Pilgrim, newest first — tap to expand.'},
-  {target:'#diag-settings-section',title:'Diagnostics',body:"Connection test buttons for AI tools, text extraction, sync, and the ESV API. Use the feedback form below to report a bug or issue directly — it files straight to the dev team."}
+  {target:'#diag-settings-section',title:'Diagnostics',body:"Quick connection checks for AI Study Tools, text extraction, Study Sync and the ESV text, plus a full check and an error list you can copy. Use the feedback form below to report a problem directly — it goes straight to the developer."}
 ];
 
 // ════════════════════════════════════════════════════════
@@ -3462,7 +3465,7 @@ function diagUpdate(id,status,detail){
 async function runQuickTest(service){
   // Dispatch table: maps service key → label + async test function
   var serviceMap={
-    groq:{label:'AI Study Tools',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'diag_ping'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Groq responded normally':'HTTP '+r.status};}},
+    groq:{label:'AI Study Tools',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'diag_ping'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'AI Study Tools responded normally':'HTTP '+r.status};}},
     // TODO: OCR test currently points to /groq (placeholder); should target its own endpoint
     ocr:{label:'Text Extraction',fn:async function(){var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'diag_ping'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});return{pass:r.ok,detail:r.ok?'Text extraction endpoint responded normally':'HTTP '+r.status};}},
     sync:{label:'Study Sync',fn:async function(){var r=await fetch(WORKER_URL+'/gist?cb='+Date.now()+'&ping=1');return{pass:r.ok||r.status===404||r.status===401,detail:'HTTP '+r.status+(r.ok?' — Sync reachable':'')};}},
@@ -3592,7 +3595,7 @@ async function runDiagnostics(){
   });
   await runTest('groq',async function(){
     var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'diag_ping'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
-    return {pass:r.ok,detail:r.ok?'Groq responded normally':'HTTP '+r.status};
+    return {pass:r.ok,detail:r.ok?'AI Study Tools responded normally':'HTTP '+r.status};
   });
   await runTest('esv',async function(){
     var r=await fetch(WORKER_URL+'/esv?q=John+1:1&include-headings=false&include-footnotes=false&include-verse-numbers=false');
@@ -3603,27 +3606,27 @@ async function runDiagnostics(){
     var r=await fetch(WORKER_URL+'/gist?cb='+Date.now());
     if(!r.ok)return{pass:false,detail:'HTTP '+r.status};
     var meta=await r.json();
-    return{pass:true,detail:'Gist metadata fetched — '+(Object.keys(meta.files||{}).length)+' file(s)'};
+    return{pass:true,detail:'Backup storage reached — '+(Object.keys(meta.files||{}).length)+' file(s)'};
   });
   await runTest('gist_push',async function(){
     var payload=JSON.stringify({diagnostic:true,ts:diagTs,id:runId});
     var body={description:'Arché Diagnostic',public:false,files:{'arche-pilgrim-diagnostic.json':{content:payload}}};
     var r=await fetch(WORKER_URL+'/gist',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    return{pass:r.ok,detail:r.ok?'Diagnostic file written to Gist':'HTTP '+r.status};
+    return{pass:r.ok,detail:r.ok?'Test backup written':'HTTP '+r.status};
   });
   await runTest('gist_verify',async function(){
     // 1.2s settle: Gist CDN propagation can lag behind the write
     await new Promise(function(res){setTimeout(res,1200);});
     var metaR=await fetch(WORKER_URL+'/gist?cb='+Date.now());
-    if(!metaR.ok)return{pass:false,detail:'Could not fetch Gist metadata'};
+    if(!metaR.ok)return{pass:false,detail:'Could not reach backup storage'};
     var meta=await metaR.json();
     var file=meta.files&&meta.files['arche-pilgrim-diagnostic.json'];
-    if(!file||!file.raw_url)return{pass:false,detail:'Diagnostic file not found in Gist'};
+    if(!file||!file.raw_url)return{pass:false,detail:'Test backup not found'};
     var rawR=await fetch(WORKER_URL+'/gist-raw?url='+encodeURIComponent(file.raw_url));
     if(!rawR.ok)return{pass:false,detail:'Could not fetch diagnostic file content'};
     var data=await rawR.json();
     var match=data.id===runId;
-    return{pass:match,detail:match?'Push verified — data round-tripped correctly':'ID mismatch — data may be stale'};
+    return{pass:match,detail:match?'Backup verified — data round-tripped correctly':'ID mismatch — data may be stale'};
   });
   await runTest('tts',async function(){
     var avail=!!(window.speechSynthesis);

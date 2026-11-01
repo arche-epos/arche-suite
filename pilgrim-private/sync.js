@@ -14,10 +14,10 @@ import {
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent,
   stripAiResultsForBackup, carryAiResults, makeSafetyCopy
-} from './utils.js?v=4.55.0';
+} from './utils.js?v=4.56.0';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.55.0';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.55.0';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.56.0';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.56.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.
@@ -178,7 +178,7 @@ async function testAPI(service){
   try{
     if(service==='groq'){
       var r=await fetch(WORKER_URL+'/groq',{method:'POST',headers:{'Content-Type':'application/json','X-Tester-Id':ACTIVE_USER||'unknown','X-Tool-Name':'diag_ping'},body:JSON.stringify({model:'openai/gpt-oss-120b',max_tokens:5,messages:[{role:'user',content:'ping'}]})});
-      if(r.ok){resultEl.style.color='var(--sagebright)';resultEl.textContent='\u2713 AI (Groq) is responding normally.';}
+      if(r.ok){resultEl.style.color='var(--sagebright)';resultEl.textContent='\u2713 AI Study Tools are responding normally.';}
       else{resultEl.style.color='var(--crimsonbright)';resultEl.textContent='\u2717 AI error \u2014 HTTP '+r.status+'.';}
     } else if(service==='esv'){
       var r=await fetch(WORKER_URL+'/esv?q=John+1:1&include-headings=false&include-footnotes=false&include-verse-numbers=false');
@@ -255,7 +255,7 @@ async function syncToGist(silent){
     var isRateLimit=e.message&&(e.message.indexOf('rate limit')!==-1||e.message.indexOf('429')!==-1||e.message.indexOf('secondary rate')!==-1||e.message.indexOf('rate_limit')!==-1);
     if(isRateLimit){_rateLimitUntil=Date.now()+15*60*1000;} // Back off silent auto-push for 15 minutes
     var msg=isRateLimit?'GitHub rate limited — auto-backup paused 15 min. Manual Backup still works.':e.message;
-    logError('Gist Push (Sync)',e);
+    logError('Backup (Sync)',e);
     trackEvent({sync:'push',syncOutcome:'fail'});
     if(!silent){gistSetStatus('Backup failed: '+msg,'var(--crimsonbright)');toast(msg);}
   }finally{_gistPushing=false;}
@@ -274,12 +274,12 @@ async function syncFromGist(){
     if(!res.ok)throw new Error('Sync '+res.status);
     var data=await res.json();
     var file=data.files&&data.files[gistFilename()];
-    if(!file||!file.raw_url)throw new Error('No studies file found in Gist');
+    if(!file||!file.raw_url)throw new Error('No backup found for this account');
     // Step 2 — GitHub's Gist API truncates content >1MB in metadata; raw_url always returns the full file
     var rawRes=await fetch(WORKER_URL+'/gist-raw?url='+encodeURIComponent(file.raw_url));
     if(!rawRes.ok)throw new Error('Raw fetch '+rawRes.status);
     var remote=await rawRes.json();
-    if(!remote.studies||!Array.isArray(remote.studies))throw new Error('Invalid Gist format');
+    if(!remote.studies||!Array.isArray(remote.studies))throw new Error('The backup is not in the expected format');
     remote.studies.forEach(function(s){migrateStudy(s);});
     var before=studies.map(function(s){return {id:s.id,upd:s.updatedAt};}); // Snapshot before merge — reserved for future change-detection or diff display
     setStudies(mergeStudies(studies,remote.studies));
@@ -338,7 +338,7 @@ async function syncFromGist(){
     trackEvent({sync:'pull',syncOutcome:'ok'});
     reportStorageSnapshot();
   }catch(e){
-    logError('Gist Pull (Sync)',e);
+    logError('Restore (Sync)',e);
     trackEvent({sync:'pull',syncOutcome:'fail'});
     gistSetStatus('Restore failed: '+e.message,'var(--crimsonbright)');
     toast('Sync failed: '+e.message);
@@ -371,11 +371,11 @@ async function syncFromGistForce(){
     if(!res.ok)throw new Error('Sync '+res.status);
     var data=await res.json();
     var file=data.files&&data.files[gistFilename()];
-    if(!file||!file.raw_url)throw new Error('No studies file found in Gist');
+    if(!file||!file.raw_url)throw new Error('No backup found for this account');
     var rawRes=await fetch(WORKER_URL+'/gist-raw?url='+encodeURIComponent(file.raw_url));
     if(!rawRes.ok)throw new Error('Raw fetch '+rawRes.status);
     var remote=await rawRes.json();
-    if(!remote.studies||!Array.isArray(remote.studies))throw new Error('Invalid Gist format');
+    if(!remote.studies||!Array.isArray(remote.studies))throw new Error('The backup is not in the expected format');
     var _localById={};studies.forEach(function(x){_localById[x.id]=x;});
     setStudies(remote.studies.filter(function(s){return !s._tourDemo;}).map(function(s){migrateStudy(s);carryAiResults(s,_localById[s.id]);return s;})) // AI results are not in backups — keep this device's own
     persist();
@@ -388,7 +388,7 @@ async function syncFromGistForce(){
     trackEvent({sync:'pull',syncOutcome:'ok'});
     reportStorageSnapshot();
   }catch(e){
-    logError('Gist Force Pull (Sync)',e);
+    logError('Force Restore (Sync)',e);
     trackEvent({sync:'pull',syncOutcome:'fail'});
     gistSetStatus('Force restore failed: '+e.message,'var(--crimsonbright)');
   }finally{_gistPulling=false;}

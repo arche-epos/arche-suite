@@ -13,11 +13,12 @@
 
 import {
   ACTIVE_USER, cur, toast, toastSuccess, escHtml, logError, closeOverlay
-} from './utils.js?v=4.55.0';
+} from './utils.js?v=4.56.0';
 
 var DB_VERSION = 1;
 var STORES = ['transcripts', 'recordings', 'meta'];
 var TR_EXTS = ['txt', 'docx', 'pdf', 'vtt', 'srt'];
+var TR_BIG_CHARS = 1000000; // v4.56.0: ask before adding a transcript larger than about 1 MB
 var PDFJS_VER = '3.11.174';
 
 var _db = null;
@@ -388,13 +389,19 @@ export function trHandleFile(input) {
     if (!r.text || !r.text.trim()) throw new Error('No text could be found in that file');
     if (!cur || cur.id !== sid) { toast('Study changed \u2014 transcript not added'); return; }
     var rec = { text: r.text, cues: r.cues || [], sourceName: file.name, addedAt: new Date().toISOString() };
-    if (mediaHasTranscript(sid)) {
-      _pending = { studyId: sid, rec: rec };
-      openConfirm('Replace transcript?', 'This study already has a transcript. Replace it with \u201c' + file.name + '\u201d? The old one will be removed from this device.', 'Replace', 'btn btn-primary', function () {
-        var p = _pending; _pending = null;
-        if (p) commitTranscript(p.studyId, p.rec);
-      });
-    } else commitTranscript(sid, rec);
+    var proceed = function () {
+      if (!cur || cur.id !== sid) { toast('Study changed \u2014 transcript not added'); return; }
+      if (mediaHasTranscript(sid)) {
+        _pending = { studyId: sid, rec: rec };
+        openConfirm('Replace transcript?', 'This study already has a transcript. Replace it with \u201c' + file.name + '\u201d? The old one will be removed from this device.', 'Replace', 'btn btn-primary', function () {
+          var p = _pending; _pending = null;
+          if (p) commitTranscript(p.studyId, p.rec);
+        });
+      } else commitTranscript(sid, rec);
+    };
+    if (r.text.length > TR_BIG_CHARS) {
+      openConfirm('Large transcript', 'This transcript is about ' + (r.text.length / 1048576).toFixed(1) + ' MB and may be slow to open. Add it anyway?', 'Add anyway', 'btn btn-primary', proceed);
+    } else proceed();
   }).catch(function (e) {
     logError('Transcript Upload', e);
     toast(e && e.message ? e.message : 'Could not read that file');

@@ -253,7 +253,8 @@ that avoids the excluded list.
   PDF, VTT or SRT file). A **Transcript** section then appears on the Study Notes tab
   with a search box and **Copy**, **Download .txt**, **Replace**, and **Delete**.
   It is stored on this device only: it is included in the JSON backup file but
-  not in cloud sync.
+  not in cloud sync. A transcript over about 1 MB asks for
+  confirmation first because it is slow to open.
 
 ### Study — Study Tools tab
 - Choose what the tools look at → the **This Passage / Whole Book** switch above
