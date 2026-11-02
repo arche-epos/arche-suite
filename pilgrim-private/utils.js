@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.58.4',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.58.5',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "changed: three psalms moved to where their author lived in The Biblical Story. Psalm 90 (Moses) now follows Deuteronomy, and Psalms 72 and 127 (Solomon) follow 1 Kings 1\u201311. They were in Other Psalms at the end of the Old Testament.",
+      "note: plan order only. Nothing saved was changed: any of these psalms you had checked stay checked, but your Last Read bookmark or the unchecked-before-here count can shift if you had read past these spots. Cache-buster bumped to 4.58.5."
+    ]
+  },
+  {
+    version:'4.58.4',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "changed: the Hide Chronicles switch is removed from The Biblical Story. Chronicles is part of the plan and always shows and counts.",

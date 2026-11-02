@@ -87,12 +87,12 @@ import(tmp).then((m) => {
 
   // Group sizes per spec 3b
   const want = {
-    'g.gen-1-11': 11, 'g.job': 42, 'g.gen-12-50': 39, 'g.exodus': 40, 'g.leviticus': 27, 'g.numbers': 36, 'g.deuteronomy': 34,
+    'g.gen-1-11': 11, 'g.job': 42, 'g.gen-12-50': 39, 'g.exodus': 40, 'g.leviticus': 27, 'g.numbers': 36, 'g.deuteronomy': 35,
     'g.joshua': 24, 'g.judges-ruth': 25, 'g.1-samuel': 31, 'g.2-samuel': 24, 'g.david-psalms-1': 25, 'g.david-psalms-2': 24, 'g.david-psalms-3': 24,
-    'g.1-chronicles': 29, 'g.1-kings-1-11': 11, 'g.2-chronicles-1-9': 9, 'g.proverbs': 31, 'g.eccl-song': 20,
+    'g.1-chronicles': 29, 'g.1-kings-1-11': 13, 'g.2-chronicles-1-9': 9, 'g.proverbs': 31, 'g.eccl-song': 20,
     'g.kings-12-22-2k-1-17': 28, 'g.2-chronicles-10-28': 19, 'g.jonah-amos-hosea': 27, 'g.isaiah-1-33': 33, 'g.isaiah-34-66-micah': 40,
     'g.2-kings-18-25': 8, 'g.2-chronicles-29-36': 8, 'g.nahum-zephaniah': 6, 'g.jeremiah-1-26': 26, 'g.jeremiah-27-52': 26, 'g.lam-hab-obad': 9,
-    'g.ezekiel': 48, 'g.daniel': 12, 'g.ezra-hag-zech': 26, 'g.esther-neh-mal': 27, 'g.other-psalms-1': 26, 'g.other-psalms-2': 26, 'g.other-psalms-3': 25, 'g.joel': 3,
+    'g.ezekiel': 48, 'g.daniel': 12, 'g.ezra-hag-zech': 26, 'g.esther-neh-mal': 27, 'g.other-psalms-1': 25, 'g.other-psalms-2': 25, 'g.other-psalms-3': 24, 'g.joel': 3,
     'g.gos-a': 12, 'g.gos-b': 4, 'g.gos-c': 7, 'g.gos-d': 12, 'g.gos-e': 1, 'g.gos-f': 22, 'g.gos-g': 6, 'g.gos-h': 7, 'g.gos-i': 16, 'g.gos-j': 7,
     'g.acts-1-12': 12, 'g.acts-13-14-gal-jas': 13, 'g.acts-15-18a-thess': 12, 'g.acts-18b-19-1cor': 18, 'g.acts-20a-2cor-rom': 30,
     'g.acts-20b-28-prison': 24, 'g.pastoral': 13, 'g.general-letters': 29, 'g.revelation': 22
@@ -108,6 +108,13 @@ import(tmp).then((m) => {
   // Weights: Part 7 = 89 chapters worth, whole plan integer-exact
   const w7 = evItems.reduce((a, e) => a + e.w, 0);
   eq('Part 7 weighs 89 chapters (events x 89 = 89 x 94)', w7, 89 * m.RP_W_CH);
+
+  // Author-tied psalms sit with their period (v4.58.5): Moses after Deuteronomy, Solomon after 1 Kings 1-11
+  const ps = plan.items.filter((i) => i.book === 'Ps');
+  eq('all 150 Psalms still once each after the moves', [ps.length, new Set(ps.map((p) => p.id)).size], [150, 150]);
+  eq('Ps 90 right after Deuteronomy 34, before Joshua', plan.index['Deut.34'] + 1 === plan.index['Ps.90'] && plan.index['Ps.90'] < plan.index['Josh.1'], true);
+  eq('Ps 72 and 127 follow 1 Kings 11, before Proverbs', plan.index['1Kgs.11'] < plan.index['Ps.72'] && plan.index['Ps.127'] < plan.index['Prov.1'], true);
+  eq('moved psalms are not in the Other Psalms groups', plan.groups.filter((g) => /^g\.other-psalms/.test(g.id)).every((g) => g.items.every((i) => !['Ps.72', 'Ps.90', 'Ps.127'].includes(i.id))), true);
 
   // Order spot checks
   const pos = (id) => plan.index[id];

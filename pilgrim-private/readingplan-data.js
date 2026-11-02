@@ -203,9 +203,9 @@ function R(code, from, to) { return [code, from, to === undefined ? from : to]; 
 var PS_DAVID_1 = [R('Ps',3,9), R('Ps',11,28)];
 var PS_DAVID_2 = [R('Ps',29,32), R('Ps',34,41), R('Ps',51,62)];
 var PS_DAVID_3 = [R('Ps',63,65), R('Ps',68,70), R('Ps',86), R('Ps',101), R('Ps',103), R('Ps',108,110), R('Ps',122), R('Ps',124), R('Ps',131), R('Ps',133), R('Ps',138,145)];
-var PS_OTHER_1 = [R('Ps',1,2), R('Ps',10), R('Ps',33), R('Ps',42,50), R('Ps',66,67), R('Ps',71,81)];
-var PS_OTHER_2 = [R('Ps',82,85), R('Ps',87,100), R('Ps',102), R('Ps',104,107), R('Ps',111,113)];
-var PS_OTHER_3 = [R('Ps',114,121), R('Ps',123), R('Ps',125,130), R('Ps',132), R('Ps',134,137), R('Ps',146,150)];
+var PS_OTHER_1 = [R('Ps',1,2), R('Ps',10), R('Ps',33), R('Ps',42,50), R('Ps',66,67), R('Ps',71), R('Ps',73,81)];
+var PS_OTHER_2 = [R('Ps',82,85), R('Ps',87,89), R('Ps',91,100), R('Ps',102), R('Ps',104,107), R('Ps',111,113)];
+var PS_OTHER_3 = [R('Ps',114,121), R('Ps',123), R('Ps',125,126), R('Ps',128,130), R('Ps',132), R('Ps',134,137), R('Ps',146,150)];
 
 // [partId, partName, [ [groupId, groupName, specs | 'gospel:X', chron?] ]]
 var RP_STORYFLOW_DEF = [
@@ -218,7 +218,7 @@ var RP_STORYFLOW_DEF = [
     ['g.exodus', 'Exodus', [R('Exod',1,40)]],
     ['g.leviticus', 'Leviticus', [R('Lev',1,27)]],
     ['g.numbers', 'Numbers', [R('Num',1,36)]],
-    ['g.deuteronomy', 'Deuteronomy', [R('Deut',1,34)]]
+    ['g.deuteronomy', 'Deuteronomy and Psalm 90', [R('Deut',1,34), R('Ps',90)]]
   ]],
   ['p3', '3. Land', [
     ['g.joshua', 'Joshua', [R('Josh',1,24)]],
@@ -231,7 +231,7 @@ var RP_STORYFLOW_DEF = [
     ['g.david-psalms-2', 'David’s Psalms (2 of 3)', PS_DAVID_2],
     ['g.david-psalms-3', 'David’s Psalms (3 of 3)', PS_DAVID_3],
     ['g.1-chronicles', '1 Chronicles', [R('1Chr',1,29)], true],
-    ['g.1-kings-1-11', '1 Kings 1–11', [R('1Kgs',1,11)]],
+    ['g.1-kings-1-11', '1 Kings 1–11 and Solomon’s Psalms', [R('1Kgs',1,11), R('Ps',72), R('Ps',127)]],
     ['g.2-chronicles-1-9', '2 Chronicles 1–9', [R('2Chr',1,9)], true],
     ['g.proverbs', 'Proverbs', [R('Prov',1,31)]],
     ['g.eccl-song', 'Ecclesiastes and Song of Solomon', [R('Eccl',1,12), R('Song',1,8)]]
@@ -316,7 +316,7 @@ function rpBuildStoryFlow() {
         'Job is read among the patriarchs.',
         'Each prophet is read beside the king he served.',
         'Chronicles comes right after the Samuel and Kings history it retells.',
-        'David\u2019s Psalms are read with David\u2019s life, and the other Psalms with the exile and return.',
+        'David\u2019s Psalms are read with David\u2019s life, Psalm 90 with Moses, and Psalms 72 and 127 with Solomon. The other Psalms are read with the exile and return.',
         'The four Gospels are woven into one life of Jesus, and organized event by event.',
         'Paul\u2019s letters are read where they fit in Acts.'
       ],
