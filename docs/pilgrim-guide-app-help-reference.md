@@ -340,8 +340,7 @@ that avoids the excluded list.
   while anything is unchecked; a tick appears only at true 100%. The overall
   percentage counts the Gospels by their chapters.
 - Chronicles → it retells Samuel and Kings and sits right after the part it
-  parallels. **Hide Chronicles** (top of the plan) removes it from the list and
-  the percentages; what I already checked is kept.
+  parallels.
 - Where it is saved → on this device, in my account's backup (Settings > Study
   Sync > Backup / Restore), in a Back up / Export file, and in the Clear All Data
   safety copy. **Clear All Data** removes it. Not included: reminders, other

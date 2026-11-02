@@ -8,12 +8,12 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.3';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.4';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
-  rpSetChecked, rpRestore, rpSetHideChron, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.58.3';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.3';
+  rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps
+} from './readingplan-core.js?v=4.58.4';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.4';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -107,7 +107,7 @@ function rpRenderCard() {
   var el = document.getElementById('stats-readplan');
   if (!el) return;
   var store = rpLoad(), st = _planState(store), plan = _getPlan();
-  var hide = !!st.opts.hideChron.v;
+  var hide = false;  // Chronicles always shown (v4.58.4); a stored hideChron option from older builds is ignored, not deleted
   var pr = rpProgress(plan, st, hide), bm = rpBookmark(plan, st, hide), gaps = rpGaps(plan, st, hide);
   var last = bm
     ? 'Last read: ' + escHtml(bm.item.label) + (bm.d ? ', ' + _fmtDate(bm.d) : '')
@@ -143,7 +143,7 @@ function rpOpenPlan(view) {
   if (!ov) return;
   var store = rpLoad(), st = _planState(store);
   _ui.view = view === 'gaps' ? 'gaps' : 'plan';
-  _openBookmarkSections(_getPlan(), st, !!st.opts.hideChron.v);
+  _openBookmarkSections(_getPlan(), st, false);
   _ui.open = true;
   if (!_ui.bound) {
     var body = document.getElementById('rp-body');
@@ -172,7 +172,7 @@ function rpBackToPlan() { _ui.view = 'plan'; _rpRender(); var b = document.getEl
 
 /** Jumps to the Last Read chip: opens its part and group, scrolls to it. */
 function rpJumpLast() {
-  var store = rpLoad(), st = _planState(store), plan = _getPlan(), hide = !!st.opts.hideChron.v;
+  var store = rpLoad(), st = _planState(store), plan = _getPlan(), hide = false;
   var bm = rpBookmark(plan, st, hide);
   if (!bm) { toast('Nothing checked yet — start with Genesis 1'); return; }
   _ui.view = 'plan';
@@ -180,15 +180,6 @@ function rpJumpLast() {
   _rpRender();
   var node = document.querySelector('#rp-body [data-rp-id="' + bm.item.id + '"]');
   if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center' });
-}
-
-/** Hide / show Chronicles (parallel accounts). Stored checks are kept; they just stop counting while hidden. */
-function rpToggleChron() {
-  var store = rpLoad(), st = _planState(store);
-  rpSetHideChron(st, !st.opts.hideChron.v, Date.now());
-  if (rpSave(store)) _rpQueueSync();
-  _rpRender();
-  rpRenderCard();
 }
 
 function _rpBodyClick(ev) {
@@ -299,7 +290,7 @@ function _rpRender() {
   var body = document.getElementById('rp-body');
   if (!body) return;
   var plan = _getPlan(), store = rpLoad(), st = _planState(store);
-  var hide = !!st.opts.hideChron.v;
+  var hide = false;  // Chronicles always shown (v4.58.4); a stored hideChron option from older builds is ignored, not deleted
   var pr = rpProgress(plan, st, hide), bm = rpBookmark(plan, st, hide), bmId = bm ? bm.item.id : '';
   var keepTop = body.scrollTop;
 
@@ -307,7 +298,6 @@ function _rpRender() {
   var pctEl = document.getElementById('rp-overall'); if (pctEl) pctEl.innerHTML = pr.overall.pct + '<span style="font-size:14px;color:var(--txt3)">%</span>';
   var barEl = document.getElementById('rp-overall-bar'); if (barEl) barEl.innerHTML = _bar(pr.overall.pct, 6);
   var subEl = document.getElementById('rp-overall-sub'); if (subEl) subEl.textContent = pr.overall.checked + ' of ' + pr.overall.total + (bm ? ' · Last read: ' + bm.item.label : '');
-  var tog = document.getElementById('rp-chron-tog'); if (tog) tog.classList.toggle('on', hide);
 
   var html = [];
   if (_ui.view === 'gaps') {
@@ -348,5 +338,5 @@ function _rpRender() {
 
 export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
-  rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast, rpToggleChron
+  rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast
 };

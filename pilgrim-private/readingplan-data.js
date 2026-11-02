@@ -322,7 +322,7 @@ function rpBuildStoryFlow() {
       ],
       outro: [
         'Every chapter appears once. You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place.',
-        'I hope this plan helps you follow the story that God has woven through his Word, and see how much he loves us.'
+        'I hope this plan helps you follow the story that God has woven through His Word, and see how much He loves us.'
       ]
     } };
   RP_STORYFLOW_DEF.forEach(function(pd) {

@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.58.3',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.58.4',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "changed: the Hide Chronicles switch is removed from The Biblical Story. Chronicles is part of the plan and always shows and counts.",
+      "changed: the About note now capitalizes He and His for God.",
+      "note: display only. Nothing saved was changed or deleted; any chapters you checked stay checked. Cache-buster bumped to 4.58.4."
+    ]
+  },
+  {
+    version:'4.58.3',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "changed: the About this plan note on The Biblical Story is rewritten in the author's own words, with the placement choices (Job, the prophets, Chronicles, the Psalms, the Gospels, Paul's letters) shown as a short list.",
