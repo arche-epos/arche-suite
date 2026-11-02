@@ -8,12 +8,12 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.2';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.3';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.58.2';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.2';
+} from './readingplan-core.js?v=4.58.3';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.3';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -289,7 +289,9 @@ function _rpAboutHtml(checked, about) {
     '<span class="rp-about-title">About this plan</span></div>' +
     (open ? '<div class="rp-about-body"><div class="rp-about-name">' + escHtml(about.title) + '</div>' +
       '<div class="rp-about-by">By ' + escHtml(about.by) + ' \u00b7 ' + escHtml(about.date) + '</div>' +
-      about.text.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') + '</div>' : '') +
+      about.intro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') +
+      '<ul class="rp-about-list">' + about.list.map(function(p) { return '<li>' + escHtml(p) + '</li>'; }).join('') + '</ul>' +
+      about.outro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') + '</div>' : '') +
     '</div>';
 }
 

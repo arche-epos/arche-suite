@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.58.2',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.58.3',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "changed: the About this plan note on The Biblical Story is rewritten in the author's own words, with the placement choices (Job, the prophets, Chronicles, the Psalms, the Gospels, Paul's letters) shown as a short list.",
+      "note: display only. Your saved reading progress is unchanged. Cache-buster bumped to 4.58.3."
+    ]
+  },
+  {
+    version:'4.58.2',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "changed: the reading plan is now called The Biblical Story (it was Story Flow). Open the plan and an About this plan section at the top gives the title, author, date, and a short note on what the plan is and why it is laid out this way. It starts open and stays tucked away once you have checked your first chapter; tap it to open or close it.",

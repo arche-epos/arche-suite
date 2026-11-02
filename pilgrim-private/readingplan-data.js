@@ -308,10 +308,21 @@ function rpBuildStoryFlow() {
       title: 'The Biblical Story',
       by: 'Jesse Caldwell',
       date: 'Nov 1, 2026',
-      text: [
-        'The books of the Bible are not arranged in the order the story happened, so reading straight through can leave the pieces disconnected. This plan keeps every chapter of the Bible and puts them in story order.',
-        'Job is read among the patriarchs. Each prophet is read beside the king he served. Chronicles comes right after the Samuel and Kings history it retells (and can be hidden). David\u2019s Psalms are read with David\u2019s life, and the other Psalms with the exile and return. The four Gospels are woven into one life of Jesus, event by event. Paul\u2019s letters are read where they fit in Acts.',
-        'Every chapter appears once. Check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place.'
+      intro: [
+        'The books of the Bible are not arranged in the order the story happened, so reading straight through can leave the pieces disconnected. This plan places the Bible in a progression close to chronological order, so the story is easier to follow.',
+        'I made some of the placement choices myself, based on my own judgment, because a few books (Job, Chronicles, the Psalms and the prophets) don\u2019t always fit cleanly into the flow. Here is how I arranged them:'
+      ],
+      list: [
+        'Job is read among the patriarchs.',
+        'Each prophet is read beside the king he served.',
+        'Chronicles comes right after the Samuel and Kings history it retells.',
+        'David\u2019s Psalms are read with David\u2019s life, and the other Psalms with the exile and return.',
+        'The four Gospels are woven into one life of Jesus, and organized event by event.',
+        'Paul\u2019s letters are read where they fit in Acts.'
+      ],
+      outro: [
+        'Every chapter appears once. You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place.',
+        'I hope this plan helps you follow the story that God has woven through his Word, and see how much he loves us.'
       ]
     } };
   RP_STORYFLOW_DEF.forEach(function(pd) {

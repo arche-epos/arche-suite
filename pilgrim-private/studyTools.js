@@ -13,15 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.58.2';
+} from './utils.js?v=4.58.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.58.2';
-import { openConfirm } from './media.js?v=4.58.2';
-import { syncToGist } from './sync.js?v=4.58.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.58.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.58.2';
-import { decodeMorph } from './morph.js?v=4.58.2';
-import { hebrewVerses } from './versemap.js?v=4.58.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.58.3';
+import { openConfirm } from './media.js?v=4.58.3';
+import { syncToGist } from './sync.js?v=4.58.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.58.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.58.3';
+import { decodeMorph } from './morph.js?v=4.58.3';
+import { hebrewVerses } from './versemap.js?v=4.58.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
