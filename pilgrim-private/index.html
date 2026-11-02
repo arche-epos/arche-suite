@@ -338,6 +338,13 @@ input[type="range"]{accent-color:var(--gold)}
 .rp-chip.on{background:var(--gold);border-color:var(--gold);color:var(--bg0);font-weight:600}
 .rp-chip.bm{border-color:var(--goldpale);box-shadow:0 0 0 1px var(--goldpale);margin-bottom:14px}
 .rp-chip.bm::after{content:'Last Read';position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;font-size:9px;color:var(--gold);white-space:nowrap;letter-spacing:.04em}
+.rp-about{border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:14px}
+.rp-about-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;min-height:44px}
+.rp-about-title{font-family:'EB Garamond',serif;font-size:16px;color:var(--gold)}
+.rp-about-body{padding:0 14px 12px;font-size:14px;line-height:1.55;color:var(--txt2)}
+.rp-about-body p{margin:8px 0 0}
+.rp-about-name{font-family:'EB Garamond',serif;font-size:20px;color:var(--txt1)}
+.rp-about-by{font-size:12px;color:var(--txt3);margin-top:2px}
 .rp-sub{font-size:11px;color:var(--txt4);text-transform:uppercase;letter-spacing:.1em;margin:10px 0 2px}
 .rp-evlist{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px}
 .rp-ev{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:var(--r);background:var(--bg2);border:1px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -1891,7 +1898,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.58.1"></script>
+<script type="module" src="app.js?v=4.58.2"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
@@ -2075,7 +2082,7 @@ input[type="range"]{accent-color:var(--gold)}
   <div style="padding:calc(14px + var(--safe-t)) 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <button class="btn btn-ghost btn-sm" onclick="rpClosePlan()">Close</button>
-      <div style="font-family:'EB Garamond',serif;font-size:19px;color:var(--gold);">&#10022; Story Flow</div>
+      <div style="font-family:'EB Garamond',serif;font-size:19px;color:var(--gold);">&#10022; The Biblical Story</div>
       <div id="rp-overall" style="font-family:'EB Garamond',serif;font-size:22px;color:var(--txt1);min-width:48px;text-align:right;"></div>
     </div>
     <div id="rp-overall-bar"></div>

@@ -302,7 +302,18 @@ function rpChapterLabel(book, chapter, books) {
  */
 function rpBuildStoryFlow() {
   var books = rpBookTable();
-  var plan = { id: 'storyflow', name: 'Story Flow', parts: [], groups: [], items: [], index: {} };
+  var plan = { id: 'storyflow', name: 'The Biblical Story', parts: [], groups: [], items: [], index: {},
+    // Plan metadata shown in the plan's "About this plan" section; every plan in a future library carries its own.
+    about: {
+      title: 'The Biblical Story',
+      by: 'Jesse Caldwell',
+      date: 'Nov 1, 2026',
+      text: [
+        'The books of the Bible are not arranged in the order the story happened, so reading straight through can leave the pieces disconnected. This plan keeps every chapter of the Bible and puts them in story order.',
+        'Job is read among the patriarchs. Each prophet is read beside the king he served. Chronicles comes right after the Samuel and Kings history it retells (and can be hidden). David\u2019s Psalms are read with David\u2019s life, and the other Psalms with the exile and return. The four Gospels are woven into one life of Jesus, event by event. Paul\u2019s letters are read where they fit in Acts.',
+        'Every chapter appears once. Check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place.'
+      ]
+    } };
   RP_STORYFLOW_DEF.forEach(function(pd) {
     var part = { id: pd[0], name: pd[1], groups: [] };
     pd[2].forEach(function(gd) {

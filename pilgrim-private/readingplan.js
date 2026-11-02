@@ -8,12 +8,12 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.1';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.2';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.58.1';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.1';
+} from './readingplan-core.js?v=4.58.2';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.2';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -83,7 +83,7 @@ function rpReplaceFromRemote(remote) {
 }
 
 // ── UI state (in memory only; group expand/collapse is never stored) ─────────
-var _ui = { open: false, view: 'plan', parts: {}, groups: {}, bound: false };
+var _ui = { open: false, view: 'plan', parts: {}, groups: {}, about: null, bound: false };
 
 function _fmtDate(ms) {
   var d = new Date(ms), now = new Date();
@@ -102,7 +102,7 @@ function _bar(pct, h) {
 }
 
 // ── Progress-tab card ───────────────────────────────────────
-/** Renders the "Reading Plan: Story Flow" card into #stats-readplan (called from renderStats). */
+/** Renders the "Reading Plan: The Biblical Story" card into #stats-readplan (called from renderStats). */
 function rpRenderCard() {
   var el = document.getElementById('stats-readplan');
   if (!el) return;
@@ -116,7 +116,7 @@ function rpRenderCard() {
     '<div class="seclabel">Reading Plan</div>' +
     '<div class="stat-card" style="margin-bottom:18px;padding-left:18px">' +
       '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">' +
-        '<div style="font-family:\'EB Garamond\',serif;font-size:19px;color:var(--gold)">Story Flow</div>' +
+        '<div style="font-family:\'EB Garamond\',serif;font-size:19px;color:var(--gold)">The Biblical Story</div>' +
         '<div style="font-family:\'EB Garamond\',serif;font-size:26px;color:var(--txt1)">' + pr.overall.pct + '<span style="font-size:15px;color:var(--txt3)">%</span></div>' +
       '</div>' +
       _bar(pr.overall.pct, 7) +
@@ -193,11 +193,12 @@ function rpToggleChron() {
 
 function _rpBodyClick(ev) {
   var t = ev.target;
-  while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-id') || t.getAttribute('data-rp-part') || t.getAttribute('data-rp-group') || t.getAttribute('data-rp-goto')))) t = t.parentNode;
+  while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-about') || t.getAttribute('data-rp-id') || t.getAttribute('data-rp-part') || t.getAttribute('data-rp-group') || t.getAttribute('data-rp-goto')))) t = t.parentNode;
   if (!t || t === ev.currentTarget || !t.getAttribute) return;
   var id = t.getAttribute('data-rp-id');
   if (id) { _rpToggleItem(id); return; }
   var part = t.getAttribute('data-rp-part');
+  if (t.getAttribute('data-rp-about')) { _ui.about = !_rpAboutOpen(_ui._pc); _rpRender(); return; }
   if (part) { _ui.parts[part] = !_ui.parts[part]; _rpRender(); return; }
   var grp = t.getAttribute('data-rp-group');
   if (grp) { _ui.groups[grp] = !_ui.groups[grp]; _rpRender(); return; }
@@ -281,6 +282,17 @@ function _itemsHtml(items, st, bmId) {
 function _chev(open) { return '<span class="rp-chev">' + (open ? '&#9662;' : '&#9656;') + '</span>'; }
 function _tick(done) { return done ? '<span class="rp-tick">&#10003;</span>' : ''; }
 
+function _rpAboutOpen(checked) { return _ui.about === null ? checked === 0 : !!_ui.about; }  // open by default until the first chapter is checked
+function _rpAboutHtml(checked, about) {
+  var open = _rpAboutOpen(checked);
+  return '<div class="rp-about"><div class="rp-about-head" data-rp-about="1">' + _chev(open) +
+    '<span class="rp-about-title">About this plan</span></div>' +
+    (open ? '<div class="rp-about-body"><div class="rp-about-name">' + escHtml(about.title) + '</div>' +
+      '<div class="rp-about-by">By ' + escHtml(about.by) + ' \u00b7 ' + escHtml(about.date) + '</div>' +
+      about.text.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') + '</div>' : '') +
+    '</div>';
+}
+
 function _rpRender() {
   var body = document.getElementById('rp-body');
   if (!body) return;
@@ -307,6 +319,8 @@ function _rpRender() {
         _itemsHtml(g.items, st, bmId) + '</div>');
     });
   } else {
+    _ui._pc = pr.overall.checked;
+    if (plan.about) html.push(_rpAboutHtml(pr.overall.checked, plan.about));
     plan.parts.forEach(function(part) {
       var pp = pr.parts[part.id], popen = !!_ui.parts[part.id];
       html.push('<div class="rp-part"><div class="rp-part-head" data-rp-part="' + part.id + '">' + _chev(popen) +

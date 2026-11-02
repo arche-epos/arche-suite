@@ -320,9 +320,9 @@ that avoids the excluded list.
 
 ### Reading Plan (Progress tab)
 - Read the whole Bible in story order and track it → **Progress** tab >
-  **Reading Plan: Story Flow** card > **Open plan**. One plan for now, called
-  Story Flow: 8 parts (Beginnings, Exodus and Law, Land, United Kingdom, Divided
-  Kingdom, Exile and Return, Gospels, Acts and the Letters). Prophets sit beside
+  **Reading Plan: The Biblical Story** card > **Open plan**. One plan for now, called
+  The Biblical Story: 8 parts (Beginnings, Exodus and Law, Land, United Kingdom, Divided
+  Kingdom, Exile and Return, Gospels, Acts and the Letters). An "About this plan" note at the top explains the layout. Prophets sit beside
   the kings they served, the four Gospels are read as one story, and each letter
   sits where it was written in Acts.
 - Check off what I have read → tap a chapter. Each part and each group opens and
