@@ -341,6 +341,13 @@ that avoids the excluded list.
   percentage counts the Gospels by their chapters.
 - Chronicles → it retells Samuel and Kings and sits right after the part it
   parallels.
+- Psalms → each of the 150 sits where it fits the story. A Psalm whose heading
+  names an event follows that passage (Psalm 51 after 2 Samuel 12); the rest go by
+  author or by what they describe. Among the chapters they show as their own row,
+  with the author in small text under the number. David's Psalms with no datable
+  setting are their own group after 2 Samuel 23, and the anonymous ones with no
+  setting are their own group after Malachi. Checking a Psalm works like checking
+  a chapter, and Last Read counts Psalms in plan order.
 - Where it is saved → on this device, in my account's backup (Settings > Study
   Sync > Backup / Restore), in a Back up / Export file, and in the Clear All Data
   safety copy. **Clear All Data** removes it. Not included: reminders, other

@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.58.5',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.59.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "changed: all 150 Psalms now sit in The Biblical Story by author and story position. A Psalm whose heading names an event follows that passage (Psalm 51 after 2 Samuel 12, Psalm 3 after 2 Samuel 15). The rest go by author or by what they describe: David\u2019s through his shepherd and fugitive years and his reign, Asaph and Korah\u2019s through the kingdom and the exile, and the Songs of Ascents split by author.",
+      "new: Psalms among the chapters show as their own row with the author in small text under the number. David\u2019s 28 Psalms with no datable setting are their own group after 2 Samuel 23, and 16 anonymous Psalms are their own group after Malachi. Psalm 90 now sits between Deuteronomy 33 and 34, and the About this plan note describes the new placement.",
+      "note: plan order only. Psalm IDs are unchanged (Ps.1 to Ps.150), so nothing saved was changed and sync, backup and import work as before. Psalms you had already checked stay checked, but your Last Read bookmark or the unchecked-before-here count can shift if you had read past these spots. Cache-buster bumped to 4.59.0."
+    ]
+  },
+  {
+    version:'4.58.5',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "changed: three psalms moved to where their author lived in The Biblical Story. Psalm 90 (Moses) now follows Deuteronomy, and Psalms 72 and 127 (Solomon) follow 1 Kings 1\u201311. They were in Other Psalms at the end of the Old Testament.",

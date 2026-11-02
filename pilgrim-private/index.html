@@ -334,6 +334,11 @@ input[type="range"]{accent-color:var(--gold)}
 .rp-chip.on{background:var(--gold);border-color:var(--gold);color:var(--bg0);font-weight:600}
 .rp-chip.bm{border-color:var(--goldpale);box-shadow:0 0 0 1px var(--goldpale);margin-bottom:14px}
 .rp-chip.bm::after{content:'Last Read';position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;font-size:9px;color:var(--gold);white-space:nowrap;letter-spacing:.04em}
+/* Psalms placed among chapters (v4.59.0): own row, author in small text under the number */
+.rp-psrow{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 6px 8px;margin:2px 0;border-left:2px solid var(--golddim)}
+.rp-chip.rp-ps{flex-direction:column;gap:1px;padding:3px 8px}
+.rp-au{font-size:9px;line-height:1.1;color:var(--txt4);white-space:nowrap;font-weight:400}
+.rp-chip.on .rp-au{color:var(--bg0);opacity:.75}
 .rp-about{border:1px solid var(--border);border-radius:var(--r);background:var(--bg2);margin-bottom:14px}
 .rp-about-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;min-height:44px}
 .rp-about-title{font-family:'EB Garamond',serif;font-size:16px;color:var(--gold)}
@@ -1897,7 +1902,7 @@ input[type="range"]{accent-color:var(--gold)}
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.58.5"></script>
+<script type="module" src="app.js?v=4.59.0"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">

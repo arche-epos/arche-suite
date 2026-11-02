@@ -14,11 +14,11 @@ import {
   toast, toastSuccess,
   migrateStudy, todayStr, logError, trackEvent,
   stripAiResultsForBackup, carryAiResults, makeSafetyCopy
-} from './utils.js?v=4.58.5';
+} from './utils.js?v=4.59.0';
 
-import { persist, reportStorageSnapshot } from './storage.js?v=4.58.5';
-import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.58.5';
-import { rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote } from './readingplan.js?v=4.58.5';
+import { persist, reportStorageSnapshot } from './storage.js?v=4.59.0';
+import { memExportStore, memMergeRemote, memReplaceFromRemote } from './memory.js?v=4.59.0';
+import { rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote } from './readingplan.js?v=4.59.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // Tags-module state and UI functions live in ui.js / tags section.

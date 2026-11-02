@@ -8,12 +8,12 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.58.5';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.59.0';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.58.5';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.58.5';
+} from './readingplan-core.js?v=4.59.0';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.59.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -251,7 +251,7 @@ function _rpShowUndo(msg, onUndo) {
 }
 
 // ── Rendering ───────────────────────────────────────────────
-function _chip(it, st, bmId) {
+function _chip(it, st, bmId, defAuthor) {
   var on = st.items[it.id] && st.items[it.id].r === 1;
   if (it.type === 'ev') {
     return '<div class="rp-ev' + (on ? ' on' : '') + (it.id === bmId ? ' bm' : '') + '" data-rp-id="' + it.id + '">' +
@@ -260,14 +260,24 @@ function _chip(it, st, bmId) {
       '<div class="rp-ev-pass">' + escHtml(it.passages) + '</div>' +
       (it.note ? '<div class="rp-ev-note">' + escHtml(it.note) + '</div>' : '') + '</div></div>';
   }
-  return '<div class="rp-chip' + (on ? ' on' : '') + (it.id === bmId ? ' bm' : '') + '" data-rp-id="' + it.id + '" title="' + escHtml(it.label) + '">' + escHtml(it.short) + '</div>';
+  // Psalms carry their author (v4.59.0): shown in small text under the number, except where it is the
+  // group's own default (every chip in "Songs of the people" would just say Anonymous).
+  var au = it.author && it.author !== defAuthor ? it.author : '';
+  return '<div class="rp-chip' + (it.author ? ' rp-ps' : '') + (on ? ' on' : '') + (it.id === bmId ? ' bm' : '') + '" data-rp-id="' + it.id + '" title="' + escHtml(it.label + (it.author ? ' · ' + it.author : '')) + '">' +
+    escHtml(it.short) + (au ? '<span class="rp-au">' + escHtml(au) + '</span>' : '') + '</div>';
 }
-function _itemsHtml(items, st, bmId) {
-  var out = [], lastSub = null, evMode = items.length && items[0].type === 'ev';
+function _itemsHtml(items, st, bmId, grp) {
+  var out = [], lastSub = null, evMode = items.length && items[0].type === 'ev', run = null;
+  var defAuthor = grp && grp.authorDefault ? grp.authorDefault : '';
+  function flush() { if (run) { out.push('<div class="rp-psrow">' + run.join('') + '</div>'); run = null; } }
   items.forEach(function(it) {
-    if (it.sub && it.sub !== lastSub) { out.push('<div class="rp-sub">' + escHtml(it.sub) + '</div>'); lastSub = it.sub; }
-    out.push(_chip(it, st, bmId));
+    if (it.sub && it.sub !== lastSub) { flush(); out.push('<div class="rp-sub">' + escHtml(it.sub) + '</div>'); lastSub = it.sub; }
+    // Psalms among chapters sit in their own row so they read as a distinct run (v4.59.0). A group that is all
+    // Psalms (the two clusters) needs no row: the group itself is the container.
+    if (it.author && !(grp && grp.psalms)) { (run = run || []).push(_chip(it, st, bmId, defAuthor)); }
+    else { flush(); out.push(_chip(it, st, bmId, defAuthor)); }
   });
+  flush();
   return '<div class="' + (evMode ? 'rp-evlist' : 'rp-chips') + '">' + out.join('') + '</div>';
 }
 function _chev(open) { return '<span class="rp-chev">' + (open ? '&#9662;' : '&#9656;') + '</span>'; }
@@ -308,7 +318,7 @@ function _rpRender() {
     gaps.groups.forEach(function(g) {
       html.push('<div class="rp-gap-group"><div class="rp-gap-head"><span>' + escHtml(g.group.name) + '</span>' +
         '<span class="rp-link" data-rp-goto="' + g.group.id + '">Jump to group</span></div>' +
-        _itemsHtml(g.items, st, bmId) + '</div>');
+        _itemsHtml(g.items, st, bmId, g.group) + '</div>');
     });
   } else {
     _ui._pc = pr.overall.checked;
@@ -325,7 +335,7 @@ function _rpRender() {
           html.push('<div class="rp-group"><div class="rp-group-head" data-rp-group="' + g.id + '">' + _chev(gopen) +
             '<span class="rp-group-name">' + escHtml(g.name) + '</span>' + _tick(gp.done) +
             '<span class="rp-count">' + gp.checked + '/' + gp.total + '</span></div>' + _bar(gp.pct, 3));
-          if (gopen) html.push(_itemsHtml(g.items, st, bmId));
+          if (gopen) html.push(_itemsHtml(g.items, st, bmId, g));
           html.push('</div>');
         });
       }

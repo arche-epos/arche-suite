@@ -134,12 +134,14 @@ function rpProgress(plan, state, hideChron) {
     part.groups.forEach(function(g) {
       if (hideChron && g.chron) return;
       var gc = 0, gcw = 0, gtw = 0;
-      g.items.forEach(function(it) {
+      // Item-level so Psalms inside the mixed Chronicles groups stay counted when Chronicles are hidden (v4.59.0)
+      var vis = hideChron ? g.items.filter(function(it) { return !it.chron; }) : g.items;
+      vis.forEach(function(it) {
         gtw += it.w;
         if (_isChecked(state, it.id)) { gc++; gcw += it.w; }
       });
-      groups[g.id] = { checked: gc, total: g.items.length, pct: _pct(gcw, gtw), done: gc === g.items.length && g.items.length > 0 };
-      pc += gc; pt += g.items.length; pcw += gcw; ptw += gtw;
+      groups[g.id] = { checked: gc, total: vis.length, pct: _pct(gcw, gtw), done: gc === vis.length && vis.length > 0 };
+      pc += gc; pt += vis.length; pcw += gcw; ptw += gtw;
     });
     parts[part.id] = { checked: pc, total: pt, pct: _pct(pcw, ptw), done: pt > 0 && pc === pt };
     cwAll += pcw; twAll += ptw;
@@ -170,7 +172,7 @@ function rpGaps(plan, state, hideChron) {
   if (!bm) return out;
   plan.groups.forEach(function(g) {
     if (hideChron && g.chron) return;
-    var missing = g.items.filter(function(it) { return plan.index[it.id] < bm.pos && !_isChecked(state, it.id); });
+    var missing = g.items.filter(function(it) { return !(hideChron && it.chron) && plan.index[it.id] < bm.pos && !_isChecked(state, it.id); });
     if (missing.length) {
       out.groups.push({ group: g, items: missing });
       out.count += missing.length;

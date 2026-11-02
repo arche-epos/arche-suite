@@ -64,12 +64,13 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
   const s = fresh();
   eq('fresh: 0%', c.rpProgress(plan, s, false).overall.pct, 0);
   const gen = groupItems('g.gen-1-11');
-  checkAll(s, gen.slice(0, 10), T);
+  const gn = gen.length;   // 11 chapters + Psalm 104 after Genesis 2 (v4.59.0)
+  checkAll(s, gen.slice(0, gn - 1), T);
   let pr = c.rpProgress(plan, s, false);
-  eq('10/11 in a group is 90% (floor) and not done', [pr.groups['g.gen-1-11'].pct, pr.groups['g.gen-1-11'].done], [90, false]);
-  c.rpSetChecked(s, gen[10].id, true, T);
+  eq('all but one in a group is floored (not 100) and not done', [pr.groups['g.gen-1-11'].pct, pr.groups['g.gen-1-11'].done], [Math.floor(100 * (gn - 1) / gn), false]);
+  c.rpSetChecked(s, gen[gn - 1].id, true, T);
   pr = c.rpProgress(plan, s, false);
-  eq('11/11 shows 100% and done', [pr.groups['g.gen-1-11'].pct, pr.groups['g.gen-1-11'].done], [100, true]);
+  eq('all of a group shows 100% and done', [pr.groups['g.gen-1-11'].pct, pr.groups['g.gen-1-11'].done], [100, true]);
   // floor rule at plan scale: everything but one chapter must read 99, never 100
   const all = fresh();
   checkAll(all, plan.items.slice(0, plan.items.length - 1), T);
@@ -101,7 +102,10 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
   eq('Chronicles checked counts when shown', c.rpProgress(plan, hc, false).overall.checked, 65);
   pr = c.rpProgress(plan, hc, true);
   eq('hidden Chronicles drop out of count and total', [pr.overall.checked, pr.overall.total, pr.overall.pct], [0, 1196 - 65, 0]);
-  eq('hidden Chronicles groups are not reported', Object.keys(pr.groups).some((g) => /chronicles/.test(g)), false);
+  eq('hidden pure Chronicles groups are not reported', ['g.2-chronicles-1-9', 'g.2-chronicles-29-36'].some((g) => g in pr.groups), false);
+  // v4.59.0: Psalms placed inside 1 Chronicles / 2 Chronicles 10-28 are not Chronicles, so they stay counted when Chronicles are hidden
+  eq('mixed Chronicles groups keep only their Psalms when hidden', [pr.groups['g.1-chronicles'].total, pr.groups['g.2-chronicles-10-28'].total], [6, 3]);
+  eq('Psalms inside Chronicles are not flagged as Chronicles', plan.items.filter((i) => i.book === 'Ps' && i.chron).length, 0);
   eq('stored checks are kept (still in state)', Object.keys(hc.items).length, 65);
   eq('visible items shrink by 65', [c.rpVisibleItems(plan, hc, false).length, c.rpVisibleItems(plan, hc, true).length], [1196, 1131]);
   eq('hidden Chronicles never become the bookmark', c.rpBookmark(plan, hc, true), null);
@@ -131,13 +135,13 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
   eq('no bookmark, no gaps', c.rpGaps(plan, g, false).count, 0);
   c.rpSetChecked(g, 'Gen.3', true, T);
   let gaps = c.rpGaps(plan, g, false);
-  eq('Gen.3 bookmark: Gen 1-2 are the gaps', [gaps.count, gaps.groups.length, gaps.groups[0].items.map((i) => i.id)], [2, 1, ['Gen.1', 'Gen.2']]);
+  eq('Gen.3 bookmark: Gen 1-2 and Psalm 104 (placed after Genesis 2) are the gaps', [gaps.count, gaps.groups.length, gaps.groups[0].items.map((i) => i.id)], [3, 1, ['Gen.1', 'Gen.2', 'Ps.104']]);
   c.rpSetChecked(g, 'Exod.1', true, T);
   gaps = c.rpGaps(plan, g, false);
-  eq('skip ahead: all of Genesis 1-11 (minus 3), Job and Genesis 12-50 are gaps, grouped',
-    [gaps.count, gaps.groups.map((x) => x.group.id)], [10 + 42 + 39, ['g.gen-1-11', 'g.job', 'g.gen-12-50']]);
+  eq('skip ahead: all of Genesis 1-11 and Psalm 104 (minus 3), Job and Genesis 12-50 are gaps, grouped',
+    [gaps.count, gaps.groups.map((x) => x.group.id)], [11 + 42 + 39, ['g.gen-1-11', 'g.job', 'g.gen-12-50']]);
   c.rpSetChecked(g, 'Gen.1', true, T + 1);
-  eq('gap-fill reduces the count by one', c.rpGaps(plan, g, false).count, 10 + 42 + 39 - 1);
+  eq('gap-fill reduces the count by one', c.rpGaps(plan, g, false).count, 11 + 42 + 39 - 1);
   eq('chapters-only gaps do not flag events', gaps.hasEvents, false);
   const gg = fresh();
   c.rpSetChecked(gg, 'Rev.22', true, T);

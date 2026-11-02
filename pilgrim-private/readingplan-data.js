@@ -1,6 +1,7 @@
-// readingplan-data.js — Pilgrim Private ES Module (v4.58.0)
+// readingplan-data.js — Pilgrim Private ES Module (v4.59.0)
 // Reading Plans: the Story Flow outline as static data. NO imports, NO DOM, NO localStorage.
 // Source: claude/spec-reading-plans-v1.md (Rev 2) + claude/spec-reading-plan-story-flow-outline-v1.md.
+// Psalm placement (v4.59.0): claude/spec-psalms-story-placement-v1.md. All 150 Psalms sit by author and story position.
 // Only progress is ever stored (readingplan.js); this outline lives in code, so editing it can
 // never touch saved data. Item and group IDs are PERMANENT: once shipped they are never renamed
 // or reused (progress is keyed by item ID only, never by position).
@@ -200,63 +201,118 @@ function _slug(s) {
 // ── Compact group definitions ────────────────────────────────────────────────────────────
 // Specs: [code, from, to]  = whole chapters;  [code, '18a'] = a split Acts item.
 function R(code, from, to) { return [code, from, to === undefined ? from : to]; }
-var PS_DAVID_1 = [R('Ps',3,9), R('Ps',11,28)];
-var PS_DAVID_2 = [R('Ps',29,32), R('Ps',34,41), R('Ps',51,62)];
-var PS_DAVID_3 = [R('Ps',63,65), R('Ps',68,70), R('Ps',86), R('Ps',101), R('Ps',103), R('Ps',108,110), R('Ps',122), R('Ps',124), R('Ps',131), R('Ps',133), R('Ps',138,145)];
-var PS_OTHER_1 = [R('Ps',1,2), R('Ps',10), R('Ps',33), R('Ps',42,50), R('Ps',66,67), R('Ps',71), R('Ps',73,81)];
-var PS_OTHER_2 = [R('Ps',82,85), R('Ps',87,89), R('Ps',91,100), R('Ps',102), R('Ps',104,107), R('Ps',111,113)];
-var PS_OTHER_3 = [R('Ps',114,121), R('Ps',123), R('Ps',125,126), R('Ps',128,130), R('Ps',132), R('Ps',134,137), R('Ps',146,150)];
+// ── Psalm placement (v4.59.0) ─────────────────────────────────────────────────────────────
+// Source: claude/spec-psalms-story-placement-v1.md. Each Psalm is read where it fits the story.
+// Rows are [psalm number, author key, basis]. Basis: A = heading names the event, B = author's era,
+// C = content ties it to a setting, C* = weaker content tie, D = no datable setting (grouped by author).
+// Basis is data only (not shown in the app); the outline test uses it to check the spec's counts.
+// Psalm item IDs stay Ps.1 to Ps.150, so saved checks never move.
+var PS_AUTHORS = { d: 'David', a: 'Anonymous', as: 'Asaph', k: 'Korah', s: 'Solomon', m: 'Moses', e: 'Ethan', kh: 'Korah / Heman' };
 
-// [partId, partName, [ [groupId, groupName, specs | 'gospel:X', chron?] ]]
+/** Psalms placed right AFTER a chapter, in reading order. Key = '<book code>.<chapter>'. */
+var PS_AFTER = {
+  'Gen.2': [[104,'a','C']],
+  'Exod.15': [[114,'a','C']],
+  'Deut.33': [[90,'m','B']],
+  '1Sam.2': [[113,'a','C*']],
+  '1Sam.7': [[99,'a','C']],
+  '1Sam.16': [[8,'d','C*'],[19,'d','C*'],[23,'d','C*'],[29,'d','C*']],
+  '1Sam.17': [[144,'d','C*']],
+  '1Sam.19': [[59,'d','A']],
+  '1Sam.21': [[34,'d','A'],[56,'d','A']],
+  '1Sam.22': [[142,'d','A'],[57,'d','A'],[52,'d','A']],
+  '1Sam.23': [[54,'d','A'],[31,'d','C*']],
+  '1Sam.24': [[7,'d','C*']],
+  '1Sam.26': [[11,'d','C*'],[13,'d','C*'],[17,'d','C*'],[35,'d','C*']],
+  '2Sam.5': [[133,'d','C*'],[122,'d','C*'],[124,'d','C*']],
+  '2Sam.6': [[15,'d','C*'],[24,'d','C'],[68,'d','C'],[101,'d','C*'],[131,'d','C*']],
+  '2Sam.7': [[2,'a','C'],[110,'d','C']],
+  '2Sam.8': [[60,'d','A'],[108,'d','C']],
+  '2Sam.10': [[20,'d','C*'],[21,'d','C*']],
+  '2Sam.12': [[51,'d','A'],[32,'d','C'],[38,'d','C*'],[6,'d','C*'],[103,'d','C*']],
+  '2Sam.15': [[3,'d','A'],[4,'d','C'],[41,'d','C*'],[55,'d','C*']],
+  '2Sam.17': [[63,'d','C*'],[61,'d','C*'],[62,'d','C*'],[143,'d','C*']],
+  '2Sam.22': [[18,'d','A']],
+  // After 2 Samuel 23 comes the David cluster (PS_CLUSTERS.david), its own group
+  '2Sam.24': [[30,'d','C*']],
+  '1Chr.16': [[96,'a','A'],[105,'a','A'],[106,'a','A'],[50,'as','B'],[73,'as','B'],[81,'as','B']],
+  '1Kgs.2': [[37,'d','C*'],[71,'a','C*']],
+  '1Kgs.3': [[72,'s','B']],
+  '1Kgs.6': [[127,'s','B']],
+  '1Kgs.8': [[132,'a','C'],[84,'k','C*'],[87,'k','C*']],
+  'Song.8': [[45,'k','C*'],[49,'k','B'],[88,'kh','B']],
+  '2Kgs.17': [[77,'as','B'],[78,'as','C'],[80,'as','C']],
+  '2Chr.19': [[82,'as','C*']],
+  '2Chr.20': [[83,'as','C'],[47,'k','C*']],
+  '2Kgs.19': [[46,'k','C'],[48,'k','C'],[76,'as','C'],[75,'as','C*']],
+  'Lam.5': [[74,'as','C'],[79,'as','C'],[44,'k','C*'],[89,'e','C']],
+  'Ezek.48': [[137,'a','C'],[102,'a','C*'],[42,'k','C*'],[43,'a','C*']],
+  'Ezra.2': [[107,'a','C'],[126,'a','C'],[120,'a','C*'],[121,'a','C*'],[123,'a','C*'],[125,'a','C*'],[128,'a','C*'],[129,'a','C*'],[130,'a','C*'],[134,'a','C*']],
+  'Ezra.3': [[136,'a','C']],
+  'Ezra.6': [[85,'k','C']],
+  'Ezra.7': [[1,'a','C*'],[119,'a','C*']],
+  'Neh.8': [[118,'a','C*']],
+  'Neh.12': [[146,'a','C*'],[147,'a','C*'],[148,'a','C*'],[149,'a','C*'],[150,'a','C*']]
+  // After Malachi 4 comes the anonymous cluster (PS_CLUSTERS.anon), its own group
+};
+
+/** Psalms with no datable setting, grouped by author. Each is its own collapsible group. */
+var PS_CLUSTERS = {
+  david: { authorDefault: 'David', rows: [[5,'d','D'],[9,'d','D'],[12,'d','D'],[14,'d','D'],[16,'d','D'],[22,'d','D'],[25,'d','D'],[26,'d','D'],[27,'d','D'],[28,'d','D'],
+    [36,'d','D'],[39,'d','D'],[40,'d','D'],[53,'d','D'],[58,'d','D'],[64,'d','D'],[65,'d','D'],[69,'d','D'],[70,'d','D'],[86,'d','D'],[109,'d','D'],[138,'d','D'],
+    [139,'d','D'],[140,'d','D'],[141,'d','D'],[145,'d','D'],[10,'a','D'],[33,'a','D']] },   // 10 and 33 are anonymous but travel with 9 and 32
+  anon: { authorDefault: 'Anonymous', rows: [[66,'a','D'],[67,'a','D'],[91,'a','D'],[92,'a','D'],[93,'a','D'],[94,'a','D'],[95,'a','D'],[97,'a','D'],[98,'a','D'],[100,'a','D'],
+    [111,'a','D'],[112,'a','D'],[115,'a','D'],[116,'a','D'],[117,'a','D'],[135,'a','D']] }
+};
+
+// [partId, partName, [ [groupId, groupName, specs | gospel letter | 'psalms:<cluster>', chron?] ]]
+// Psalms are not listed in the chapter specs: they are woven in after their anchor chapters (PS_AFTER).
 var RP_STORYFLOW_DEF = [
   ['p1', '1. Beginnings', [
-    ['g.gen-1-11', 'Genesis 1–11', [R('Gen',1,11)]],
+    ['g.gen-1-11', 'Genesis 1–11 and Psalm 104', [R('Gen',1,11)]],
     ['g.job', 'Job', [R('Job',1,42)]],
     ['g.gen-12-50', 'Genesis 12–50', [R('Gen',12,50)]]
   ]],
   ['p2', '2. Exodus and Law', [
-    ['g.exodus', 'Exodus', [R('Exod',1,40)]],
+    ['g.exodus', 'Exodus and Psalm 114', [R('Exod',1,40)]],
     ['g.leviticus', 'Leviticus', [R('Lev',1,27)]],
     ['g.numbers', 'Numbers', [R('Num',1,36)]],
-    ['g.deuteronomy', 'Deuteronomy and Psalm 90', [R('Deut',1,34), R('Ps',90)]]
+    ['g.deuteronomy', 'Deuteronomy and Psalm 90', [R('Deut',1,34)]]
   ]],
   ['p3', '3. Land', [
     ['g.joshua', 'Joshua', [R('Josh',1,24)]],
     ['g.judges-ruth', 'Judges and Ruth', [R('Judg',1,21), R('Ruth',1,4)]]
   ]],
   ['p4', '4. United Kingdom', [
-    ['g.1-samuel', '1 Samuel', [R('1Sam',1,31)]],
-    ['g.2-samuel', '2 Samuel', [R('2Sam',1,24)]],
-    ['g.david-psalms-1', 'David’s Psalms (1 of 3)', PS_DAVID_1],
-    ['g.david-psalms-2', 'David’s Psalms (2 of 3)', PS_DAVID_2],
-    ['g.david-psalms-3', 'David’s Psalms (3 of 3)', PS_DAVID_3],
-    ['g.1-chronicles', '1 Chronicles', [R('1Chr',1,29)], true],
-    ['g.1-kings-1-11', '1 Kings 1–11 and Solomon’s Psalms', [R('1Kgs',1,11), R('Ps',72), R('Ps',127)]],
+    ['g.1-samuel', '1 Samuel and Psalms', [R('1Sam',1,31)]],
+    ['g.2-samuel', '2 Samuel 1–23 and Psalms', [R('2Sam',1,23)]],
+    ['g.david-psalms-undated', 'David’s Psalms with no datable setting', 'psalms:david'],
+    ['g.2-samuel-24', '2 Samuel 24 and Psalm 30', [R('2Sam',24)]],
+    ['g.1-chronicles', '1 Chronicles and Psalms', [R('1Chr',1,29)], true],
+    ['g.1-kings-1-11', '1 Kings 1–11 and Psalms', [R('1Kgs',1,11)]],
     ['g.2-chronicles-1-9', '2 Chronicles 1–9', [R('2Chr',1,9)], true],
     ['g.proverbs', 'Proverbs', [R('Prov',1,31)]],
-    ['g.eccl-song', 'Ecclesiastes and Song of Solomon', [R('Eccl',1,12), R('Song',1,8)]]
+    ['g.eccl-song', 'Ecclesiastes, Song of Solomon and Psalms', [R('Eccl',1,12), R('Song',1,8)]]
   ]],
   ['p5', '5. Divided Kingdom', [
-    ['g.kings-12-22-2k-1-17', '1 Kings 12–22 and 2 Kings 1–17', [R('1Kgs',12,22), R('2Kgs',1,17)]],
-    ['g.2-chronicles-10-28', '2 Chronicles 10–28', [R('2Chr',10,28)], true],
+    ['g.kings-12-22-2k-1-17', '1 Kings 12–22, 2 Kings 1–17 and Psalms', [R('1Kgs',12,22), R('2Kgs',1,17)]],
+    ['g.2-chronicles-10-28', '2 Chronicles 10–28 and Psalms', [R('2Chr',10,28)], true],
     ['g.jonah-amos-hosea', 'Jonah, Amos, Hosea', [R('Jonah',1,4), R('Amos',1,9), R('Hos',1,14)]],
     ['g.isaiah-1-33', 'Isaiah 1–33', [R('Isa',1,33)]],
     ['g.isaiah-34-66-micah', 'Isaiah 34–66 and Micah', [R('Isa',34,66), R('Mic',1,7)]],
-    ['g.2-kings-18-25', '2 Kings 18–25', [R('2Kgs',18,25)]],
+    ['g.2-kings-18-25', '2 Kings 18–25 and Psalms', [R('2Kgs',18,25)]],
     ['g.2-chronicles-29-36', '2 Chronicles 29–36', [R('2Chr',29,36)], true],
     ['g.nahum-zephaniah', 'Nahum and Zephaniah', [R('Nah',1,3), R('Zeph',1,3)]],
     ['g.jeremiah-1-26', 'Jeremiah 1–26', [R('Jer',1,26)]],
     ['g.jeremiah-27-52', 'Jeremiah 27–52', [R('Jer',27,52)]],
-    ['g.lam-hab-obad', 'Lamentations, Habakkuk, Obadiah', [R('Lam',1,5), R('Hab',1,3), R('Obad',1,1)]]
+    ['g.lam-hab-obad', 'Lamentations, Habakkuk, Obadiah and Psalms', [R('Lam',1,5), R('Hab',1,3), R('Obad',1,1)]]
   ]],
   ['p6', '6. Exile and Return', [
-    ['g.ezekiel', 'Ezekiel', [R('Ezek',1,48)]],
+    ['g.ezekiel', 'Ezekiel and Psalms', [R('Ezek',1,48)]],
     ['g.daniel', 'Daniel', [R('Dan',1,12)]],
-    ['g.ezra-hag-zech', 'Ezra, Haggai, Zechariah', [R('Ezra',1,10), R('Hag',1,2), R('Zech',1,14)]],
-    ['g.esther-neh-mal', 'Esther, Nehemiah, Malachi', [R('Esth',1,10), R('Neh',1,13), R('Mal',1,4)]],
-    ['g.other-psalms-1', 'Other Psalms (1 of 3)', PS_OTHER_1],
-    ['g.other-psalms-2', 'Other Psalms (2 of 3)', PS_OTHER_2],
-    ['g.other-psalms-3', 'Other Psalms (3 of 3)', PS_OTHER_3],
+    ['g.ezra-hag-zech', 'Ezra, Haggai, Zechariah and Psalms', [R('Ezra',1,10), R('Hag',1,2), R('Zech',1,14)]],
+    ['g.esther-neh-mal', 'Esther, Nehemiah, Malachi and Psalms', [R('Esth',1,10), R('Neh',1,13), R('Mal',1,4)]],
+    ['g.anon-psalms', 'Songs of the people: anonymous Psalms', 'psalms:anon'],
     ['g.joel', 'Joel', [R('Joel',1,3)]]
   ]],
   ['p7', '7. Gospels', [
@@ -296,6 +352,14 @@ function rpChapterLabel(book, chapter, books) {
   return books[book].name + ' ' + chapter;
 }
 
+function _isChron(it) { return it.book === '1Chr' || it.book === '2Chr'; }
+
+/** A Psalm item: same shape as a chapter item plus its author and placement basis. */
+function _psItem(row, books) {
+  return { id: 'Ps.' + row[0], type: 'ch', book: 'Ps', label: rpChapterLabel('Ps', row[0], books), short: String(row[0]),
+    w: RP_W_CH, author: PS_AUTHORS[row[1]], basis: row[2] };
+}
+
 /**
  * Builds the Story Flow plan: parts, groups and a flat item list in plan order.
  * @returns {Object} plan (see header comment)
@@ -316,7 +380,7 @@ function rpBuildStoryFlow() {
         'Job is read among the patriarchs.',
         'Each prophet is read beside the king he served.',
         'Chronicles comes right after the Samuel and Kings history it retells.',
-        'David\u2019s Psalms are read with David\u2019s life, Psalm 90 with Moses, and Psalms 72 and 127 with Solomon. The other Psalms are read with the exile and return.',
+        'Each Psalm is read where it fits the story: right after the event named in its heading when it has one, otherwise by its author or by what it describes. Psalms with no clear setting are gathered in two groups, David\u2019s after 2 Samuel and the rest after Malachi.',
         'The four Gospels are woven into one life of Jesus, and organized event by event.',
         'Paul\u2019s letters are read where they fit in Acts.'
       ],
@@ -330,7 +394,12 @@ function rpBuildStoryFlow() {
     pd[2].forEach(function(gd) {
       var group = { id: gd[0], name: gd[1], partId: part.id, chron: !!gd[3], items: [], mixed: false };
       var specs = gd[2];
-      if (typeof specs === 'string') {
+      if (typeof specs === 'string' && specs.indexOf('psalms:') === 0) {
+        var cl = PS_CLUSTERS[specs.slice(7)];
+        group.authorDefault = cl.authorDefault;
+        group.psalms = true;
+        cl.rows.forEach(function(row) { group.items.push(_psItem(row, books)); });
+      } else if (typeof specs === 'string') {
         RP_EVENTS[specs].forEach(function(e) {
           var extra = e[2] || {};
           var item = { id: 'ev.' + _slug(e[0]), type: 'ev', label: e[0], passages: e[1], w: RP_W_EV };
@@ -349,16 +418,21 @@ function rpBuildStoryFlow() {
           } else {
             for (var ch = sp[1]; ch <= sp[2]; ch++) {
               group.items.push({ id: code + '.' + ch, type: 'ch', book: code, label: rpChapterLabel(code, ch, books), short: String(ch), w: RP_W_CH });
+              var after = PS_AFTER[code + '.' + ch];
+              if (after) { seenBooks.Ps = true; after.forEach(function(row) { group.items.push(_psItem(row, books)); }); }
             }
           }
         });
         group.mixed = Object.keys(seenBooks).length > 1;
         if (group.mixed) group.items.forEach(function(it) { it.short = books[it.book].short + ' ' + it.short; });
       }
+      // A group is a Chronicles group only if it holds nothing else; Psalms placed inside the two mixed
+      // Chronicles groups are not Chronicles (the hide-Chronicles math in readingplan-core.js is per item).
+      group.chron = group.chron && group.items.every(_isChron);
       part.groups.push(group);
       plan.groups.push(group);
       group.items.forEach(function(it) {
-        it.partId = part.id; it.groupId = group.id; it.chron = group.chron;
+        it.partId = part.id; it.groupId = group.id; it.chron = _isChron(it);
         plan.index[it.id] = plan.items.length;
         plan.items.push(it);
       });
@@ -369,6 +443,6 @@ function rpBuildStoryFlow() {
 }
 
 export {
-  RP_BOOKS, RP_SPLITS, RP_EVENTS, RP_STORYFLOW_DEF, RP_W_CH, RP_W_EV,
+  RP_BOOKS, RP_SPLITS, RP_EVENTS, RP_STORYFLOW_DEF, RP_W_CH, RP_W_EV, PS_AFTER, PS_CLUSTERS, PS_AUTHORS,
   rpBuildStoryFlow, rpPassageChapters
 };
