@@ -8,12 +8,13 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.59.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.60.0';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
-  rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps
-} from './readingplan-core.js?v=4.59.0';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.59.0';
+  rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
+  rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
+} from './readingplan-core.js?v=4.60.0';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.60.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -122,7 +123,14 @@ function rpRenderCard() {
       _bar(pr.overall.pct, 7) +
       '<div style="font-size:13px;color:var(--txt2);margin-top:9px">' + last + '</div>' +
       (gaps.count ? '<div class="rp-gapline" onclick="rpOpenPlan(\'gaps\')">' + _gapLine(gaps) + '</div>' : '') +
-      '<button class="btn btn-sec btn-sm" style="margin-top:12px;width:100%" onclick="rpOpenPlan()">Open plan</button>' +
+      '<div style="display:flex;gap:8px;margin-top:12px">' +
+        '<button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(true)">&#9654; Listen</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(false)">Read</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:8px">' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenStart()">Choose where to start</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenPlan()">Open plan</button>' +
+      '</div>' +
     '</div>';
 }
 
@@ -184,8 +192,10 @@ function rpJumpLast() {
 
 function _rpBodyClick(ev) {
   var t = ev.target;
-  while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-about') || t.getAttribute('data-rp-id') || t.getAttribute('data-rp-part') || t.getAttribute('data-rp-group') || t.getAttribute('data-rp-goto')))) t = t.parentNode;
+  while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-about') || t.getAttribute('data-rp-id') || t.getAttribute('data-rp-part') || t.getAttribute('data-rp-group') || t.getAttribute('data-rp-goto') || t.getAttribute('data-rp-play')))) t = t.parentNode;
   if (!t || t === ev.currentTarget || !t.getAttribute) return;
+  var playGrp = t.getAttribute('data-rp-play');
+  if (playGrp) { rpStartGroup(playGrp, true); return; }   // group ▶ (v4.60.0): listen from this group's first unchecked item
   var id = t.getAttribute('data-rp-id');
   if (id) { _rpToggleItem(id); return; }
   var part = t.getAttribute('data-rp-part');
@@ -334,7 +344,8 @@ function _rpRender() {
           var gp = pr.groups[g.id], gopen = !!_ui.groups[g.id];
           html.push('<div class="rp-group"><div class="rp-group-head" data-rp-group="' + g.id + '">' + _chev(gopen) +
             '<span class="rp-group-name">' + escHtml(g.name) + '</span>' + _tick(gp.done) +
-            '<span class="rp-count">' + gp.checked + '/' + gp.total + '</span></div>' + _bar(gp.pct, 3));
+            '<span class="rp-count">' + gp.checked + '/' + gp.total + '</span>' +
+            '<span class="rp-play" data-rp-play="' + g.id + '" title="Listen from this group" aria-label="Listen from ' + escHtml(g.name) + '">&#9654;</span></div>' + _bar(gp.pct, 3));
           if (gopen) html.push(_itemsHtml(g.items, st, bmId, g));
           html.push('</div>');
         });
@@ -346,7 +357,197 @@ function _rpRender() {
   body.scrollTop = keepTop;
 }
 
+// ── Plan playback (v4.60.0): read or listen along the plan, in plan order ────────────────────────
+// A "plan session" lives in memory only: { pos, passIdx }. Nothing new is stored; the only writes are the
+// normal item checks through the existing store path. ui.js wires the Read-tab hooks (this module never imports ui.js).
+var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), stop() }
+var _sess = null;        // active session, or null
+var _stopAtEnd = false;  // "Stop at the end of this section" (in memory; off by default)
+
+function rpWireRead(fns) { _rd = fns; }
+function rpSessionActive() { return !!_sess; }
+/** The passage the session expects to be loaded now; ui.js compares it with a typed reference to tell a user change from a plan load. */
+function rpSessionRef() {
+  if (!_sess) return '';
+  var it = _getPlan().items[_sess.pos];
+  return it ? (rpItemPassages(it)[_sess.passIdx] || '') : '';
+}
+function rpEndSession() { if (!_sess) return; _sess = null; _renderBar(); }
+/** Exit button: ends the session and stops audio. The passage stays on screen. */
+function rpExitPlan() { var was = !!_sess; rpEndSession(); if (was && _rd && _rd.stop) _rd.stop(); }
+
+function _groupName(it) {
+  var g = _getPlan().groups.filter(function(x) { return x.id === it.groupId; })[0];
+  return g ? g.name : '';
+}
+
+/** Checks an item if it is not already checked. @returns {{prev:Object|null}|null} null when it was already checked or the save failed */
+function _autoCheck(item) {
+  var store = rpLoad(), st = _planState(store), rec = st.items[item.id];
+  if (rec && rec.r === 1) return null;
+  var prev = rpSetChecked(st, item.id, true, Date.now());
+  if (!rpSave(store)) return null;
+  _rpQueueSync();
+  if (_ui.open) _rpRender();
+  rpRenderCard();
+  return { prev: prev };
+}
+function _undoCheck(id, prev) {
+  var s2 = rpLoad(), p2 = _planState(s2);
+  rpRestore(p2, id, prev, Date.now());
+  if (rpSave(s2)) _rpQueueSync();
+  if (_ui.open) _rpRender();
+  rpRenderCard();
+  _renderBar();
+}
+function _checkWithUndo(item, msg) {
+  var r = _autoCheck(item);
+  if (r) _rpShowUndo(msg, function() { _undoCheck(item.id, r.prev); });
+  return !!r;
+}
+
+/** Loads the session's current passage into the Read tab, and starts the voice when `listen` is true. */
+async function _loadCurrent(listen) {
+  if (!_sess || !_rd) return false;
+  var pos = _sess.pos, idx = _sess.passIdx, ref = rpSessionRef();
+  _renderBar();
+  var ok = await _rd.load(ref);
+  if (!_sess || _sess.pos !== pos || _sess.passIdx !== idx) return false;   // the reader moved on while this was loading
+  if (!ok) { toast('Could not load ' + ref); return false; }
+  if (listen) _rd.play();
+  return true;
+}
+
+/** Starts a plan session at plan position `pos` and opens the Read tab. */
+async function rpStartSession(pos, listen) {
+  var plan = _getPlan();
+  _rpCloseStart();
+  if (!_rd) return false;
+  if (pos < 0 || pos >= plan.items.length) { toast('Nothing left to read in this plan'); return false; }
+  if (_ui.open) rpClosePlan();
+  _sess = { pos: pos, passIdx: 0 };
+  _rd.navRead();
+  return _loadCurrent(!!listen);
+}
+/** Continue: the first unchecked item after Last Read. */
+function rpContinue(listen) {
+  var pos = rpContinuePos(_getPlan(), _planState(rpLoad()));
+  if (pos < 0) { toast('Every item in this plan is checked'); return; }
+  return rpStartSession(pos, listen);
+}
+/** Start at a group's first unchecked item (or its first item when the group is fully checked). */
+function rpStartGroup(groupId, listen) {
+  var pos = rpGroupStartPos(_getPlan(), _planState(rpLoad()), groupId);
+  if (pos < 0) { toast('Could not find that section'); return; }
+  return rpStartSession(pos, listen);
+}
+
+/** Previous / Next item buttons. Audio keeps playing if it was playing. */
+function rpPlanMove(delta) {
+  if (!_sess || !_rd) return;
+  var np = _sess.pos + delta;
+  if (np < 0 || np >= _getPlan().items.length) return;
+  var wasPlaying = _rd.isPlaying ? _rd.isPlaying() : false;
+  _sess.pos = np; _sess.passIdx = 0;
+  if (_rd.stop) _rd.stop();
+  _loadCurrent(wasPlaying);
+}
+/** Mark read button (reading). Checking never happens just by opening an item. */
+function rpMarkRead() {
+  if (!_sess) return;
+  var it = _getPlan().items[_sess.pos];
+  if (!it) return;
+  if (_checkWithUndo(it, 'Marked ' + it.label + ' read')) _renderBar();
+  else toast('Already marked read');
+}
+function rpSetStopAtEnd(on) { _stopAtEnd = !!on; _renderBar(); }
+
+/**
+ * Called by ui.js readAutoAdvance() when a passage finishes speaking naturally (never on skip, pause or stop).
+ * Moves through the item's passages, checks the finished item, and continues along the plan,
+ * or stops at the end of a section when the toggle is on. @returns {Promise<boolean>} true when a session handled it
+ */
+async function rpOnPassageEnd() {
+  if (!_sess) return false;
+  var plan = _getPlan(), it = plan.items[_sess.pos];
+  var s = rpStep(plan, _sess.pos, _sess.passIdx, _stopAtEnd);
+  if (s.check && it) _checkWithUndo(it, 'Read: ' + it.label);
+  if (s.action === 'end') {
+    if (_rd && _rd.stop) _rd.stop();
+    _sess = null; _renderBar();
+    toast('You have reached the end of the plan');
+    return true;
+  }
+  _sess.pos = s.pos; _sess.passIdx = s.passIdx;
+  if (s.action === 'stop') {
+    if (_rd && _rd.stop) _rd.stop();
+    await _loadCurrent(false);
+    toast('End of section. Next up: ' + plan.items[s.pos].label);
+    return true;
+  }
+  await _loadCurrent(true);
+  return true;
+}
+
+// ── Plan bar (Read tab) ────────────────────────────────────
+function _renderBar() {
+  var el = document.getElementById('rp-playbar');
+  if (!el) return;
+  if (!_sess) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var plan = _getPlan(), it = plan.items[_sess.pos];
+  if (!it) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var st = _planState(rpLoad()), n = rpItemPassages(it).length;
+  var read = !!(st.items[it.id] && st.items[it.id].r === 1);
+  el.style.display = 'block';
+  el.innerHTML =
+    '<div class="rp-pb-top"><span class="rp-pb-plan">The Biblical Story</span>' +
+      '<span class="rp-pb-grp">' + escHtml(_groupName(it)) + '</span></div>' +
+    '<div class="rp-pb-item">' + escHtml(it.label) + (n > 1 ? ' <span class="rp-pb-pass">Passage ' + (_sess.passIdx + 1) + ' of ' + n + '</span>' : '') + '</div>' +
+    '<div class="rp-pb-btns">' +
+      '<button class="btn btn-sec btn-sm" onclick="rpPlanMove(-1)" aria-label="Previous item">&#8249; Prev</button>' +
+      '<button class="btn ' + (read ? 'btn-sec' : 'btn-primary') + ' btn-sm" onclick="rpMarkRead()"' + (read ? ' disabled' : '') + '>' + (read ? '&#10003; Read' : 'Mark read') + '</button>' +
+      '<button class="btn btn-sec btn-sm" onclick="rpPlanMove(1)" aria-label="Next item">Next &#8250;</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="rpExitPlan()">Exit</button>' +
+    '</div>' +
+    '<label class="rp-pb-stop"><input type="checkbox" ' + (_stopAtEnd ? 'checked ' : '') + 'onchange="rpSetStopAtEnd(this.checked)"> Stop at the end of this section</label>';
+}
+
+// ── Start sheet: Continue, or choose a section ───────────────
+function _rpCloseStart() { var o = document.getElementById('rp-start-overlay'); if (o) o.classList.remove('on'); }
+function rpCloseStart() { _rpCloseStart(); }
+
+/** Opens the "where to start" sheet (Read tab and Progress card). */
+function rpOpenStart() {
+  var o = document.getElementById('rp-start-overlay'), body = document.getElementById('rp-start-body');
+  if (!o || !body) return;
+  var plan = _getPlan(), st = _planState(rpLoad());
+  var cp = rpContinuePos(plan, st), cit = cp >= 0 ? plan.items[cp] : null;
+  var pr = rpProgress(plan, st, false);
+  var opts = plan.parts.map(function(part) {
+    return '<optgroup label="' + escHtml(part.name) + '">' + part.groups.map(function(g) {
+      var gp = pr.groups[g.id];
+      return '<option value="' + g.id + '"' + (cit && cit.groupId === g.id ? ' selected' : '') + '>' + escHtml(g.name) + ' (' + gp.checked + '/' + gp.total + ')</option>';
+    }).join('') + '</optgroup>';
+  }).join('');
+  body.innerHTML =
+    '<div class="rp-st-h">Continue</div>' +
+    (cit
+      ? '<div class="rp-st-sub">Next unchecked: <b>' + escHtml(cit.label) + '</b></div>' +
+        '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(true)">&#9654; Listen</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(false)">Read</button></div>'
+      : '<div class="rp-st-sub">Every item in this plan is checked.</div>') +
+    '<div class="rp-st-h" style="margin-top:18px">Or choose a section</div>' +
+    '<div class="rp-st-sub">Starts at the first unchecked item in that section.</div>' +
+    '<select id="rp-start-group" class="rp-st-sel">' + opts + '</select>' +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpStartGroup(document.getElementById(\'rp-start-group\').value,true)">&#9654; Listen</button>' +
+    '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpStartGroup(document.getElementById(\'rp-start-group\').value,false)">Read</button></div>' +
+    '<div style="margin-top:14px;text-align:right"><button class="btn btn-ghost btn-sm" onclick="rpCloseStart()">Cancel</button></div>';
+  o.classList.add('on');
+}
+
 export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
-  rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast
+  rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
+  rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpExitPlan, rpStartSession, rpContinue, rpStartGroup,
+  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpOnPassageEnd, rpOpenStart, rpCloseStart
 };

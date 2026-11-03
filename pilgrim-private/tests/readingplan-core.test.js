@@ -154,6 +154,65 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
   c.rpProgress(plan, s1, false); c.rpBookmark(plan, s1, false); c.rpGaps(plan, s1, false); c.rpVisibleItems(plan, s1, true);
   eq('derived functions do not mutate state', JSON.stringify(s1), snap);
 
+  // ── Plan playback (v4.60.0) ──
+  const at = (id) => plan.index[id];
+  const item = (id) => plan.items[at(id)];
+  eq('passages: chapter item is its own label', c.rpItemPassages(item('Gen.12')), ['Genesis 12']);
+  eq('passages: Acts split keeps its verse range', c.rpItemPassages(item('Acts.18a')), ['Acts 18:1-17']);
+  eq('passages: Psalm item', c.rpItemPassages(item('Ps.104')), ['Psalms 104']);
+  eq('passages: event splits on semicolons', c.rpItemPassages(item('ev.baptism-of-jesus')), ['Matthew 3:13-17', 'Mark 1:9-11', 'Luke 3:21-22']);
+  const evList = plan.items.filter((i) => i.type === 'ev');
+  const comma = evList.find((e) => e.passages.indexOf(',') >= 0 && /Matthew 26:1-5/.test(e.passages));
+  eq('passages: comma list expands with inherited chapter', c.rpItemPassages(comma).filter((p) => /^Matthew 26/.test(p)), ['Matthew 26:1-5', 'Matthew 26:14-16']);
+  eq('passages: every item has at least one passage, none empty', plan.items.every((i) => { const p = c.rpItemPassages(i); return p.length > 0 && p.every((x) => x.length > 3); }), true);
+  eq('passages: no passage keeps a comma', plan.items.every((i) => c.rpItemPassages(i).every((x) => x.indexOf(',') < 0)), true);
+  eq('passages: null item', c.rpItemPassages(null), []);
+
+  eq('continue: empty plan starts at the first item', c.rpContinuePos(plan, fresh()), 0);
+  const cs = fresh(); c.rpSetChecked(cs, 'Gen.3', true, T);
+  eq('continue: first unchecked after the bookmark', plan.items[c.rpContinuePos(plan, cs)].id, plan.items[at('Gen.3') + 1].id);
+  const cs2 = fresh(); c.rpSetChecked(cs2, 'Exod.1', true, T);
+  eq('continue: skipping ahead never sends you back to an earlier gap while later items remain', c.rpContinuePos(plan, cs2), at('Exod.1') + 1);
+  const csAll = fresh(); plan.items.forEach((i) => c.rpSetChecked(csAll, i.id, true, T));
+  eq('continue: everything checked -> -1', c.rpContinuePos(plan, csAll), -1);
+  const csLast = fresh(); plan.items.forEach((i, p) => { if (p !== at('Gen.2')) c.rpSetChecked(csLast, i.id, true, T); });
+  eq('continue: only an earlier gap left -> that gap', c.rpContinuePos(plan, csLast), at('Gen.2'));
+
+  const g12 = plan.groups.find((x) => x.id === 'g.gen-12-50');
+  const gs = fresh(); c.rpSetChecked(gs, g12.items[0].id, true, T);
+  eq('group start: first unchecked item in the group', c.rpGroupStartPos(plan, gs, 'g.gen-12-50'), at(g12.items[1].id));
+  const gAll = fresh(); g12.items.forEach((i) => c.rpSetChecked(gAll, i.id, true, T));
+  eq('group start: fully checked group restarts at its first item', c.rpGroupStartPos(plan, gAll, 'g.gen-12-50'), at(g12.items[0].id));
+  eq('group start: unknown group -> -1', c.rpGroupStartPos(plan, fresh(), 'g.nope'), -1);
+
+  const lastOfG = at(g12.items[g12.items.length - 1].id);
+  eq('group end: last item of a group', c.rpIsGroupEnd(plan, lastOfG), true);
+  eq('group end: a middle item is not', c.rpIsGroupEnd(plan, lastOfG - 1), false);
+  eq('group end: final plan item', c.rpIsGroupEnd(plan, plan.items.length - 1), true);
+
+  const evPos = at('ev.baptism-of-jesus');
+  eq('step: next passage inside a multi-passage item', c.rpStep(plan, evPos, 0, false), { action: 'passage', pos: evPos, passIdx: 1, check: false });
+  eq('step: last passage finishes the item and moves on', c.rpStep(plan, evPos, 2, false), { action: 'item', pos: evPos + 1, passIdx: 0, check: true });
+  eq('step: chapter item advances', c.rpStep(plan, at('Gen.12'), 0, false), { action: 'item', pos: at('Gen.12') + 1, passIdx: 0, check: true });
+  eq('step: stopAtEnd inside a group keeps going', c.rpStep(plan, lastOfG - 1, 0, true).action, 'item');
+  eq('step: stopAtEnd at the end of a group stops on the next item', c.rpStep(plan, lastOfG, 0, true), { action: 'stop', pos: lastOfG + 1, passIdx: 0, check: true });
+  eq('step: stopAtEnd off runs across the group boundary', c.rpStep(plan, lastOfG, 0, false).action, 'item');
+  eq('step: stopAtEnd does not stop mid multi-passage item', c.rpStep(plan, evPos, 0, true).action, 'passage');
+  eq('step: last item of the plan ends', c.rpStep(plan, plan.items.length - 1, 0, true), { action: 'end', check: true });
+  // walking the whole plan with no stop visits every item once, in order, never skipping
+  (function walk() {
+    let pos = 0, pi = 0, visited = 0, guard = 0, ok = true;
+    for (;;) {
+      if (++guard > 5000) { ok = false; break; }
+      const s = c.rpStep(plan, pos, pi, false);
+      if (s.check) { visited++; }
+      if (s.action === 'end') break;
+      if (s.action === 'item' && s.pos !== pos + 1) { ok = false; break; }
+      pos = s.pos; pi = s.passIdx;
+    }
+    eq('walk: whole plan, every item once in order', [ok, visited], [true, plan.items.length]);
+  })();
+
   fs.rmSync(dir, { recursive: true, force: true });
   console.log(pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

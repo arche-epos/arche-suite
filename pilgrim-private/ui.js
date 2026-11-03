@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.59.0';
+} from './utils.js?v=4.60.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.59.0';
+} from './storage.js?v=4.60.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.59.0';
+} from './media.js?v=4.60.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.59.0';
+} from './tts.js?v=4.60.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.59.0';
+} from './sync.js?v=4.60.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.59.0';
+} from './studyTools.js?v=4.60.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.59.0';
-import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard } from './readingplan.js?v=4.59.0';
+} from './memory.js?v=4.60.0';
+import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.60.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -792,6 +792,7 @@ function navTo(id){
   // with a stuck-focused field somewhere off-screen.
   _deferBlur();
   trackEvent({screen:id}); // usage tracking — screen visit, no content (spec-usage-tracking-admin-v2.md)
+  if(id!=='read')rpEndSession(); // leaving the Read tab ends a Reading Plan playback session (v4.60.0)
   dismissTabHints();
   // Cancel any active TTS before navigating — avoids audio continuing on new screen
   if(window.speechSynthesis)window.speechSynthesis.cancel();
@@ -2311,6 +2312,7 @@ var _readReference='',_readTranslation='esv',_readScriptureText='';
 var _readVerses=[]; // [{num:'1',text:'...'}, ...] — parsed once per fetch, shared by render + TTS
 var _readChapterBoundaries=[]; // range mode only: [{atIndex, book, chapter, newBook}, ...] — see computeReadChapterBoundaries()
 var _readHandoff=null; // set by startStudyFromReading(), consumed once by createFromTemplate()
+var _readPlanLoading=false; // true only for the synchronous start of a load requested by a Reading Plan session (v4.60.0)
 
 /**
  * Splits a verse-numbered chapter/range text (e.g. "[1] In the beginning...") into an
@@ -2421,6 +2423,9 @@ async function fetchReadChapter(){
   var refInput=document.getElementById('read-ref');
   var ref=refInput?refInput.value.trim():'';
   if(!ref)return;
+  // Reading Plans playback (v4.60.0): a reference the reader typed or picked (anything but the plan's own load) ends the plan session.
+  var planLoad=_readPlanLoading;
+  if(!planLoad&&rpSessionActive()&&ref!==rpSessionRef())rpEndSession();
   var transEl=document.getElementById('read-trans');
   _readTranslation=transEl?transEl.value:'esv';
   var disp=document.getElementById('read-display');
@@ -2429,7 +2434,8 @@ async function fetchReadChapter(){
   readSetPlayerEnabled(false);
   if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
 
-  if(isReadRangeRef(ref)){
+  // A plan passage that is a single verse (e.g. "Luke 2:39") must load as just that verse, not widen to its chapter.
+  if(isReadRangeRef(ref)||(planLoad&&/:\d+$/.test(ref))){
     _readRangeMode=true;_readBook=null;_readChapter=null;_readTargetVerse=null;_readSelectedIdx=null;_readReference=ref;
     readSetChapterNavEnabled(false);
     try{
@@ -2782,11 +2788,32 @@ function saveReadVerseToMemory(){
  * (and therefore "what's next") isn't well-defined for an arbitrary passage range.
  */
 async function readAutoAdvance(){
+  // Reading Plans playback (v4.60.0): while a plan session drives the Read tab, "what's next" is the next plan passage or item.
+  if(rpSessionActive()){await rpOnPassageEnd();return;}
   if(_readRangeMode)return;
   await readNextChapter();
   if(!_readVerses.length)return; // fetch failed (offline/error) — stop quietly rather than throw
   ttsPlayReadFrom(0);
 }
+/**
+ * Loads one plan passage into the Read tab for a Reading Plan session (v4.60.0). Resolves true when verses loaded.
+ * Clears the previous verses first so a failed load can never be mistaken for the old passage.
+ */
+function readPlanLoad(ref){
+  var inp=document.getElementById('read-ref');
+  if(!inp)return Promise.resolve(false);
+  inp.value=ref;_readVerses=[];_readPlanLoading=true;
+  var p;
+  try{p=fetchReadChapter();}finally{_readPlanLoading=false;}
+  return p.then(function(){return _readVerses.length>0;},function(){return false;});
+}
+rpWireRead({
+  navRead:function(){navTo('read');},
+  load:readPlanLoad,
+  play:function(){ttsPlayReadFrom(0);},
+  stop:function(){if(window.ttsStop)window.ttsStop();},
+  isPlaying:function(){return !!_ttsActive;}
+});
 // ── END READ TAB ───────────────────────────────────────────────
 /**
  * Opens the export backup modal and renders a checkbox list of all studies.

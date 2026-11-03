@@ -182,9 +182,79 @@ function rpGaps(plan, state, hideChron) {
   return out;
 }
 
+// ── Plan playback (v4.60.0): read / listen along the plan. Pure helpers; the session itself lives in memory in readingplan.js ──
+
+/**
+ * The readable passages of one plan item, in order. A chapter item is its own label ("Genesis 12", "Acts 18:1-17").
+ * A Gospel event splits on ";" and expands comma lists, so "Matthew 26:1-5, 14-16" becomes two passages.
+ * @param {Object} item
+ * @returns {string[]}
+ */
+function rpItemPassages(item) {
+  if (!item) return [];
+  if (item.type !== 'ev') return [item.label];
+  var out = [];
+  String(item.passages || '').split(';').forEach(function(seg) {
+    seg = seg.trim();
+    if (!seg) return;
+    var parts = seg.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    var m = parts[0].match(/^(.*\s\d+):\d+/);   // "Matthew 26" so a bare "14-16" can inherit it
+    out.push(parts[0]);
+    for (var i = 1; i < parts.length; i++) {
+      out.push(m && /^\d+(-\d+)?$/.test(parts[i]) ? m[1] + ':' + parts[i] : parts[i]);
+    }
+  });
+  return out;
+}
+
+/**
+ * Where "Continue" starts: the first unchecked item after the Last Read bookmark. With no bookmark, the first item.
+ * If nothing unchecked is left after the bookmark, falls back to the first unchecked item anywhere (an earlier gap).
+ * @returns {number} plan position, or -1 when every item is checked
+ */
+function rpContinuePos(plan, state) {
+  var bm = rpBookmark(plan, state, false);
+  var from = bm ? bm.pos + 1 : 0, i;
+  for (i = from; i < plan.items.length; i++) if (!_isChecked(state, plan.items[i].id)) return i;
+  for (i = 0; i < from && i < plan.items.length; i++) if (!_isChecked(state, plan.items[i].id)) return i;
+  return -1;
+}
+
+/** @returns {number} position of the group's first unchecked item, or its first item when all are checked; -1 if unknown group. */
+function rpGroupStartPos(plan, state, groupId) {
+  var g = plan.groups.filter(function(x) { return x.id === groupId; })[0];
+  if (!g || !g.items.length) return -1;
+  for (var i = 0; i < g.items.length; i++) if (!_isChecked(state, g.items[i].id)) return plan.index[g.items[i].id];
+  return plan.index[g.items[0].id];
+}
+
+/** @returns {boolean} true when the item at `pos` is the last one in its group. */
+function rpIsGroupEnd(plan, pos) {
+  var a = plan.items[pos], b = plan.items[pos + 1];
+  return !!a && (!b || b.groupId !== a.groupId);
+}
+
+/**
+ * One step of listening. Called when a passage finishes speaking naturally.
+ *  - more passages left in this item  -> { action:'passage', pos, passIdx }
+ *  - item finished (check = true)     -> { action:'item', pos:next, passIdx:0, check:true }
+ *  - item finished at a section end with stopAtEnd -> { action:'stop', pos:next, passIdx:0, check:true }
+ *  - last item of the plan            -> { action:'end', check:true }
+ * Never skips an item and never changes order.
+ */
+function rpStep(plan, pos, passIdx, stopAtEnd) {
+  var item = plan.items[pos];
+  if (!item) return { action: 'end', check: false };
+  if (passIdx + 1 < rpItemPassages(item).length) return { action: 'passage', pos: pos, passIdx: passIdx + 1, check: false };
+  if (pos + 1 >= plan.items.length) return { action: 'end', check: true };
+  if (stopAtEnd && rpIsGroupEnd(plan, pos)) return { action: 'stop', pos: pos + 1, passIdx: 0, check: true };
+  return { action: 'item', pos: pos + 1, passIdx: 0, check: true };
+}
+
 export {
   RP_STORE_VERSION, RP_PLAN_ID,
   rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron,
-  rpVisibleItems, rpProgress, rpBookmark, rpGaps
+  rpVisibleItems, rpProgress, rpBookmark, rpGaps,
+  rpItemPassages, rpContinuePos, rpGroupStartPos, rpIsGroupEnd, rpStep
 };

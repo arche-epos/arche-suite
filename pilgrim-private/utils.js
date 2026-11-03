@@ -585,7 +585,18 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.59.0',date:'Nov 1, 2026',label:'Latest \u2014 untested',
+    version:'4.60.0',date:'Nov 3, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: read or listen to The Biblical Story in plan order. On the Progress tab, Listen starts at the first unchecked item after your Last Read, and Read loads it without playing. Choose where to start picks any section. You can also start from the Story plan button on the Read tab, or the play arrow on any section in the plan.",
+      "new: a plan bar above the passage shows where you are, with Prev and Next item, Mark read, and Exit. Gospel events that list several passages play one after another, shown as Passage 1 of 3.",
+      "new: when the voice finishes an item on its own, that item is checked for you, with an Undo. Skipping, pausing or stopping never checks anything, and opening an item never checks it. Reading uses Mark read.",
+      "new: Stop at the end of this section. Off by default and not remembered between visits. When on, playback stops after the last item of a section and waits on the next one.",
+      "note: nothing new is stored. The plan position lives only while you are in the Read tab, and checks use the same saved progress as before. Typing your own reference, using Prev or Next Chapter, or leaving the Read tab ends plan playback. Cache-buster bumped to 4.60.0."
+    ]
+  },
+  {
+    version:'4.59.0',date:'Nov 1, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "changed: all 150 Psalms now sit in The Biblical Story by author and story position. A Psalm whose heading names an event follows that passage (Psalm 51 after 2 Samuel 12, Psalm 3 after 2 Samuel 15). The rest go by author or by what they describe: David\u2019s through his shepherd and fugitive years and his reign, Asaph and Korah\u2019s through the kingdom and the exile, and the Songs of Ascents split by author.",
