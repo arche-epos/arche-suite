@@ -8,13 +8,13 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.60.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.60.1';
 import {
   RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
-} from './readingplan-core.js?v=4.60.0';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.60.0';
+} from './readingplan-core.js?v=4.60.1';
+import { rpBuildStoryFlow } from './readingplan-data.js?v=4.60.1';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -363,6 +363,7 @@ function _rpRender() {
 var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), stop() }
 var _sess = null;        // active session, or null
 var _stopAtEnd = false;  // "Stop at the end of this section" (in memory; off by default)
+var _repeat = 'off';     // 'off' | 'passage' | 'item' | 'section' (v4.60.1; in memory, resets when the session ends)
 
 function rpWireRead(fns) { _rd = fns; }
 function rpSessionActive() { return !!_sess; }
@@ -372,7 +373,7 @@ function rpSessionRef() {
   var it = _getPlan().items[_sess.pos];
   return it ? (rpItemPassages(it)[_sess.passIdx] || '') : '';
 }
-function rpEndSession() { if (!_sess) return; _sess = null; _renderBar(); }
+function rpEndSession() { if (!_sess) return; _sess = null; _repeat = 'off'; _renderBar(); }
 /** Exit button: ends the session and stops audio. The passage stays on screen. */
 function rpExitPlan() { var was = !!_sess; rpEndSession(); if (was && _rd && _rd.stop) _rd.stop(); }
 
@@ -461,6 +462,7 @@ function rpMarkRead() {
   else toast('Already marked read');
 }
 function rpSetStopAtEnd(on) { _stopAtEnd = !!on; _renderBar(); }
+function rpSetRepeat(mode) { _repeat = (mode === 'passage' || mode === 'item' || mode === 'section') ? mode : 'off'; _renderBar(); }
 
 /**
  * Called by ui.js readAutoAdvance() when a passage finishes speaking naturally (never on skip, pause or stop).
@@ -470,11 +472,11 @@ function rpSetStopAtEnd(on) { _stopAtEnd = !!on; _renderBar(); }
 async function rpOnPassageEnd() {
   if (!_sess) return false;
   var plan = _getPlan(), it = plan.items[_sess.pos];
-  var s = rpStep(plan, _sess.pos, _sess.passIdx, _stopAtEnd);
+  var s = rpStep(plan, _sess.pos, _sess.passIdx, _stopAtEnd, _repeat);
   if (s.check && it) _checkWithUndo(it, 'Read: ' + it.label);
   if (s.action === 'end') {
     if (_rd && _rd.stop) _rd.stop();
-    _sess = null; _renderBar();
+    _sess = null; _repeat = 'off'; _renderBar();
     toast('You have reached the end of the plan');
     return true;
   }
@@ -509,6 +511,10 @@ function _renderBar() {
       '<button class="btn btn-sec btn-sm" onclick="rpPlanMove(1)" aria-label="Next item">Next &#8250;</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="rpExitPlan()">Exit</button>' +
     '</div>' +
+    '<label class="rp-pb-rep">Repeat <select onchange="rpSetRepeat(this.value)" aria-label="Repeat">' +
+      [['off', 'Off'], ['passage', 'This passage'], ['item', 'This item'], ['section', 'This section']].map(function(o) {
+        return '<option value="' + o[0] + '"' + (_repeat === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>' +
     '<label class="rp-pb-stop"><input type="checkbox" ' + (_stopAtEnd ? 'checked ' : '') + 'onchange="rpSetStopAtEnd(this.checked)"> Stop at the end of this section</label>';
 }
 
@@ -549,5 +555,5 @@ export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
   rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
   rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpExitPlan, rpStartSession, rpContinue, rpStartGroup,
-  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpOnPassageEnd, rpOpenStart, rpCloseStart
+  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpOnPassageEnd, rpOpenStart, rpCloseStart
 };

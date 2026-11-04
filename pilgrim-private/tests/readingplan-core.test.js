@@ -199,6 +199,19 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
   eq('step: stopAtEnd off runs across the group boundary', c.rpStep(plan, lastOfG, 0, false).action, 'item');
   eq('step: stopAtEnd does not stop mid multi-passage item', c.rpStep(plan, evPos, 0, true).action, 'passage');
   eq('step: last item of the plan ends', c.rpStep(plan, plan.items.length - 1, 0, true), { action: 'end', check: true });
+  // repeat (v4.60.1)
+  const firstOfG = at(g12.items[0].id);
+  eq('repeat off/unknown behaves as before', [c.rpStep(plan, evPos, 2, false, 'off'), c.rpStep(plan, evPos, 2, false, 'bogus')], [c.rpStep(plan, evPos, 2, false), c.rpStep(plan, evPos, 2, false)]);
+  eq('repeat passage: single-passage chapter replays and counts as read', c.rpStep(plan, at('Gen.12'), 0, false, 'passage'), { action: 'repeat', pos: at('Gen.12'), passIdx: 0, check: true });
+  eq('repeat passage: mid-event passage replays without checking', c.rpStep(plan, evPos, 1, false, 'passage'), { action: 'repeat', pos: evPos, passIdx: 1, check: false });
+  eq('repeat passage: last passage of an event replays and checks', c.rpStep(plan, evPos, 2, false, 'passage'), { action: 'repeat', pos: evPos, passIdx: 2, check: true });
+  eq('repeat item: mid-event still moves to the next passage', c.rpStep(plan, evPos, 0, false, 'item'), { action: 'passage', pos: evPos, passIdx: 1, check: false });
+  eq('repeat item: after the last passage restarts the item and checks', c.rpStep(plan, evPos, 2, false, 'item'), { action: 'repeat', pos: evPos, passIdx: 0, check: true });
+  eq('repeat section: mid-section moves on normally', c.rpStep(plan, firstOfG, 0, false, 'section').action, 'item');
+  eq('repeat section: at the section end restarts at its first item', c.rpStep(plan, lastOfG, 0, false, 'section'), { action: 'repeat', pos: firstOfG, passIdx: 0, check: true });
+  eq('repeat section: wins over stopAtEnd', c.rpStep(plan, lastOfG, 0, true, 'section').action, 'repeat');
+  eq('repeat section: works on the final item of the plan', c.rpStep(plan, plan.items.length - 1, 0, false, 'section').action, 'repeat');
+  eq('repeat section: a multi-passage item at section end plays its passages first', c.rpStep(plan, at('ev.baptism-of-jesus'), 0, false, 'section').action, 'passage');
   // walking the whole plan with no stop visits every item once, in order, never skipping
   (function walk() {
     let pos = 0, pi = 0, visited = 0, guard = 0, ok = true;

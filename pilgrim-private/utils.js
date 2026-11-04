@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.0',date:'Nov 3, 2026',label:'Latest \u2014 untested',
+    version:'4.60.1',date:'Nov 3, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Repeat on the plan bar. Choose This passage, This item or This section and it loops until you set it back to Off. A Gospel event has several passages, so This passage repeats just the one on screen and This item repeats the whole event.",
+      "note: repeating a section takes priority over Stop at the end of this section. A repeated item still counts as read the first time it finishes. Repeat is not remembered, so it goes back to Off when plan playback ends. Cache-buster bumped to 4.60.1."
+    ]
+  },
+  {
+    version:'4.60.0',date:'Nov 3, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: read or listen to The Biblical Story in plan order. On the Progress tab, Listen starts at the first unchecked item after your Last Read, and Read loads it without playing. Choose where to start picks any section. You can also start from the Story plan button on the Read tab, or the play arrow on any section in the plan.",

@@ -241,11 +241,25 @@ function rpIsGroupEnd(plan, pos) {
  *  - item finished at a section end with stopAtEnd -> { action:'stop', pos:next, passIdx:0, check:true }
  *  - last item of the plan            -> { action:'end', check:true }
  * Never skips an item and never changes order.
+ * Repeat (v4.60.1), `repeat` = 'off' | 'passage' | 'item' | 'section' (anything else = off). Loops until stopped:
+ *  - 'passage': the passage that just finished plays again (check = true only when it was the item's last passage)
+ *  - 'item': after the item's last passage, the item restarts at its first passage (check = true)
+ *  - 'section': after the section's last item, it restarts at the section's first item (check = true);
+ *    this takes priority over stopAtEnd, since looping the section is the point
+ *  A repeat step returns { action:'repeat', pos, passIdx, check }.
  */
-function rpStep(plan, pos, passIdx, stopAtEnd) {
+function rpStep(plan, pos, passIdx, stopAtEnd, repeat) {
   var item = plan.items[pos];
   if (!item) return { action: 'end', check: false };
-  if (passIdx + 1 < rpItemPassages(item).length) return { action: 'passage', pos: pos, passIdx: passIdx + 1, check: false };
+  var last = passIdx + 1 >= rpItemPassages(item).length;
+  if (repeat === 'passage') return { action: 'repeat', pos: pos, passIdx: passIdx, check: last };
+  if (!last) return { action: 'passage', pos: pos, passIdx: passIdx + 1, check: false };
+  if (repeat === 'item') return { action: 'repeat', pos: pos, passIdx: 0, check: true };
+  if (repeat === 'section' && rpIsGroupEnd(plan, pos)) {
+    var start = pos;
+    while (start > 0 && plan.items[start - 1].groupId === item.groupId) start--;
+    return { action: 'repeat', pos: start, passIdx: 0, check: true };
+  }
   if (pos + 1 >= plan.items.length) return { action: 'end', check: true };
   if (stopAtEnd && rpIsGroupEnd(plan, pos)) return { action: 'stop', pos: pos + 1, passIdx: 0, check: true };
   return { action: 'item', pos: pos + 1, passIdx: 0, check: true };
