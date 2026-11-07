@@ -15,7 +15,7 @@ data updates). See `spec-ai-tools-grounding-v1.md` for the tools that consume th
     Git-LFS-hosted and wasn't reachable from the build environment; the lexical/morphological
     content is the same. OSHB has no English, so `gloss` for OT entries is filled (v4.52.0) from **MACULA Hebrew**
     (Clear-Bible/macula-hebrew, `WLC/lowfat`, CC BY 4.0) by `data/build-hebrew-gloss.py`: a word is paired only when its Hebrew
-    consonants are identical, otherwise `gloss` stays empty. Re-run the script to regenerate; nothing else in these files changes.
+    consonants are identical, otherwise `gloss` stays empty. Re-run the script to regenerate; nothing else in these files changes. Since v4.60.2 a plain possessive ending (my, your, his, her, its, our, their) that follows a noun is moved in front of it ("my face", not "face my"); nothing else is reordered.
 - `crossrefs/<NN>.json` — per verse, top-8 cross-references by community vote weight:
   `[[ "Book Chap:Verse", votes ], ...]`. Source: **OpenBible.info Cross-References** (Treasury of
   Scripture Knowledge, vote-weighted), CC BY.

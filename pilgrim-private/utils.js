@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.1',date:'Nov 3, 2026',label:'Latest \u2014 untested',
+    version:'4.60.2',date:'Nov 7, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Old Testament words with a possessive ending now read in English order in Interlinear: my face (not face my), his hand, to its kind, and his wife. About 17,700 words changed, Genesis to Malachi. Only the order of the English changed; the Hebrew, Strong's numbers and parsing are the same.",
+      "new: Interlinear rows now lead with the English word in larger bold type, with the Hebrew or Greek smaller on the right. Each row has its own color bar, and the English and the original word share that color so it is easy to see which belong together.",
+      "note: Old Testament words can keep showing the old order until the data cache refreshes (up to 12 hours). Cache-buster bumped to 4.60.2."
+    ]
+  },
+  {
+    version:'4.60.1',date:'Nov 3, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Repeat on the plan bar. Choose This passage, This item or This section and it loops until you set it back to Off. A Gospel event has several passages, so This passage repeats just the one on screen and This item repeats the whole event.",

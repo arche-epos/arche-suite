@@ -13,15 +13,15 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.60.1';
+} from './utils.js?v=4.60.2';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.60.1';
-import { openConfirm } from './media.js?v=4.60.1';
-import { syncToGist } from './sync.js?v=4.60.1';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.60.1';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.60.1';
-import { decodeMorph } from './morph.js?v=4.60.1';
-import { hebrewVerses } from './versemap.js?v=4.60.1';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.60.2';
+import { openConfirm } from './media.js?v=4.60.2';
+import { syncToGist } from './sync.js?v=4.60.2';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.60.2';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.60.2';
+import { decodeMorph } from './morph.js?v=4.60.2';
+import { hebrewVerses } from './versemap.js?v=4.60.2';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -3420,8 +3420,8 @@ function _btIlxRowHTML(r,i){
   if(r.lemma)meta.push('<span dir="'+dir+'" lang="'+lang+'">'+escHtml(r.lemma)+'</span>');
   if(r.translit)meta.push(escHtml(r.translit));
   if(r.strongs)meta.push(escHtml(r.strongs));
-  return (r.head?'<div class="bt-ilhd">'+escHtml(r.head)+'</div>':'')+'<div class="bt-ilr"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
-    +'<span class="bt-il1"><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-ilg">'+(r.gloss?escHtml(r.gloss):'<span class="bt-nog" title="The source gives no English for this word">\u2014</span>')+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
+  return (r.head?'<div class="bt-ilhd">'+escHtml(r.head)+'</div>':'')+'<div class="bt-ilr bt-c'+(i%6)+'"><button class="bt-ilb" '+(r.card?'':'disabled ')+'aria-expanded="false" onclick="btIlxToggle('+i+')">'
+    +'<span class="bt-il1"><span class="bt-ilg">'+(r.gloss?escHtml(r.gloss):'<span class="bt-nog" title="The source gives no English for this word">\u2014</span>')+'</span><span class="bt-ilw'+(r.rtl?' bt-ilh':'')+'" dir="'+dir+'" lang="'+lang+'">'+escHtml(r.word)+'</span><span class="bt-chev">'+(r.card?'▸':'')+'</span></span>'
     +'<span class="bt-il2">'+(meta.length?'<span class="bt-ilm">'+meta.join(' · ')+'</span>':'')+'<span class="bt-chip" title="'+escHtml(r.raw)+'">'+escHtml(r.chip)+'</span>'+(r.raw?'<span class="bt-raw" title="Source parsing code">'+escHtml(r.raw)+'</span>':'')+'</span>'
     +'</button><div class="bt-ilcard" id="bt-ilc-'+i+'" hidden></div></div>';
 }

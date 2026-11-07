@@ -213,8 +213,9 @@ that avoids the excluded list.
 - See a verse word by word in Greek or Hebrew (no AI) → Bible Tools sheet >
   **Interlinear** (below Translation Comparison; tap it to open). Pick a verse
   from the dropdown (the same verse picker as Translation Comparison, so
-  changing it in one changes the other). Each row shows the original word and a
-  short English meaning, then its dictionary form, transliteration, Strong's
+  changing it in one changes the other). Each row leads with the English meaning
+  in larger bold type, with the original word smaller on the right; both share
+  a color bar so you can see which belong together. Under that come its dictionary form, transliteration, Strong's
   number, and a plain-English grammar chip. Tap a row to open its full
   dictionary entry. Words with no Strong's entry (small prefix-and-pronoun
   forms) show but do not open. Hebrew and English Bibles number some Old

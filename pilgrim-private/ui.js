@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.60.1';
+} from './utils.js?v=4.60.2';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.60.1';
+} from './storage.js?v=4.60.2';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.60.1';
+} from './media.js?v=4.60.2';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.60.1';
+} from './tts.js?v=4.60.2';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.60.1';
+} from './sync.js?v=4.60.2';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.60.1';
+} from './studyTools.js?v=4.60.2';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.60.1';
-import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.60.1';
+} from './memory.js?v=4.60.2';
+import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.60.2';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since

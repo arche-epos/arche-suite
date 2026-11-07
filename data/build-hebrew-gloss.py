@@ -1,5 +1,5 @@
 """
-build-hebrew-gloss.py  (Pilgrim Private v4.52.0, fix-plan Batch 3c)
+build-hebrew-gloss.py  (Pilgrim Private v4.52.0, fix-plan Batch 3c; possessive-suffix order fixed v4.60.2)
 
 Fills the empty `gloss` field of data/macula/01.json .. 39.json (Old Testament) with the English gloss from
 MACULA Hebrew (Clear-Bible/macula-hebrew, WLC/lowfat/*.xml, CC BY 4.0). The Open Scriptures word list in those
@@ -50,6 +50,9 @@ def chapter(path):
     return out
 
 
+POSS = {'my', 'your', 'his', 'her', 'its', 'our', 'their'}
+
+
 def word_gloss(morphemes):
     parts = [(x.get('gloss', ''), x.get('morph', '')) for x in morphemes if x.get('gloss')]
     texts = [re.sub(r'\s+', ' ', g.replace('.', ' ')).strip() for g, _ in parts]
@@ -57,6 +60,19 @@ def word_gloss(morphemes):
         earlier = ' '.join(texts[:-1]).lower().split()
         if all(t in earlier for t in texts[-1].lower().split()):
             texts = texts[:-1]
+            parts = parts[:-1]
+    # v4.60.2: Hebrew puts a possessive suffix after its noun; English puts it before ("face my" -> "my face",
+    # "and for wife his" -> "and for his wife"). Only a pronoun suffix (morph Sp...) that follows a NOUN morpheme
+    # (morph N...) is moved, to sit right in front of that noun. Prepositions and verbs keep MACULA's order
+    # ("to you", "keep him"). Nothing else is reordered or reworded.
+    # Guards: the suffix text must be exactly one plain possessive word, and no earlier part may already hold one
+    # (MACULA sometimes puts the English possessive on another morpheme, e.g. "(in).his" + "own" + "image": those are
+    # already in English order and are left alone).
+    if len(parts) > 1 and parts[-1][1].startswith('Sp') and texts[-1].lower() in POSS:
+        earlier_words = ' '.join(texts[:-1]).lower().replace('(', ' ').replace(')', ' ').replace('[', ' ').replace(']', ' ').split()
+        ni = [i for i, (_, m) in enumerate(parts[:-1]) if m.startswith('N')]
+        if ni and not any(w in POSS for w in earlier_words):
+            texts.insert(ni[-1], texts.pop())
     return ' '.join(t for t in texts if t)
 
 
