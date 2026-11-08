@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.4',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    version:'4.60.5',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the white screen while the app opens is gone. The page no longer waits for fonts and outside libraries (Quill, PDF tools) before it shows your theme, so dark mode paints dark right away even on a slow connection. The app itself still appears once those finish loading.",
+      "note: fonts may switch in a moment after the text first shows. Nothing is saved or changed in your data. Cache-buster bumped to 4.60.5."
+    ]
+  },
+  {
+    version:'4.60.4',date:'Nov 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the page no longer flashes light before switching to dark mode when it opens. Your saved theme is now applied before anything is drawn, so dark mode starts dark and light mode starts light.",
