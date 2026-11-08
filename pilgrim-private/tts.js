@@ -13,7 +13,7 @@ import {
   trackEvent,
   logError,
   toast
-} from './utils.js?v=4.60.3';
+} from './utils.js?v=4.60.4';
 
 // ── Cross-module state accessors (window.* during extraction phase) ─────────
 // These live in studyTools.js (_aiResults(), _aiActiveTab()) and ui.js (Quill).

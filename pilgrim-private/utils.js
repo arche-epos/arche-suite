@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.3',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    version:'4.60.4',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: the page no longer flashes light before switching to dark mode when it opens. Your saved theme is now applied before anything is drawn, so dark mode starts dark and light mode starts light.",
+      "note: nothing is saved or changed to make this work; it only reads the theme you already chose. A first visit with nothing saved still opens in light. Cache-buster bumped to 4.60.4."
+    ]
+  },
+  {
+    version:'4.60.3',date:'Nov 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Bible Tools (Interlinear, Cross-References) now re-download their word data after every app update. Before, a corrected data file could stay cached on the phone for up to 12 hours, so the fixed word order in 4.60.2 did not show until the browser cache was cleared by hand.",
