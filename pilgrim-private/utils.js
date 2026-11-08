@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.2',date:'Nov 7, 2026',label:'Latest \u2014 untested',
+    version:'4.60.3',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: Bible Tools (Interlinear, Cross-References) now re-download their word data after every app update. Before, a corrected data file could stay cached on the phone for up to 12 hours, so the fixed word order in 4.60.2 did not show until the browser cache was cleared by hand.",
+      "note: Cache-buster bumped to 4.60.3."
+    ]
+  },
+  {
+    version:'4.60.2',date:'Nov 7, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: Old Testament words with a possessive ending now read in English order in Interlinear: my face (not face my), his hand, to its kind, and his wife. About 17,700 words changed, Genesis to Malachi. Only the order of the English changed; the Hebrew, Strong's numbers and parsing are the same.",

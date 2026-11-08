@@ -12,16 +12,16 @@ import {
   cur, studies, sett, activeRef,
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
-  toast, toastSuccess, parseVerseChunks, logError
-} from './utils.js?v=4.60.2';
+  toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
+} from './utils.js?v=4.60.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.60.2';
-import { openConfirm } from './media.js?v=4.60.2';
-import { syncToGist } from './sync.js?v=4.60.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.60.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.60.2';
-import { decodeMorph } from './morph.js?v=4.60.2';
-import { hebrewVerses } from './versemap.js?v=4.60.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.60.3';
+import { openConfirm } from './media.js?v=4.60.3';
+import { syncToGist } from './sync.js?v=4.60.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.60.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.60.3';
+import { decodeMorph } from './morph.js?v=4.60.3';
+import { hebrewVerses } from './versemap.js?v=4.60.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -469,7 +469,9 @@ function _isContentWordMorph(morph,isOT){
  */
 async function fetchGroundData(path){
   if(_groundCache[path])return _groundCache[path];
-  var r=await fetch(GROUND_CDN+path);
+  // v4.60.3: the app version in the URL makes the phone's browser re-download this data after every release
+  // (a changed data file used to stay cached on the phone for up to 12 h). jsDelivr ignores the query string.
+  var r=await fetch(GROUND_CDN+path+'?v='+((CHANGELOG&&CHANGELOG[0]&&CHANGELOG[0].version)||'0'));
   if(!r.ok)throw new Error('Grounding data unavailable: '+path+' (HTTP '+r.status+')');
   var d=await r.json();
   _groundCache[path]=d;
