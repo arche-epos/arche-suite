@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// readingplan-library.test.js — plan library integrity + enrollment logic (spec-reading-plan-library-v1.md, v4.61.0)
+// readingplan-library.test.js — plan library integrity + enrollment logic (spec-reading-plan-library-v1.md, v4.62.0)
 // Usage (from pilgrim-private/): node tests/readingplan-library.test.js
 const fs = require('fs'), os = require('os'), path = require('path');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rplib-'));
@@ -14,11 +14,34 @@ function eq(name, got, want) {
 
 Promise.all([import(path.join(dir, 'readingplan-data.mjs')), import(path.join(dir, 'readingplan-core.mjs'))]).then(([d, c]) => {
   const ids = d.RP_PLAN_LIST.map((p) => p.id);
-  eq('six plans in the registry', ids, ['storyflow', 'life-of-jesus', 'canon', 'nt', 'acts-letters', 'ot-story']);
+  eq('ten plans in the registry', ids, ['storyflow', 'life-of-jesus', 'canon', 'nt', 'psalms-proverbs', 'acts-letters', 'ot-story', 'genesis-1-11', 'creation', 'lineage']);
   eq('unknown plan id builds nothing', d.rpBuildPlan('nope'), null);
 
   const P = {}; ids.forEach((id) => { P[id] = d.rpBuildPlan(id); });
-  const expect = { storyflow: 1196, 'life-of-jesus': 94, canon: 1189, nt: 260, 'acts-letters': 173, 'ot-story': 929 };
+
+  // ── v4.62.0 content plans ──
+  const BK = d.RP_BOOKS.map((b) => b[1]);
+  const okRef = (seg) => { const m = /^((?:[123] )?[A-Za-z]+(?: of [A-Za-z]+)?) (\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?$/.exec(seg.trim()); return !!m && BK.includes(m[1]); };
+  ['psalms-proverbs', 'genesis-1-11', 'creation', 'lineage'].forEach((id) => {
+    P[id].items.forEach((it) => {
+      eq(id + ' ' + it.id + ': type ev, weight', [it.type, it.w], ['ev', d.RP_W_EV]);
+      const bad = it.passages.split(';').filter((s) => !okRef(s));
+      eq(id + ' ' + it.id + ': every segment is a full reference (' + it.passages + ')', bad, []);
+    });
+  });
+  const covered = (id, book) => { const seen = {}; P[id].items.forEach((it) => it.passages.split(';').forEach((s) => { const m = /^\s*(\D+?) (\d+)(?::\d+(?:-\d+(?::\d+)?)?|-(\d+))?/.exec(s); if (m && m[1] === book) for (let n = +m[2]; n <= +(m[3] || m[2]); n++) seen[n] = (seen[n] || 0) + 1; })); return seen; };
+  const ps = covered('psalms-proverbs', 'Psalms'), pr = covered('psalms-proverbs', 'Proverbs');
+  eq('psalms-proverbs: Psalms 1-150 each once', Object.keys(ps).length === 150 && Object.values(ps).every((v) => v === 1), true);
+  eq('psalms-proverbs: Proverbs 1-31 each once', Object.keys(pr).length === 31 && Object.values(pr).every((v) => v === 1), true);
+  eq('psalms-proverbs: ids pp.1..pp.30', P['psalms-proverbs'].items.map((i) => i.id), Array.from({ length: 30 }, (_, i) => 'pp.' + (i + 1)));
+  eq('psalms-proverbs: day 1 and day 30', [P['psalms-proverbs'].items[0].passages, P['psalms-proverbs'].items[29].passages], ['Psalms 1-5; Proverbs 1', 'Psalms 146-150; Proverbs 30; Proverbs 31']);
+  const gn = covered('genesis-1-11', 'Genesis');
+  eq('genesis-1-11: chapters 1-11 all present', Object.keys(gn).map(Number), [1,2,3,4,5,6,7,8,9,10,11]);
+  eq('creation: Bible order of first books', P.creation.items.map((i) => i.passages.split(' ')[0]).slice(0, 4), ['Genesis', 'Genesis', 'Nehemiah', 'Job']);
+  eq('lineage: ends with Matthew then Luke genealogy', P.lineage.items.slice(-2).map((i) => i.passages), ['Matthew 1:1-17', 'Luke 3:23-38']);
+  eq('every content plan has an About with the prototype note', ['psalms-proverbs', 'genesis-1-11', 'creation', 'lineage'].every((id) => P[id].about && (P[id].about && P[id].about.note.indexOf('prototype') > 0)), true);
+  eq('units on registry entries', d.RP_PLAN_LIST.filter((x) => x.unit).map((x) => x.unit), ['days', 'passages', 'readings']);
+  const expect = { storyflow: 1196, 'life-of-jesus': 94, canon: 1189, nt: 260, 'acts-letters': 173, 'ot-story': 929, 'psalms-proverbs': 30, 'genesis-1-11': 11, creation: 21, lineage: 19 };
   ids.forEach((id) => {
     const p = P[id];
     eq(id + ': item count', p.items.length, expect[id]);

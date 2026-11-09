@@ -1,5 +1,5 @@
-// readingplan.js — Pilgrim Private ES Module (v4.61.0)
-// Reading Plans (v4.61.0: a library of plans, Start/Leave enrollment, Browse plans): check chapters off, a "Last Read" bookmark, progress bars and percentages.
+// readingplan.js — Pilgrim Private ES Module (v4.62.0)
+// Reading Plans (v4.62.0: a library of plans, Start/Leave enrollment, Browse plans): check chapters off, a "Last Read" bookmark, progress bars and percentages.
 // Spec: claude/spec-reading-plans-v1.md (Rev 2). Pure logic lives in readingplan-core.js, the outline in
 // readingplan-data.js; this module owns storage I/O, the Progress-tab card and the full-screen plan overlay.
 //
@@ -8,14 +8,14 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.61.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.62.0';
 import {
   RP_PLAN_ID, rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
   rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
-} from './readingplan-core.js?v=4.61.0';
-import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.61.0';
+} from './readingplan-core.js?v=4.62.0';
+import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.62.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -106,7 +106,7 @@ function _bar(pct, h) {
   return '<div class="rp-bar" style="height:' + (h || 6) + 'px"><div class="rp-bar-fill" style="width:' + pct + '%"></div></div>';
 }
 
-// ── Progress-tab section: Reading Plans (v4.61.0) ───────────
+// ── Progress-tab section: Reading Plans (v4.62.0) ───────────
 function _planCardHtml(plan, st) {
   var pr = rpProgress(plan, st, false), bm = rpBookmark(plan, st, false), gaps = rpGaps(plan, st, false);
   var q = '\'' + plan.id + '\'';
@@ -286,7 +286,7 @@ function _chip(it, st, bmId, defAuthor) {
     return '<div class="rp-ev' + (on ? ' on' : '') + (it.id === bmId ? ' bm' : '') + '" data-rp-id="' + it.id + '">' +
       '<div class="rp-box">' + (on ? '&#10003;' : '') + '</div>' +
       '<div class="rp-ev-txt"><div class="rp-ev-title">' + escHtml(it.label) + (it.id === bmId ? ' <span class="rp-badge">Last Read</span>' : '') + '</div>' +
-      '<div class="rp-ev-pass">' + escHtml(it.passages) + '</div>' +
+      (it.passages !== it.label ? '<div class="rp-ev-pass">' + escHtml(it.passages) + '</div>' : '') +
       (it.note ? '<div class="rp-ev-note">' + escHtml(it.note) + '</div>' : '') + '</div></div>';
   }
   // Psalms carry their author (v4.59.0): shown in small text under the number, except where it is the
@@ -382,7 +382,7 @@ function _rpRender() {
   body.scrollTop = keepTop;
 }
 
-// ── Plan playback (v4.60.0; per-plan since v4.61.0): read or listen along a plan, in plan order ────────────────────────
+// ── Plan playback (v4.60.0; per-plan since v4.62.0): read or listen along a plan, in plan order ────────────────────────
 // A "plan session" lives in memory only: { planId, pos, passIdx }. Nothing new is stored; the only writes are the
 // normal item checks through the existing store path. ui.js wires the Read-tab hooks (this module never imports ui.js).
 var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), stop() }
@@ -591,7 +591,7 @@ function rpOpenStart(planId) {
   o.classList.add('on');
 }
 
-// ── Browse plans + Start / Leave (v4.61.0) ───────────────────
+// ── Browse plans + Start / Leave (v4.62.0) ───────────────────
 /** Start (on = true) or Leave (on = false) a plan. Leaving keeps every check. */
 function rpEnroll(planId, on) {
   var plan = _getPlan(planId);
@@ -625,7 +625,7 @@ function _rpBrowseRender() {
     var enr = rpIsEnrolled(st), prog = rpHasProgress(st), open = !!_ui.browseAbout[meta.id];
     html.push('<div class="rp-bcard' + (enr ? ' enr' : '') + '">' +
       '<div class="rp-bhead"><div class="rp-bname">' + escHtml(plan.name) + '</div><div class="rp-bstat">' + escHtml(_planStatus(plan, st, pr)) + '</div></div>' +
-      '<div class="rp-bby">By ' + escHtml(plan.about.by) + ' · ' + plan.items.length + ' ' + (plan.items.every(function(it) { return it.type === 'ev'; }) ? 'events' : plan.items.every(function(it) { return it.type === 'ch'; }) ? 'chapters' : 'items') + '</div>' +
+      '<div class="rp-bby">By ' + escHtml(plan.about.by) + ' · ' + plan.items.length + ' ' + (meta.unit || (plan.items.every(function(it) { return it.type === 'ev'; }) ? 'events' : plan.items.every(function(it) { return it.type === 'ch'; }) ? 'chapters' : 'items')) + '</div>' +
       '<div class="rp-bblurb">' + escHtml(meta.blurb) + '</div>' +
       '<div class="rp-babout-link" data-rp-babout="' + meta.id + '">' + (open ? 'Hide About ▴' : 'About this plan ▾') + '</div>' +
       (open ? '<div class="rp-about-body" style="padding:0 2px 8px">' + _aboutBodyHtml(plan.about) + '</div>' : '') +

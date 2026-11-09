@@ -1,4 +1,4 @@
-// readingplan-data.js — Pilgrim Private ES Module (v4.61.0)
+// readingplan-data.js — Pilgrim Private ES Module (v4.62.0)
 // Reading Plans: the Story Flow outline as static data. NO imports, NO DOM, NO localStorage.
 // Source: claude/spec-reading-plans-v1.md (Rev 2) + claude/spec-reading-plan-story-flow-outline-v1.md.
 // Psalm placement (v4.59.0): claude/spec-psalms-story-placement-v1.md. All 150 Psalms sit by author and story position.
@@ -444,7 +444,7 @@ function rpBuildStoryFlow() {
 }
 
 
-// ══ Plan library (v4.61.0) ═══════════════════════════════════════════════════════════════════
+// ══ Plan library (v4.62.0) ═══════════════════════════════════════════════════════════════════
 // Source: claude/spec-reading-plan-library-v1.md (Rev 3) + claude/spec-reading-plan-about-texts-v1.md (approved Nov 2, 2026).
 // Every plan is built from code, never stored; only progress and the per-plan "enrolled" option are stored (readingplan.js).
 // Plan ids are PERMANENT. Item ids inside different plans may repeat (e.g. 'Gen.1'); progress is per plan.
@@ -457,8 +457,12 @@ var RP_PLAN_LIST = [
   { id: 'life-of-jesus', name: 'The Life of Jesus', blurb: 'The four Gospels woven into one account, event by event, from His birth to His ascension.' },
   { id: 'canon', name: 'Genesis to Revelation', blurb: 'Straight through the Bible in book order, one chapter at a time.' },
   { id: 'nt', name: 'The New Testament', blurb: 'Matthew 1 to Revelation 22, one chapter at a time.' },
+  { id: 'psalms-proverbs', name: 'Psalms and Proverbs in 30 Days', blurb: 'Five Psalms and a chapter of Proverbs each day for thirty days.', unit: 'days' },
   { id: 'acts-letters', name: 'Acts and the Letters', blurb: 'Paul’s letters read beside the part of Acts where they fit.' },
-  { id: 'ot-story', name: 'The Old Testament Story', blurb: 'The Old Testament in a near-chronological order, from creation to Malachi.' }
+  { id: 'ot-story', name: 'The Old Testament Story', blurb: 'The Old Testament in a near-chronological order, from creation to Malachi.' },
+  { id: 'genesis-1-11', name: 'Genesis 1–11: Event to Event', blurb: 'The first eleven chapters of Genesis, read as eleven events.' },
+  { id: 'creation', name: 'Creation Across the Bible', blurb: 'Twenty-one creation passages from Genesis to Revelation, in Bible order.', unit: 'passages' },
+  { id: 'lineage', name: 'Abraham to Christ', blurb: 'Nineteen readings that follow the promise from Abraham through David and the exile to Jesus.', unit: 'readings' }
 ];
 
 var RP_ABOUTS = {
@@ -494,6 +498,30 @@ var RP_ABOUTS = {
         "Chronicles comes right after the Samuel and Kings history it retells.",
         "Each Psalm is read where it fits the story, and the Psalms with no clear setting are gathered in two groups."],
       outro: ["Every chapter appears once. You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you see the story God was telling before Jesus came."],
+      note: RP_PROTO_NOTE },
+  'psalms-proverbs': { title: "Psalms and Proverbs in 30 Days", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["This plan reads the Psalms and Proverbs in thirty days: five Psalms and one chapter of Proverbs each day. Day 30 ends with Psalms 146 to 150 and holds both Proverbs 30 and 31, so the whole of both books fits.",
+        "There is no calendar. Each day is one check, and you can start whenever you like, take a day off, or double up. The Psalms are read in numeric order here, not placed in the story as they are in The Biblical Story."],
+      list: [],
+      outro: ["I hope this plan gives you a month of praying with the Psalms and hearing the wisdom of Proverbs."],
+      note: RP_PROTO_NOTE },
+  'genesis-1-11': { title: "Genesis 1–11: Event to Event", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["The first eleven chapters of Genesis move from one event to the next: creation, the garden, the fall, Cain and Abel, the flood, the covenant with Noah, the nations, and Babel. After Abraham the Bible moves differently, from person to person. This plan slows down to read the beginning as eleven events.",
+        "Each event is one check, and some span more than one chapter. Genesis 1 to 11 is covered once, with nothing left out."],
+      list: [],
+      outro: ["I hope this plan helps you see how everything began, and why we need the rest of the story."],
+      note: RP_PROTO_NOTE },
+  'creation': { title: "Creation Across the Bible", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["Creation is not told only in Genesis. The Psalms sing about it, Job and Isaiah answer with it, and the New Testament says it was made through Christ and will be made new. This plan gathers twenty-one creation passages from across the Bible, in the order the books are arranged.",
+        "Each passage is one check. Some are a few verses, some a whole chapter, and a few combine two readings."],
+      list: [],
+      outro: ["I hope this plan helps you see the Creator, and worship Him."],
+      note: RP_PROTO_NOTE },
+  'lineage': { title: "Abraham to Christ", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["After Genesis 11, the Bible follows people. God promises Abraham a blessing for the nations, and from there the story passes from person to person, through Isaac, Jacob, Judah, David and the kings, the exile and the return, until Jesus is born.",
+        "This plan follows that line in nineteen readings, each named for the person who carries it forward. A few readings stop to look at others the story could not skip, such as Joseph, Hezekiah and Josiah. The last two readings are Matthew’s family tree of Jesus, and Luke’s, which goes back to Adam."],
+      list: [],
+      outro: ["I hope this plan helps you see that God kept His promise through the generations, and that the line leads to Jesus."],
       note: RP_PROTO_NOTE }
 };
 
@@ -569,6 +597,63 @@ function _buildCanon(id, name, partDefs) {
   return plan;
 }
 
+// ── Content plans (v4.62.0) ───────────────────────────────────────────────────────────────────
+// Every passage segment names its book in full (";"-separated), so rpItemPassages can open each one on its own.
+function _psPass(n) { return n === 30 ? 'Psalms 146-150; Proverbs 30; Proverbs 31' : 'Psalms ' + (5 * n - 4) + '-' + (5 * n) + '; Proverbs ' + n; }
+var RP_PP_DAYS = (function() { var a = []; for (var n = 1; n <= 30; n++) a.push(['Day ' + n, _psPass(n)]); return a; })();
+var RP_G1_11 = [
+  ['Creation: six days and rest', 'Genesis 1:1-2:3'], ['The garden', 'Genesis 2:4-25'], ['The fall', 'Genesis 3'],
+  ['Cain and Abel', 'Genesis 4:1-16'], ['From Adam to Noah', 'Genesis 4:17-26; Genesis 5'], ['Wickedness on the earth, and Noah', 'Genesis 6'],
+  ['The flood', 'Genesis 7-8'], ['God’s covenant with Noah', 'Genesis 9'], ['The nations', 'Genesis 10'],
+  ['The tower of Babel', 'Genesis 11:1-9'], ['From Shem to Abram', 'Genesis 11:10-32']
+];
+var RP_CREATION = [
+  ['Genesis 1:1-2:3', 'Six days and rest'], ['Genesis 2:4-25', 'The garden'], ['Nehemiah 9:6', ''], ['Job 38-39', ''],
+  ['Psalms 8', 'Psalm 8'], ['Psalms 19', 'Psalm 19'], ['Psalms 33', 'Psalm 33'], ['Psalms 104', 'Psalm 104'],
+  ['Psalms 136:1-9', 'Psalm 136:1-9'], ['Psalms 148', 'Psalm 148'], ['Proverbs 3:19-20', ''], ['Proverbs 8:22-31', ''],
+  ['Isaiah 40:12-31; Isaiah 45:18', ''], ['Jeremiah 10:12-16', ''], ['John 1:1-18', ''], ['Acts 17:24-28', ''],
+  ['Romans 1:18-23; Romans 8:18-25', ''], ['Colossians 1:15-20', ''], ['Hebrews 1:1-4', ''], ['Revelation 4', ''], ['Revelation 21-22', 'The new creation']
+];
+var RP_LINEAGE = [
+  ['Abraham, the promise', 'Genesis 12; Genesis 15; Genesis 17; Genesis 22'], ['Isaac', 'Genesis 21:1-7; Genesis 24-26'],
+  ['Jacob (Israel)', 'Genesis 27-35'], ['Joseph', 'Genesis 37; Genesis 39-50'], ['Judah', 'Genesis 38; Genesis 44:18-34; Genesis 49:8-12'],
+  ['Perez to Nahshon (Egypt and the wilderness)', 'Ruth 4:18-20; Exodus 6:14-27; Numbers 1:7; Numbers 2:3'],
+  ['Salmon and Rahab', 'Joshua 2; Joshua 6:22-25'], ['Boaz and Ruth', 'Ruth 1-4'], ['Jesse and David', '1 Samuel 16; 2 Samuel 7'],
+  ['Solomon', '1 Kings 1-3'], ['The kings of Judah', '1 Chronicles 3:10-16; 1 Kings 12'], ['Hezekiah', '2 Kings 18-20'], ['Josiah', '2 Kings 22-23'],
+  ['Exile and Jeconiah', '2 Kings 24-25; Jeremiah 22:24-30'], ['Zerubbabel and the return', 'Ezra 3:1-13; Haggai 2:20-23'],
+  ['The line to Joseph', 'Matthew 1:12-16'], ['Joseph and Mary', 'Matthew 1:18-25; Luke 1-2'],
+  ['Jesus, son of David, son of Abraham', 'Matthew 1:1-17'], ['Luke’s line back to Adam', 'Luke 3:23-38']
+];
+
+/** One-part event plan. `groups` = [[groupId, groupName, [[label, passages], ...]], ...]; item ids are `<prefix>.<n>`, permanent. */
+function _eventPlan(id, name, partName, prefix, groups) {
+  var plan = { id: id, name: name, parts: [], groups: [], items: [], index: {}, about: RP_ABOUTS[id] };
+  var part = { id: prefix + 'p', name: partName, groups: [] }, n = 0;
+  groups.forEach(function(gd) {
+    var group = { id: prefix + '.' + gd[0], name: gd[1], partId: part.id, chron: false, items: [], mixed: false };
+    gd[2].forEach(function(e) {
+      n++;
+      group.items.push({ id: prefix + '.' + n, type: 'ev', label: e[0], passages: e[1], w: RP_W_EV, partId: part.id, groupId: group.id, chron: false });
+    });
+    part.groups.push(group);
+    plan.groups.push(group);
+    group.items.forEach(function(it) { plan.index[it.id] = plan.items.length; plan.items.push(it); });
+  });
+  plan.parts.push(part);
+  return plan;
+}
+function _buildContentPlan(id, name) {
+  switch (id) {
+    case 'psalms-proverbs': return _eventPlan(id, name, 'Thirty days', 'pp', [
+      ['a', 'Days 1–10', RP_PP_DAYS.slice(0, 10)], ['b', 'Days 11–20', RP_PP_DAYS.slice(10, 20)], ['c', 'Days 21–30', RP_PP_DAYS.slice(20)]]);
+    case 'genesis-1-11': return _eventPlan(id, name, 'Eleven events', 'g1', [['a', 'Genesis 1–11', RP_G1_11]]);
+    case 'creation': return _eventPlan(id, name, 'Twenty-one passages', 'cr', [['a', 'Creation in Scripture',
+      RP_CREATION.map(function(c) { return [c[1] || c[0], c[0]]; })]]);
+    case 'lineage': return _eventPlan(id, name, 'Nineteen readings', 'ln', [['a', 'The line of promise', RP_LINEAGE]]);
+  }
+  return null;
+}
+
 /**
  * Builds any plan in the library by id.
  * @param {string} id - one of RP_PLAN_LIST
@@ -583,6 +668,7 @@ function rpBuildPlan(id) {
     case 'ot-story': return _sliceStory(id, name, ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
     case 'canon': return _buildCanon(id, name, RP_CANON_PARTS);
     case 'nt': return _buildCanon(id, name, RP_CANON_PARTS.slice(4));
+    case 'psalms-proverbs': case 'genesis-1-11': case 'creation': case 'lineage': return _buildContentPlan(id, name);
   }
   return null;
 }

@@ -585,7 +585,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.61.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    version:'4.62.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: four more reading plans in Browse plans: Psalms and Proverbs in 30 Days, Genesis 1\u201311: Event to Event, Creation Across the Bible, and Abraham to Christ. Each has its own About text and the prototype note.",
+      "new: Psalms and Proverbs in 30 Days is five Psalms and one chapter of Proverbs a day; Day 30 holds Psalms 146\u2013150 and both Proverbs 30 and 31, so every Psalm and Proverb is read once.",
+      "change: Browse plans shows the right count word for each plan (days, passages, readings), and an event whose passage is the same as its title no longer shows it twice.",
+      "note: nothing new is stored. Progress for the new plans is kept the same way as the other plans, only after you tap Start. Cache-buster bumped to 4.62.0."
+    ]
+  },
+  {
+    version:'4.61.0',date:'Nov 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Reading Plans is now a library. Progress has a Reading Plans section with a card for each plan you have started, and a Browse plans button.",

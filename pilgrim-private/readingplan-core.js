@@ -1,4 +1,4 @@
-// readingplan-core.js — Pilgrim Private ES Module (v4.61.0)
+// readingplan-core.js — Pilgrim Private ES Module (v4.62.0)
 // Pure Reading Plans helpers: NO imports, NO DOM, NO localStorage (tests/readingplan-core.test.js runs under plain node).
 // Storage + UI live in readingplan.js; the outline lives in readingplan-data.js (a plan object is passed in).
 //
@@ -112,7 +112,7 @@ function rpRestore(state, id, prev, now) {
 }
 function rpSetHideChron(state, on, now) { state.opts.hideChron = { v: !!on, u: now }; }
 
-// ── Enrollment (v4.61.0): a plan is active only after the user taps Start. Stored as opts.enrolled = { v, u } ──
+// ── Enrollment (v4.62.0): a plan is active only after the user taps Start. Stored as opts.enrolled = { v, u } ──
 // Never written = not enrolled, for everyone (including users who already have checks). Leaving writes v:false and
 // keeps every check; Start again restores them. Syncs through the existing per-option last-write-wins merge.
 
