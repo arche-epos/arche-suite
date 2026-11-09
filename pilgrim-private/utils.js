@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.1',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    version:'4.63.2',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the plan bar and the Prev Chapter / Next Chapter / Reading plan row are a little tighter, so the passage starts higher.",
+      "change: on the Read tab, Start a Study and Save to Memory are now two smaller buttons side by side, and sit near the bottom of the screen instead of floating above a block of empty space. The Guide button stays above them. The labels are shorter: Start a Study, Save to Memory.",
+      "note: nothing is stored or changed in your data. Cache-buster bumped to 4.63.2."
+    ]
+  },
+  {
+    version:'4.63.1',date:'Nov 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the plan bar above the reading text is much smaller, so more of the passage shows. The Prev, Mark read, Next and Exit buttons are shorter and no longer stretch across the screen, and the heading and spacing are tighter.",
