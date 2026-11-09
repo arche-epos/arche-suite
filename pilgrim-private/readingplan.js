@@ -8,14 +8,14 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.63.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.63.1';
 import {
   RP_PLAN_ID, rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
   rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds, rpReadStreak,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
-} from './readingplan-core.js?v=4.63.0';
-import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.63.0';
+} from './readingplan-core.js?v=4.63.1';
+import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.63.1';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -403,6 +403,9 @@ var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), 
 var _sess = null;        // active session, or null
 var _stopAtEnd = false;  // "Stop at the end of this section" (in memory; off by default)
 var _repeat = 'off';     // 'off' | 'passage' | 'item' | 'section' (v4.60.1; in memory, resets when the session ends)
+var _repOpen = false;    // Repeat popup menu open (v4.63.1; in memory)
+var _REP_OPTS = [['off', 'Off'], ['passage', 'This passage'], ['item', 'This item'], ['section', 'This section']];
+var _REP_SHORT = { passage: 'Passage', item: 'Item', section: 'Section' };
 
 function rpWireRead(fns) { _rd = fns; }
 function rpSessionActive() { return !!_sess; }
@@ -412,7 +415,7 @@ function rpSessionRef() {
   var it = _getPlan(_sess.planId).items[_sess.pos];
   return it ? (rpItemPassages(it)[_sess.passIdx] || '') : '';
 }
-function rpEndSession() { if (!_sess) return; _sess = null; _repeat = 'off'; _renderBar(); }
+function rpEndSession() { if (!_sess) return; _sess = null; _repeat = 'off'; _repOpen = false; _renderBar(); }
 /** Exit button: ends the session and stops audio. The passage stays on screen. */
 function rpExitPlan() { var was = !!_sess; rpEndSession(); if (was && _rd && _rd.stop) _rd.stop(); }
 
@@ -502,7 +505,15 @@ function rpMarkRead() {
   else toast('Already marked read');
 }
 function rpSetStopAtEnd(on) { _stopAtEnd = !!on; _renderBar(); }
-function rpSetRepeat(mode) { _repeat = (mode === 'passage' || mode === 'item' || mode === 'section') ? mode : 'off'; _renderBar(); }
+function rpSetRepeat(mode) { _repeat = (mode === 'passage' || mode === 'item' || mode === 'section') ? mode : 'off'; _repOpen = false; _renderBar(); }
+/** Opens or closes the Repeat popup under the Repeat button (v4.63.1). */
+function rpToggleRepMenu(ev) { if (ev && ev.stopPropagation) ev.stopPropagation(); _repOpen = !_repOpen; _renderBar(); }
+// Tap anywhere outside the popup to close it.
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', function(e) {
+    if (_repOpen && !(e.target && e.target.closest && e.target.closest('.rp-pb-repwrap'))) { _repOpen = false; _renderBar(); }
+  });
+}
 
 /**
  * Called by ui.js readAutoAdvance() when a passage finishes speaking naturally (never on skip, pause or stop).
@@ -550,11 +561,17 @@ function _renderBar() {
       '<button class="btn ' + (read ? 'btn-sec' : 'btn-primary') + ' btn-sm" onclick="rpMarkRead()"' + (read ? ' disabled' : '') + '>' + (read ? '&#10003; Read' : 'Mark read') + '</button>' +
       '<button class="btn btn-sec btn-sm" onclick="rpPlanMove(1)" aria-label="Next item">Next &#8250;</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="rpExitPlan()">Exit</button>' +
+      '<span class="rp-pb-repwrap">' +
+        '<button class="btn btn-sm ' + (_repeat === 'off' ? 'btn-sec' : 'btn-sec rp-pb-rep-on') + '" onclick="rpToggleRepMenu(event)" aria-haspopup="true" aria-expanded="' + (_repOpen ? 'true' : 'false') + '" aria-label="Repeat: ' + escHtml(_REP_OPTS.filter(function(o) { return o[0] === _repeat; })[0][1]) + '">' +
+          (_repeat === 'off' ? 'Repeat' : '&#8635; ' + _REP_SHORT[_repeat]) + ' &#9662;</button>' +
+        (_repOpen
+          ? '<div class="rp-pb-repmenu" role="menu">' + _REP_OPTS.map(function(o) {
+              return '<button role="menuitemradio" aria-checked="' + (_repeat === o[0]) + '" class="rp-pb-repopt' + (_repeat === o[0] ? ' on' : '') + '" onclick="rpSetRepeat(\'' + o[0] + '\')">' +
+                (_repeat === o[0] ? '&#10003; ' : '') + o[1] + '</button>';
+            }).join('') + '</div>'
+          : '') +
+      '</span>' +
     '</div>' +
-    '<label class="rp-pb-rep">Repeat <select onchange="rpSetRepeat(this.value)" aria-label="Repeat">' +
-      [['off', 'Off'], ['passage', 'This passage'], ['item', 'This item'], ['section', 'This section']].map(function(o) {
-        return '<option value="' + o[0] + '"' + (_repeat === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
-      }).join('') + '</select></label>' +
     '<label class="rp-pb-stop"><input type="checkbox" ' + (_stopAtEnd ? 'checked ' : '') + 'onchange="rpSetStopAtEnd(this.checked)"> Stop at the end of this section</label>';
 }
 
@@ -691,6 +708,6 @@ export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
   rpRenderCard, rpStatsSummary, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
   rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpExitPlan, rpStartSession, rpContinue, rpStartGroup,
-  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpOnPassageEnd, rpOpenStart, rpCloseStart,
+  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpToggleRepMenu, rpOnPassageEnd, rpOpenStart, rpCloseStart,
   rpOpenBrowse, rpCloseBrowse, rpEnroll
 };

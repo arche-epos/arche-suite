@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    version:'4.63.1',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the plan bar above the reading text is much smaller, so more of the passage shows. The Prev, Mark read, Next and Exit buttons are shorter and no longer stretch across the screen, and the heading and spacing are tighter.",
+      "change: Repeat is now one button beside Exit. Tap it to open a small list (Off, This passage, This item, This section), tap a choice to pick it, or tap anywhere else to close the list. When Repeat is on, the button shows the choice in gold.",
+      "note: the Stop at the end of this section checkbox and its text are unchanged. Repeat still is not remembered and goes back to Off when plan playback ends. Nothing new is stored. Cache-buster bumped to 4.63.1."
+    ]
+  },
+  {
+    version:'4.63.0',date:'Nov 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the \"AI Tools Run\" box on the Progress tab is now \"Plans Started\": the big number is how many reading plans you have started, and under it is how many of those you have completed (every item checked).",

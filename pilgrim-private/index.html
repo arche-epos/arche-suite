@@ -383,16 +383,21 @@ html[data-theme="light"] .bt-c0{--ilc:#8a6a1f}html[data-theme="light"] .bt-c1{--
 .rp-link{font-size:12px;color:var(--gold);cursor:pointer;text-decoration:underline;white-space:nowrap;padding:8px 0}
 /* Plan playback (v4.60.0): ▶ on a group, the Read-tab plan bar, the start sheet */
 .rp-play{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:40px;margin-right:-8px;color:var(--gold);font-size:13px;cursor:pointer}
-.rp-playbar{margin:10px 16px 0;padding:10px 12px;background:var(--bg2);border:1px solid var(--golddim);border-radius:var(--r)}
-.rp-pb-top{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
-.rp-pb-grp{text-align:right;text-transform:none;letter-spacing:0;font-size:12px}
-.rp-pb-item{font-family:'EB Garamond',serif;font-size:20px;color:var(--gold);margin:4px 0 8px;line-height:1.25}
-.rp-pb-pass{font-family:'Crimson Pro',serif;font-size:12px;color:var(--txt3);margin-left:6px}
-.rp-pb-btns{display:flex;gap:6px}
-.rp-pb-btns .btn{flex:1;min-height:44px}
-.rp-pb-rep{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--txt2)}
-.rp-pb-rep select{flex:1;min-height:44px;background:var(--bg3);color:var(--txt1);border:1px solid var(--border);border-radius:8px;font-family:'Crimson Pro',serif;font-size:15px;padding:0 8px}
-.rp-pb-stop{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--txt2);cursor:pointer;min-height:36px}
+.rp-playbar{margin:8px 16px 0;padding:7px 10px;background:var(--bg2);border:1px solid var(--golddim);border-radius:var(--r)}
+.rp-pb-top{display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.08em}
+.rp-pb-grp{text-align:right;text-transform:none;letter-spacing:0;font-size:11px}
+.rp-pb-item{font-family:'EB Garamond',serif;font-size:17px;color:var(--gold);margin:2px 0 6px;line-height:1.2}
+.rp-pb-pass{font-family:'Crimson Pro',serif;font-size:11px;color:var(--txt3);margin-left:6px}
+.rp-pb-btns{display:flex;gap:5px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.rp-pb-btns .btn,.rp-pb-repwrap .btn{flex:0 0 auto;min-height:32px;padding:0 10px;font-size:13px;line-height:1}
+.rp-pb-repwrap{position:relative;display:inline-block}
+.rp-pb-rep-on{border-color:var(--gold)!important;color:var(--gold)!important}
+.rp-pb-repmenu{position:absolute;right:0;top:calc(100% + 4px);z-index:60;min-width:160px;background:var(--bg3);border:1px solid var(--borderlit);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.55);overflow:hidden}
+.rp-pb-repopt{display:block;width:100%;text-align:left;min-height:40px;padding:0 14px;background:none;border:0;border-bottom:1px solid var(--border);color:var(--txt1);font-family:'Crimson Pro',serif;font-size:15px;cursor:pointer}
+.rp-pb-repopt:last-child{border-bottom:0}
+.rp-pb-repopt.on{color:var(--gold)}
+.rp-pb-repopt:active{background:var(--bg4)}
+.rp-pb-stop{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--txt2);cursor:pointer;min-height:32px}
 .rp-pb-stop input{width:18px;height:18px}
 .rp-st-h{font-family:'EB Garamond',serif;font-size:17px;color:var(--gold)}
 .rp-st-sub{font-size:13px;color:var(--txt2);margin:3px 0 10px;line-height:1.4}
@@ -1938,7 +1943,7 @@ html[data-theme="light"] .bt-c0{--ilc:#8a6a1f}html[data-theme="light"] .bt-c1{--
   </button>
 </div>
 
-<script type="module" src="app.js?v=4.63.0"></script>
+<script type="module" src="app.js?v=4.63.1"></script>
 <!-- RESOURCES MODAL -->
 <div class="overlay" id="resources-overlay" onclick="if(event.target===this)closeOverlay('resources-overlay')">
   <div class="modal" style="max-width:600px;max-height:82vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation()">
