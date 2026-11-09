@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// readingplan-library.test.js — plan library integrity + enrollment logic (spec-reading-plan-library-v1.md, v4.62.0)
+// readingplan-library.test.js — plan library integrity + enrollment logic (spec-reading-plan-library-v1.md, v4.63.0)
 // Usage (from pilgrim-private/): node tests/readingplan-library.test.js
 const fs = require('fs'), os = require('os'), path = require('path');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rplib-'));
@@ -19,7 +19,7 @@ Promise.all([import(path.join(dir, 'readingplan-data.mjs')), import(path.join(di
 
   const P = {}; ids.forEach((id) => { P[id] = d.rpBuildPlan(id); });
 
-  // ── v4.62.0 content plans ──
+  // ── v4.63.0 content plans ──
   const BK = d.RP_BOOKS.map((b) => b[1]);
   const okRef = (seg) => { const m = /^((?:[123] )?[A-Za-z]+(?: of [A-Za-z]+)?) (\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?$/.exec(seg.trim()); return !!m && BK.includes(m[1]); };
   ['psalms-proverbs', 'genesis-1-11', 'creation', 'lineage'].forEach((id) => {

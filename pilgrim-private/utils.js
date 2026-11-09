@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.62.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    version:'4.63.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "change: the \"AI Tools Run\" box on the Progress tab is now \"Plans Started\": the big number is how many reading plans you have started, and under it is how many of those you have completed (every item checked).",
+      "new: the Day Streak box now also shows your reading streak, the number of days in a row you checked something off in any reading plan. Like the study streak, it carries over until the end of the next day.",
+      "note: nothing new is stored. The reading streak is worked out from the dates your existing checks already have, so un-checking something can lower it. The count of AI tools run is no longer shown anywhere on Progress. Cache-buster bumped to 4.63.0."
+    ]
+  },
+  {
+    version:'4.62.0',date:'Nov 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: four more reading plans in Browse plans: Psalms and Proverbs in 30 Days, Genesis 1\u201311: Event to Event, Creation Across the Bible, and Abraham to Christ. Each has its own About text and the prototype note.",

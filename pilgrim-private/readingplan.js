@@ -1,5 +1,5 @@
-// readingplan.js — Pilgrim Private ES Module (v4.62.0)
-// Reading Plans (v4.62.0: a library of plans, Start/Leave enrollment, Browse plans): check chapters off, a "Last Read" bookmark, progress bars and percentages.
+// readingplan.js — Pilgrim Private ES Module (v4.63.0)
+// Reading Plans (v4.63.0: a library of plans, Start/Leave enrollment, Browse plans): check chapters off, a "Last Read" bookmark, progress bars and percentages.
 // Spec: claude/spec-reading-plans-v1.md (Rev 2). Pure logic lives in readingplan-core.js, the outline in
 // readingplan-data.js; this module owns storage I/O, the Progress-tab card and the full-screen plan overlay.
 //
@@ -8,14 +8,14 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.62.0';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.63.0';
 import {
   RP_PLAN_ID, rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
-  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds,
+  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds, rpReadStreak,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
-} from './readingplan-core.js?v=4.62.0';
-import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.62.0';
+} from './readingplan-core.js?v=4.63.0';
+import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.63.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -106,7 +106,7 @@ function _bar(pct, h) {
   return '<div class="rp-bar" style="height:' + (h || 6) + 'px"><div class="rp-bar-fill" style="width:' + pct + '%"></div></div>';
 }
 
-// ── Progress-tab section: Reading Plans (v4.62.0) ───────────
+// ── Progress-tab section: Reading Plans (v4.63.0) ───────────
 function _planCardHtml(plan, st) {
   var pr = rpProgress(plan, st, false), bm = rpBookmark(plan, st, false), gaps = rpGaps(plan, st, false);
   var q = '\'' + plan.id + '\'';
@@ -279,6 +279,20 @@ function _rpShowUndo(msg, onUndo) {
   _undoTimer = setTimeout(_rpHideUndo, 6000);
 }
 
+/**
+ * Numbers for the Progress stat cards (v4.63.0): plans started, plans completed (every item checked), reading streak.
+ * Read-only; nothing is stored.
+ * @returns {{enrolled:number,completed:number,streak:number}}
+ */
+function rpStatsSummary() {
+  var store = rpLoad(), ids = rpEnrolledIds(store, _planIds()), done = 0;
+  ids.forEach(function(id) {
+    var pr = rpProgress(_getPlan(id), _planState(store, id), false);
+    if (pr.overall.total > 0 && pr.overall.checked === pr.overall.total) done++;
+  });
+  return { enrolled: ids.length, completed: done, streak: rpReadStreak(store, Date.now()) };
+}
+
 // ── Rendering ───────────────────────────────────────────────
 function _chip(it, st, bmId, defAuthor) {
   var on = st.items[it.id] && st.items[it.id].r === 1;
@@ -382,7 +396,7 @@ function _rpRender() {
   body.scrollTop = keepTop;
 }
 
-// ── Plan playback (v4.60.0; per-plan since v4.62.0): read or listen along a plan, in plan order ────────────────────────
+// ── Plan playback (v4.60.0; per-plan since v4.63.0): read or listen along a plan, in plan order ────────────────────────
 // A "plan session" lives in memory only: { planId, pos, passIdx }. Nothing new is stored; the only writes are the
 // normal item checks through the existing store path. ui.js wires the Read-tab hooks (this module never imports ui.js).
 var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), stop() }
@@ -591,7 +605,7 @@ function rpOpenStart(planId) {
   o.classList.add('on');
 }
 
-// ── Browse plans + Start / Leave (v4.62.0) ───────────────────
+// ── Browse plans + Start / Leave (v4.63.0) ───────────────────
 /** Start (on = true) or Leave (on = false) a plan. Leaving keeps every check. */
 function rpEnroll(planId, on) {
   var plan = _getPlan(planId);
@@ -675,7 +689,7 @@ function rpCloseBrowse() {
 
 export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
-  rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
+  rpRenderCard, rpStatsSummary, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
   rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpExitPlan, rpStartSession, rpContinue, rpStartGroup,
   rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpOnPassageEnd, rpOpenStart, rpCloseStart,
   rpOpenBrowse, rpCloseBrowse, rpEnroll

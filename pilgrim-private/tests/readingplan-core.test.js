@@ -226,6 +226,23 @@ Promise.all([import(path.join(dir, 'core.mjs')), import(path.join(dir, 'data.mjs
     eq('walk: whole plan, every item once in order', [ok, visited], [true, plan.items.length]);
   })();
 
+  // reading streak (v4.63.0): consecutive local days with a check in any plan
+  (function() {
+    const DAY = 86400000, noon = new Date(2026, 10, 9, 12).getTime();
+    const mk = (offsets, plan) => { const st = c.rpEmptyStore(); st.plans[plan || 'a'] = c.rpEmptyPlanState(); offsets.forEach((o, i) => c.rpSetChecked(st.plans[plan || 'a'], 'x' + i + '.' + o, true, noon - o * DAY)); return st; };
+    eq('streak: no checks = 0', c.rpReadStreak(c.rpEmptyStore(), noon), 0);
+    eq('streak: today only = 1', c.rpReadStreak(mk([0]), noon), 1);
+    eq('streak: today, yesterday, 2 days ago = 3', c.rpReadStreak(mk([0, 1, 2]), noon), 3);
+    eq('streak: yesterday still counts before tonight', c.rpReadStreak(mk([1, 2]), noon), 2);
+    eq('streak: a gap ends it', c.rpReadStreak(mk([0, 1, 3, 4]), noon), 2);
+    eq('streak: last read 2 days ago = 0', c.rpReadStreak(mk([2, 3]), noon), 0);
+    eq('streak: two items on one day = 1 day', c.rpReadStreak(mk([0, 0]), noon), 1);
+    const two = mk([0]); two.plans.b = c.rpEmptyPlanState(); c.rpSetChecked(two.plans.b, 'y', true, noon - DAY);
+    eq('streak: days across different plans combine', c.rpReadStreak(two, noon), 2);
+    const un = mk([0, 1]); c.rpSetChecked(un.plans.a, 'x0.0', false, noon);
+    eq('streak: unchecking today leaves yesterday = 1', c.rpReadStreak(un, noon), 1);
+  })();
+
   fs.rmSync(dir, { recursive: true, force: true });
   console.log(pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

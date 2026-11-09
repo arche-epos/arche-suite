@@ -1,4 +1,4 @@
-// readingplan-core.js — Pilgrim Private ES Module (v4.62.0)
+// readingplan-core.js — Pilgrim Private ES Module (v4.63.0)
 // Pure Reading Plans helpers: NO imports, NO DOM, NO localStorage (tests/readingplan-core.test.js runs under plain node).
 // Storage + UI live in readingplan.js; the outline lives in readingplan-data.js (a plan object is passed in).
 //
@@ -112,7 +112,7 @@ function rpRestore(state, id, prev, now) {
 }
 function rpSetHideChron(state, on, now) { state.opts.hideChron = { v: !!on, u: now }; }
 
-// ── Enrollment (v4.62.0): a plan is active only after the user taps Start. Stored as opts.enrolled = { v, u } ──
+// ── Enrollment (v4.63.0): a plan is active only after the user taps Start. Stored as opts.enrolled = { v, u } ──
 // Never written = not enrolled, for everyone (including users who already have checks). Leaving writes v:false and
 // keeps every check; Start again restores them. Syncs through the existing per-option last-write-wins merge.
 
@@ -122,6 +122,28 @@ function rpIsEnrolled(state) { return !!(state && state.opts && state.opts.enrol
 function rpSetEnrolled(state, on, now) { state.opts.enrolled = { v: !!on, u: now }; }
 /** @returns {boolean} true if any item in the plan state is checked */
 function rpHasProgress(state) { return !!state && Object.keys(state.items || {}).some(function(id) { return state.items[id].r === 1; }); }
+/**
+ * Reading streak: consecutive local calendar days, ending today (or yesterday, so the streak survives until
+ * tonight), on which at least one item was checked in ANY plan. Derived from each checked item's `d` (read time);
+ * nothing is stored. Unchecking an item removes its day. Plans left via Leave still count (their checks are kept).
+ * @param {*} store
+ * @param {number} now - epoch ms
+ * @returns {number} days in a row
+ */
+function rpReadStreak(store, now) {
+  var s = rpNormalizeStore(store), days = {};
+  function key(ms) { var d = new Date(ms); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
+  Object.keys(s.plans).forEach(function(pid) {
+    var items = s.plans[pid].items || {};
+    Object.keys(items).forEach(function(id) { var r = items[id]; if (r.r === 1 && _isNum(r.d)) days[key(r.d)] = true; });
+  });
+  var cur = new Date(now); cur.setHours(12, 0, 0, 0);
+  if (!days[key(cur.getTime())]) cur.setDate(cur.getDate() - 1);
+  var n = 0;
+  while (days[key(cur.getTime())]) { n++; cur.setDate(cur.getDate() - 1); }
+  return n;
+}
+
 /**
  * Enrolled plan ids in the order they were started (ties: registry order).
  * @param {*} store
@@ -292,7 +314,7 @@ export {
   RP_STORE_VERSION, RP_PLAN_ID,
   rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron,
-  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds,
+  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds, rpReadStreak,
   rpVisibleItems, rpProgress, rpBookmark, rpGaps,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpIsGroupEnd, rpStep
 };

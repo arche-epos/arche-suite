@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.62.0';
+} from './utils.js?v=4.63.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.62.0';
+} from './storage.js?v=4.63.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.62.0';
+} from './media.js?v=4.63.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.62.0';
+} from './tts.js?v=4.63.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.62.0';
+} from './sync.js?v=4.63.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.62.0';
+} from './studyTools.js?v=4.63.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.62.0';
-import { rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.62.0';
+} from './memory.js?v=4.63.0';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -3050,17 +3050,12 @@ function renderStats(){
   });
   var topBook=Object.keys(bookCounts).sort(function(a,b){return bookCounts[b]-bookCounts[a];})[0]||'—';
 
-  // AI tools run — count across all refs in all studies
-  var aiRuns=studies.reduce(function(a,s){
-    var refs=s.refs&&s.refs.length?s.refs:[s.deep||{}];
-    return a+refs.reduce(function(b,r){var d=r.deep||r;return b+['lexical','grammar','historical','cultural','crossrefs'].filter(function(k){return d[k];}).length;},0);
-  },0);
-
+  var rps=rpStatsSummary(); // v4.63.0: plans started / completed + reading streak (replaces the AI Tools Run card)
   document.getElementById('stats-grid').innerHTML=
-    statCard(streakVal,'Day Streak','🔥','Keep going!')+
+    statCard(streakVal,'Day Streak','🔥','Reading streak: '+rps.streak+(rps.streak===1?' day':' days'))+
     statCard(studies.length,'Total Studies','','Across all time')+
     statCard(totalWords.toLocaleString(),'Words Written','','In field notes')+
-    statCard(aiRuns,'AI Tools Run','','Across all studies');
+    statCard(rps.enrolled,'Plans Started','','Completed: '+rps.completed);
 
   // Most studied books
   var sortedBooks=Object.keys(bookCounts).sort(function(a,b){return bookCounts[b]-bookCounts[a];}).slice(0,6);

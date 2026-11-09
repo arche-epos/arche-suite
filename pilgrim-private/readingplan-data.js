@@ -1,4 +1,4 @@
-// readingplan-data.js — Pilgrim Private ES Module (v4.62.0)
+// readingplan-data.js — Pilgrim Private ES Module (v4.63.0)
 // Reading Plans: the Story Flow outline as static data. NO imports, NO DOM, NO localStorage.
 // Source: claude/spec-reading-plans-v1.md (Rev 2) + claude/spec-reading-plan-story-flow-outline-v1.md.
 // Psalm placement (v4.59.0): claude/spec-psalms-story-placement-v1.md. All 150 Psalms sit by author and story position.
@@ -444,7 +444,7 @@ function rpBuildStoryFlow() {
 }
 
 
-// ══ Plan library (v4.62.0) ═══════════════════════════════════════════════════════════════════
+// ══ Plan library (v4.63.0) ═══════════════════════════════════════════════════════════════════
 // Source: claude/spec-reading-plan-library-v1.md (Rev 3) + claude/spec-reading-plan-about-texts-v1.md (approved Nov 2, 2026).
 // Every plan is built from code, never stored; only progress and the per-plan "enrolled" option are stored (readingplan.js).
 // Plan ids are PERMANENT. Item ids inside different plans may repeat (e.g. 'Gen.1'); progress is per plan.
@@ -597,7 +597,7 @@ function _buildCanon(id, name, partDefs) {
   return plan;
 }
 
-// ── Content plans (v4.62.0) ───────────────────────────────────────────────────────────────────
+// ── Content plans (v4.63.0) ───────────────────────────────────────────────────────────────────
 // Every passage segment names its book in full (";"-separated), so rpItemPassages can open each one on its own.
 function _psPass(n) { return n === 30 ? 'Psalms 146-150; Proverbs 30; Proverbs 31' : 'Psalms ' + (5 * n - 4) + '-' + (5 * n) + '; Proverbs ' + n; }
 var RP_PP_DAYS = (function() { var a = []; for (var n = 1; n <= 30; n++) a.push(['Day ' + n, _psPass(n)]); return a; })();
