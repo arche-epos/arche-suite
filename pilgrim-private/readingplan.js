@@ -1,5 +1,5 @@
-// readingplan.js — Pilgrim Private ES Module (v4.58.0)
-// Reading Plans v1 (Story Flow): check chapters off, a "Last Read" bookmark, progress bars and percentages.
+// readingplan.js — Pilgrim Private ES Module (v4.61.0)
+// Reading Plans (v4.61.0: a library of plans, Start/Leave enrollment, Browse plans): check chapters off, a "Last Read" bookmark, progress bars and percentages.
 // Spec: claude/spec-reading-plans-v1.md (Rev 2). Pure logic lives in readingplan-core.js, the outline in
 // readingplan-data.js; this module owns storage I/O, the Progress-tab card and the full-screen plan overlay.
 //
@@ -8,13 +8,14 @@
 // safety copy (utils.js) and removed by Clear All through the existing per-user suffix rule.
 // Imports only utils.js + core + data so sync.js / ui.js can import this module without a dependency cycle.
 
-import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.60.5';
+import { SK_READPLAN, online, escHtml, toast, logError } from './utils.js?v=4.61.0';
 import {
-  RP_PLAN_ID, rpEmptyStore, rpNormalizeStore, rpStoreHasData, rpMerge,
+  RP_PLAN_ID, rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpProgress, rpBookmark, rpGaps,
+  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpStep
-} from './readingplan-core.js?v=4.60.5';
-import { rpBuildStoryFlow } from './readingplan-data.js?v=4.60.5';
+} from './readingplan-core.js?v=4.61.0';
+import { rpBuildPlan, RP_PLAN_LIST } from './readingplan-data.js?v=4.61.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _rpSyncFn = null;
@@ -28,8 +29,10 @@ function _rpQueueSync() {
 }
 
 // ── Outline (built once; static, never stored) ──────────────────────────────
-var _plan = null;
-function _getPlan() { return _plan || (_plan = rpBuildStoryFlow()); }
+var _plans = {};
+/** @param {string} [id] plan id (default The Biblical Story). Every caller passes the plan it means. */
+function _getPlan(id) { id = id || RP_PLAN_ID; return _plans[id] || (_plans[id] = rpBuildPlan(id)); }
+function _planIds() { return RP_PLAN_LIST.map(function(p) { return p.id; }); }
 
 // ── Store I/O ───────────────────────────────────────────────
 /**
@@ -54,9 +57,10 @@ function rpSave(store) {
   try { localStorage.setItem(SK_READPLAN, JSON.stringify(store)); return true; }
   catch (e) { logError('Reading Plan Save', e); toast('Could not save reading progress — storage may be full'); return false; }
 }
-function _planState(store) {
-  if (!store.plans[RP_PLAN_ID]) store.plans[RP_PLAN_ID] = rpEmptyStore().plans[RP_PLAN_ID];
-  return store.plans[RP_PLAN_ID];
+function _planState(store, id) {
+  id = id || RP_PLAN_ID;
+  if (!store.plans[id]) store.plans[id] = rpEmptyPlanState();
+  return store.plans[id];
 }
 
 /** Store snapshot for Gist push / JSON export. */
@@ -84,7 +88,7 @@ function rpReplaceFromRemote(remote) {
 }
 
 // ── UI state (in memory only; group expand/collapse is never stored) ─────────
-var _ui = { open: false, view: 'plan', parts: {}, groups: {}, about: null, bound: false };
+var _ui = { open: false, planId: RP_PLAN_ID, view: 'plan', parts: {}, groups: {}, about: null, bound: false, browseAbout: {}, browseBound: false };
 
 function _fmtDate(ms) {
   var d = new Date(ms), now = new Date();
@@ -102,36 +106,47 @@ function _bar(pct, h) {
   return '<div class="rp-bar" style="height:' + (h || 6) + 'px"><div class="rp-bar-fill" style="width:' + pct + '%"></div></div>';
 }
 
-// ── Progress-tab card ───────────────────────────────────────
-/** Renders the "Reading Plan: The Biblical Story" card into #stats-readplan (called from renderStats). */
-function rpRenderCard() {
-  var el = document.getElementById('stats-readplan');
-  if (!el) return;
-  var store = rpLoad(), st = _planState(store), plan = _getPlan();
-  var hide = false;  // Chronicles always shown (v4.58.4); a stored hideChron option from older builds is ignored, not deleted
-  var pr = rpProgress(plan, st, hide), bm = rpBookmark(plan, st, hide), gaps = rpGaps(plan, st, hide);
+// ── Progress-tab section: Reading Plans (v4.61.0) ───────────
+function _planCardHtml(plan, st) {
+  var pr = rpProgress(plan, st, false), bm = rpBookmark(plan, st, false), gaps = rpGaps(plan, st, false);
+  var q = '\'' + plan.id + '\'';
   var last = bm
     ? 'Last read: ' + escHtml(bm.item.label) + (bm.d ? ', ' + _fmtDate(bm.d) : '')
-    : 'Start with Genesis 1';
-  el.innerHTML =
-    '<div class="seclabel">Reading Plan</div>' +
-    '<div class="stat-card" style="margin-bottom:18px;padding-left:18px">' +
+    : 'Start with ' + escHtml(plan.items[0].label);
+  return '<div class="stat-card" style="margin-bottom:14px;padding-left:18px">' +
       '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">' +
-        '<div style="font-family:\'EB Garamond\',serif;font-size:19px;color:var(--gold)">The Biblical Story</div>' +
+        '<div style="font-family:\'EB Garamond\',serif;font-size:19px;color:var(--gold)">' + escHtml(plan.name) + '</div>' +
         '<div style="font-family:\'EB Garamond\',serif;font-size:26px;color:var(--txt1)">' + pr.overall.pct + '<span style="font-size:15px;color:var(--txt3)">%</span></div>' +
       '</div>' +
       _bar(pr.overall.pct, 7) +
       '<div style="font-size:13px;color:var(--txt2);margin-top:9px">' + last + '</div>' +
-      (gaps.count ? '<div class="rp-gapline" onclick="rpOpenPlan(\'gaps\')">' + _gapLine(gaps) + '</div>' : '') +
+      (gaps.count ? '<div class="rp-gapline" onclick="rpOpenPlan(' + q + ',\'gaps\')">' + _gapLine(gaps) + '</div>' : '') +
       '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(true)">&#9654; Listen</button>' +
-        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(false)">Read</button>' +
+        '<button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(' + q + ',true)">&#9654; Listen</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(' + q + ',false)">Read</button>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:8px">' +
-        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenStart()">Choose where to start</button>' +
-        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenPlan()">Open plan</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenStart(' + q + ')">Choose where to start</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpOpenPlan(' + q + ')">Open plan</button>' +
       '</div>' +
     '</div>';
+}
+
+/** Renders the "Reading Plans" section (one card per enrolled plan, then Browse plans) into #stats-readplan (called from renderStats). */
+function rpRenderCard() {
+  var el = document.getElementById('stats-readplan');
+  if (!el) return;
+  var store = rpLoad(), ids = rpEnrolledIds(store, _planIds());
+  var html = '<div class="seclabel">Reading Plans</div>';
+  if (!ids.length) {
+    html += '<div class="stat-card" style="margin-bottom:12px;padding-left:18px"><div style="font-size:14px;color:var(--txt2);line-height:1.5">Pick a plan to start reading. Your progress is kept for each plan.</div></div>';
+  }
+  ids.forEach(function(id) {
+    var plan = _getPlan(id);
+    if (plan) html += _planCardHtml(plan, _planState(store, id));
+  });
+  html += '<button class="btn btn-sec btn-sm btn-full" style="margin-bottom:18px" onclick="rpOpenBrowse()">Browse plans</button>';
+  el.innerHTML = html;
 }
 
 // ── Plan overlay ────────────────────────────────────────────
@@ -139,19 +154,22 @@ function _openBookmarkSections(plan, st, hide) {
   _ui.parts = {}; _ui.groups = {};
   var bm = rpBookmark(plan, st, hide);
   if (bm) { _ui.parts[bm.item.partId] = true; _ui.groups[bm.item.groupId] = true; }
-  else { _ui.parts.p1 = true; _ui.groups['g.gen-1-11'] = true; }
+  else { var p0 = plan.parts[0]; _ui.parts[p0.id] = true; _ui.groups[p0.groups[0].id] = true; }   // nothing checked yet: open the plan's first section
 }
 
 /**
  * Opens the full-screen plan.
+ * @param {string} planId - a plan id from the library
  * @param {string} [view] - 'gaps' opens the unchecked-before-here list; anything else opens the plan.
  */
-function rpOpenPlan(view) {
+function rpOpenPlan(planId, view) {
   var ov = document.getElementById('rp-overlay');
-  if (!ov) return;
-  var store = rpLoad(), st = _planState(store);
+  if (!ov || !_getPlan(planId)) return;
+  _ui.planId = planId;
+  var store = rpLoad(), st = _planState(store, planId);
   _ui.view = view === 'gaps' ? 'gaps' : 'plan';
-  _openBookmarkSections(_getPlan(), st, false);
+  _ui.about = null;
+  _openBookmarkSections(_getPlan(planId), st, false);
   _ui.open = true;
   if (!_ui.bound) {
     var body = document.getElementById('rp-body');
@@ -169,6 +187,7 @@ function rpClosePlan() {
   _ui.open = false;
   _rpHideUndo();
   rpRenderCard();
+  _rpBrowseRefresh();
 }
 function _rpRefreshIfVisible() {
   if (_ui.open) _rpRender();
@@ -180,9 +199,9 @@ function rpBackToPlan() { _ui.view = 'plan'; _rpRender(); var b = document.getEl
 
 /** Jumps to the Last Read chip: opens its part and group, scrolls to it. */
 function rpJumpLast() {
-  var store = rpLoad(), st = _planState(store), plan = _getPlan(), hide = false;
+  var plan = _getPlan(_ui.planId), st = _planState(rpLoad(), _ui.planId), hide = false;
   var bm = rpBookmark(plan, st, hide);
-  if (!bm) { toast('Nothing checked yet — start with Genesis 1'); return; }
+  if (!bm) { toast('Nothing checked yet — start with ' + plan.items[0].label); return; }
   _ui.view = 'plan';
   _ui.parts[bm.item.partId] = true; _ui.groups[bm.item.groupId] = true;
   _rpRender();
@@ -195,7 +214,7 @@ function _rpBodyClick(ev) {
   while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-about') || t.getAttribute('data-rp-id') || t.getAttribute('data-rp-part') || t.getAttribute('data-rp-group') || t.getAttribute('data-rp-goto') || t.getAttribute('data-rp-play')))) t = t.parentNode;
   if (!t || t === ev.currentTarget || !t.getAttribute) return;
   var playGrp = t.getAttribute('data-rp-play');
-  if (playGrp) { rpStartGroup(playGrp, true); return; }   // group ▶ (v4.60.0): listen from this group's first unchecked item
+  if (playGrp) { rpStartGroup(_ui.planId, playGrp, true); return; }   // group ▶ (v4.60.0): listen from this group's first unchecked item
   var id = t.getAttribute('data-rp-id');
   if (id) { _rpToggleItem(id); return; }
   var part = t.getAttribute('data-rp-part');
@@ -205,7 +224,7 @@ function _rpBodyClick(ev) {
   if (grp) { _ui.groups[grp] = !_ui.groups[grp]; _rpRender(); return; }
   var go = t.getAttribute('data-rp-goto');
   if (go) {
-    var g = _getPlan().groups.filter(function(x) { return x.id === go; })[0];
+    var g = _getPlan(_ui.planId).groups.filter(function(x) { return x.id === go; })[0];
     if (!g) return;
     _ui.view = 'plan'; _ui.parts[g.partId] = true; _ui.groups[g.id] = true;
     _rpRender();
@@ -215,10 +234,10 @@ function _rpBodyClick(ev) {
 }
 
 function _rpToggleItem(id) {
-  var plan = _getPlan();
+  var pid = _ui.planId, plan = _getPlan(pid);
   if (plan.index[id] === undefined) return;
   var item = plan.items[plan.index[id]];
-  var store = rpLoad(), st = _planState(store), now = Date.now();
+  var store = rpLoad(), st = _planState(store, pid), now = Date.now();
   var rec = st.items[id], wasChecked = !!(rec && rec.r === 1);
   var prev = rpSetChecked(st, id, !wasChecked, now);
   if (!rpSave(store)) return;
@@ -227,10 +246,10 @@ function _rpToggleItem(id) {
   rpRenderCard();
   if (wasChecked) {
     _rpShowUndo('Unchecked ' + item.label, function() {
-      var s2 = rpLoad(), p2 = _planState(s2);
+      var s2 = rpLoad(), p2 = _planState(s2, pid);
       rpRestore(p2, id, prev, Date.now());
       if (rpSave(s2)) _rpQueueSync();
-      _rpRender();
+      if (_ui.open && _ui.planId === pid) _rpRender();
       rpRenderCard();
     });
   }
@@ -294,24 +313,30 @@ function _chev(open) { return '<span class="rp-chev">' + (open ? '&#9662;' : '&#
 function _tick(done) { return done ? '<span class="rp-tick">&#10003;</span>' : ''; }
 
 function _rpAboutOpen(checked) { return _ui.about === null ? checked === 0 : !!_ui.about; }  // open by default until the first chapter is checked
+/** The About text of a plan (title, credit, paragraphs, optional list, prototype note), no wrapper. */
+function _aboutBodyHtml(about) {
+  return '<div class="rp-about-name">' + escHtml(about.title) + '</div>' +
+    '<div class="rp-about-by">By ' + escHtml(about.by) + ' · ' + escHtml(about.date) + '</div>' +
+    about.intro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') +
+    (about.list && about.list.length ? '<ul class="rp-about-list">' + about.list.map(function(p) { return '<li>' + escHtml(p) + '</li>'; }).join('') + '</ul>' : '') +
+    about.outro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') +
+    (about.note ? '<div class="rp-about-note"><b>A note on this plan</b><br>' + escHtml(about.note) + '</div>' : '');
+}
 function _rpAboutHtml(checked, about) {
   var open = _rpAboutOpen(checked);
   return '<div class="rp-about"><div class="rp-about-head" data-rp-about="1">' + _chev(open) +
     '<span class="rp-about-title">About this plan</span></div>' +
-    (open ? '<div class="rp-about-body"><div class="rp-about-name">' + escHtml(about.title) + '</div>' +
-      '<div class="rp-about-by">By ' + escHtml(about.by) + ' \u00b7 ' + escHtml(about.date) + '</div>' +
-      about.intro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') +
-      '<ul class="rp-about-list">' + about.list.map(function(p) { return '<li>' + escHtml(p) + '</li>'; }).join('') + '</ul>' +
-      about.outro.map(function(p) { return '<p>' + escHtml(p) + '</p>'; }).join('') + '</div>' : '') +
+    (open ? '<div class="rp-about-body">' + _aboutBodyHtml(about) + '</div>' : '') +
     '</div>';
 }
 
 function _rpRender() {
   var body = document.getElementById('rp-body');
   if (!body) return;
-  var plan = _getPlan(), store = rpLoad(), st = _planState(store);
+  var plan = _getPlan(_ui.planId), store = rpLoad(), st = _planState(store, _ui.planId);
   var hide = false;  // Chronicles always shown (v4.58.4); a stored hideChron option from older builds is ignored, not deleted
   var pr = rpProgress(plan, st, hide), bm = rpBookmark(plan, st, hide), bmId = bm ? bm.item.id : '';
+  var titleEl = document.getElementById('rp-title'); if (titleEl) titleEl.innerHTML = '&#10022; ' + escHtml(plan.name);
   var keepTop = body.scrollTop;
 
   // header
@@ -357,8 +382,8 @@ function _rpRender() {
   body.scrollTop = keepTop;
 }
 
-// ── Plan playback (v4.60.0): read or listen along the plan, in plan order ────────────────────────
-// A "plan session" lives in memory only: { pos, passIdx }. Nothing new is stored; the only writes are the
+// ── Plan playback (v4.60.0; per-plan since v4.61.0): read or listen along a plan, in plan order ────────────────────────
+// A "plan session" lives in memory only: { planId, pos, passIdx }. Nothing new is stored; the only writes are the
 // normal item checks through the existing store path. ui.js wires the Read-tab hooks (this module never imports ui.js).
 var _rd = null;          // { navRead(), load(ref) -> Promise<boolean>, play(), stop() }
 var _sess = null;        // active session, or null
@@ -370,40 +395,40 @@ function rpSessionActive() { return !!_sess; }
 /** The passage the session expects to be loaded now; ui.js compares it with a typed reference to tell a user change from a plan load. */
 function rpSessionRef() {
   if (!_sess) return '';
-  var it = _getPlan().items[_sess.pos];
+  var it = _getPlan(_sess.planId).items[_sess.pos];
   return it ? (rpItemPassages(it)[_sess.passIdx] || '') : '';
 }
 function rpEndSession() { if (!_sess) return; _sess = null; _repeat = 'off'; _renderBar(); }
 /** Exit button: ends the session and stops audio. The passage stays on screen. */
 function rpExitPlan() { var was = !!_sess; rpEndSession(); if (was && _rd && _rd.stop) _rd.stop(); }
 
-function _groupName(it) {
-  var g = _getPlan().groups.filter(function(x) { return x.id === it.groupId; })[0];
+function _groupName(plan, it) {
+  var g = plan.groups.filter(function(x) { return x.id === it.groupId; })[0];
   return g ? g.name : '';
 }
 
 /** Checks an item if it is not already checked. @returns {{prev:Object|null}|null} null when it was already checked or the save failed */
-function _autoCheck(item) {
-  var store = rpLoad(), st = _planState(store), rec = st.items[item.id];
+function _autoCheck(planId, item) {
+  var store = rpLoad(), st = _planState(store, planId), rec = st.items[item.id];
   if (rec && rec.r === 1) return null;
   var prev = rpSetChecked(st, item.id, true, Date.now());
   if (!rpSave(store)) return null;
   _rpQueueSync();
-  if (_ui.open) _rpRender();
+  if (_ui.open && _ui.planId === planId) _rpRender();
   rpRenderCard();
   return { prev: prev };
 }
-function _undoCheck(id, prev) {
-  var s2 = rpLoad(), p2 = _planState(s2);
+function _undoCheck(planId, id, prev) {
+  var s2 = rpLoad(), p2 = _planState(s2, planId);
   rpRestore(p2, id, prev, Date.now());
   if (rpSave(s2)) _rpQueueSync();
-  if (_ui.open) _rpRender();
+  if (_ui.open && _ui.planId === planId) _rpRender();
   rpRenderCard();
   _renderBar();
 }
-function _checkWithUndo(item, msg) {
-  var r = _autoCheck(item);
-  if (r) _rpShowUndo(msg, function() { _undoCheck(item.id, r.prev); });
+function _checkWithUndo(planId, item, msg) {
+  var r = _autoCheck(planId, item);
+  if (r) _rpShowUndo(msg, function() { _undoCheck(planId, item.id, r.prev); });
   return !!r;
 }
 
@@ -419,35 +444,36 @@ async function _loadCurrent(listen) {
   return true;
 }
 
-/** Starts a plan session at plan position `pos` and opens the Read tab. */
-async function rpStartSession(pos, listen) {
-  var plan = _getPlan();
+/** Starts a plan session at plan position `pos` of plan `planId` and opens the Read tab. */
+async function rpStartSession(planId, pos, listen) {
+  var plan = _getPlan(planId);
   _rpCloseStart();
-  if (!_rd) return false;
+  if (!_rd || !plan) return false;
   if (pos < 0 || pos >= plan.items.length) { toast('Nothing left to read in this plan'); return false; }
   if (_ui.open) rpClosePlan();
-  _sess = { pos: pos, passIdx: 0 };
+  var bo = document.getElementById('rp-browse-overlay'); if (bo) bo.classList.remove('on');
+  _sess = { planId: planId, pos: pos, passIdx: 0 };
   _rd.navRead();
   return _loadCurrent(!!listen);
 }
 /** Continue: the first unchecked item after Last Read. */
-function rpContinue(listen) {
-  var pos = rpContinuePos(_getPlan(), _planState(rpLoad()));
+function rpContinue(planId, listen) {
+  var pos = rpContinuePos(_getPlan(planId), _planState(rpLoad(), planId));
   if (pos < 0) { toast('Every item in this plan is checked'); return; }
-  return rpStartSession(pos, listen);
+  return rpStartSession(planId, pos, listen);
 }
 /** Start at a group's first unchecked item (or its first item when the group is fully checked). */
-function rpStartGroup(groupId, listen) {
-  var pos = rpGroupStartPos(_getPlan(), _planState(rpLoad()), groupId);
+function rpStartGroup(planId, groupId, listen) {
+  var pos = rpGroupStartPos(_getPlan(planId), _planState(rpLoad(), planId), groupId);
   if (pos < 0) { toast('Could not find that section'); return; }
-  return rpStartSession(pos, listen);
+  return rpStartSession(planId, pos, listen);
 }
 
 /** Previous / Next item buttons. Audio keeps playing if it was playing. */
 function rpPlanMove(delta) {
   if (!_sess || !_rd) return;
   var np = _sess.pos + delta;
-  if (np < 0 || np >= _getPlan().items.length) return;
+  if (np < 0 || np >= _getPlan(_sess.planId).items.length) return;
   var wasPlaying = _rd.isPlaying ? _rd.isPlaying() : false;
   _sess.pos = np; _sess.passIdx = 0;
   if (_rd.stop) _rd.stop();
@@ -456,9 +482,9 @@ function rpPlanMove(delta) {
 /** Mark read button (reading). Checking never happens just by opening an item. */
 function rpMarkRead() {
   if (!_sess) return;
-  var it = _getPlan().items[_sess.pos];
+  var it = _getPlan(_sess.planId).items[_sess.pos];
   if (!it) return;
-  if (_checkWithUndo(it, 'Marked ' + it.label + ' read')) _renderBar();
+  if (_checkWithUndo(_sess.planId, it, 'Marked ' + it.label + ' read')) _renderBar();
   else toast('Already marked read');
 }
 function rpSetStopAtEnd(on) { _stopAtEnd = !!on; _renderBar(); }
@@ -466,14 +492,14 @@ function rpSetRepeat(mode) { _repeat = (mode === 'passage' || mode === 'item' ||
 
 /**
  * Called by ui.js readAutoAdvance() when a passage finishes speaking naturally (never on skip, pause or stop).
- * Moves through the item's passages, checks the finished item, and continues along the plan,
+ * Moves through the item's passages, checks the finished item (in the session's plan only), and continues along the plan,
  * or stops at the end of a section when the toggle is on. @returns {Promise<boolean>} true when a session handled it
  */
 async function rpOnPassageEnd() {
   if (!_sess) return false;
-  var plan = _getPlan(), it = plan.items[_sess.pos];
+  var pid = _sess.planId, plan = _getPlan(pid), it = plan.items[_sess.pos];
   var s = rpStep(plan, _sess.pos, _sess.passIdx, _stopAtEnd, _repeat);
-  if (s.check && it) _checkWithUndo(it, 'Read: ' + it.label);
+  if (s.check && it) _checkWithUndo(pid, it, 'Read: ' + it.label);
   if (s.action === 'end') {
     if (_rd && _rd.stop) _rd.stop();
     _sess = null; _repeat = 'off'; _renderBar();
@@ -496,14 +522,14 @@ function _renderBar() {
   var el = document.getElementById('rp-playbar');
   if (!el) return;
   if (!_sess) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  var plan = _getPlan(), it = plan.items[_sess.pos];
+  var plan = _getPlan(_sess.planId), it = plan ? plan.items[_sess.pos] : null;
   if (!it) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  var st = _planState(rpLoad()), n = rpItemPassages(it).length;
+  var st = _planState(rpLoad(), _sess.planId), n = rpItemPassages(it).length;
   var read = !!(st.items[it.id] && st.items[it.id].r === 1);
   el.style.display = 'block';
   el.innerHTML =
-    '<div class="rp-pb-top"><span class="rp-pb-plan">The Biblical Story</span>' +
-      '<span class="rp-pb-grp">' + escHtml(_groupName(it)) + '</span></div>' +
+    '<div class="rp-pb-top"><span class="rp-pb-plan">' + escHtml(plan.name) + '</span>' +
+      '<span class="rp-pb-grp">' + escHtml(_groupName(plan, it)) + '</span></div>' +
     '<div class="rp-pb-item">' + escHtml(it.label) + (n > 1 ? ' <span class="rp-pb-pass">Passage ' + (_sess.passIdx + 1) + ' of ' + n + '</span>' : '') + '</div>' +
     '<div class="rp-pb-btns">' +
       '<button class="btn btn-sec btn-sm" onclick="rpPlanMove(-1)" aria-label="Previous item">&#8249; Prev</button>' +
@@ -522,38 +548,135 @@ function _renderBar() {
 function _rpCloseStart() { var o = document.getElementById('rp-start-overlay'); if (o) o.classList.remove('on'); }
 function rpCloseStart() { _rpCloseStart(); }
 
-/** Opens the "where to start" sheet (Read tab and Progress card). */
-function rpOpenStart() {
+/**
+ * Opens the "where to start" sheet (Read tab and Progress card).
+ * @param {string} [planId] - the plan; omitted (Read tab) = the plan open now, the plan in playback, or the first enrolled plan.
+ *   With nothing enrolled it opens Browse plans instead.
+ */
+function rpOpenStart(planId) {
   var o = document.getElementById('rp-start-overlay'), body = document.getElementById('rp-start-body');
   if (!o || !body) return;
-  var plan = _getPlan(), st = _planState(rpLoad());
+  var store = rpLoad(), ids = rpEnrolledIds(store, _planIds());
+  var pid = planId || (_ui.open ? _ui.planId : '') || (_sess ? _sess.planId : '') || ids[0] || '';
+  if (!pid || !_getPlan(pid)) { toast('Pick a plan to start reading'); rpOpenBrowse(); return; }
+  var plan = _getPlan(pid), st = _planState(store, pid), q = '\'' + pid + '\'';
   var cp = rpContinuePos(plan, st), cit = cp >= 0 ? plan.items[cp] : null;
   var pr = rpProgress(plan, st, false);
+  var titleEl = document.getElementById('rp-start-title'); if (titleEl) titleEl.innerHTML = '&#10022; ' + escHtml(plan.name);
+  var list = ids.indexOf(pid) < 0 ? ids.concat([pid]) : ids;
+  var chooser = list.length > 1
+    ? '<select class="rp-st-sel" style="margin-bottom:14px" aria-label="Plan" onchange="rpOpenStart(this.value)">' + list.map(function(id) {
+        return '<option value="' + id + '"' + (id === pid ? ' selected' : '') + '>' + escHtml(_getPlan(id).name) + '</option>';
+      }).join('') + '</select>'
+    : '';
   var opts = plan.parts.map(function(part) {
     return '<optgroup label="' + escHtml(part.name) + '">' + part.groups.map(function(g) {
       var gp = pr.groups[g.id];
       return '<option value="' + g.id + '"' + (cit && cit.groupId === g.id ? ' selected' : '') + '>' + escHtml(g.name) + ' (' + gp.checked + '/' + gp.total + ')</option>';
     }).join('') + '</optgroup>';
   }).join('');
-  body.innerHTML =
+  body.innerHTML = chooser +
     '<div class="rp-st-h">Continue</div>' +
     (cit
       ? '<div class="rp-st-sub">Next unchecked: <b>' + escHtml(cit.label) + '</b></div>' +
-        '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(true)">&#9654; Listen</button>' +
-        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(false)">Read</button></div>'
+        '<div style="display:flex;gap:8px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpContinue(' + q + ',true)">&#9654; Listen</button>' +
+        '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpContinue(' + q + ',false)">Read</button></div>'
       : '<div class="rp-st-sub">Every item in this plan is checked.</div>') +
     '<div class="rp-st-h" style="margin-top:18px">Or choose a section</div>' +
     '<div class="rp-st-sub">Starts at the first unchecked item in that section.</div>' +
     '<select id="rp-start-group" class="rp-st-sel">' + opts + '</select>' +
-    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpStartGroup(document.getElementById(\'rp-start-group\').value,true)">&#9654; Listen</button>' +
-    '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpStartGroup(document.getElementById(\'rp-start-group\').value,false)">Read</button></div>' +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-primary btn-sm" style="flex:1" onclick="rpStartGroup(' + q + ',document.getElementById(\'rp-start-group\').value,true)">&#9654; Listen</button>' +
+    '<button class="btn btn-sec btn-sm" style="flex:1" onclick="rpStartGroup(' + q + ',document.getElementById(\'rp-start-group\').value,false)">Read</button></div>' +
     '<div style="margin-top:14px;text-align:right"><button class="btn btn-ghost btn-sm" onclick="rpCloseStart()">Cancel</button></div>';
   o.classList.add('on');
+}
+
+// ── Browse plans + Start / Leave (v4.61.0) ───────────────────
+/** Start (on = true) or Leave (on = false) a plan. Leaving keeps every check. */
+function rpEnroll(planId, on) {
+  var plan = _getPlan(planId);
+  if (!plan) return;
+  if (!on && !confirm('Leave "' + plan.name + '"? Your progress is kept.')) return;
+  var store = rpLoad(), st = _planState(store, planId);
+  rpSetEnrolled(st, on, Date.now());
+  if (!rpSave(store)) return;
+  _rpQueueSync();
+  if (!on && _sess && _sess.planId === planId) rpEndSession();
+  rpRenderCard();
+  _rpBrowseRefresh();
+  toast(on ? 'Started ' + plan.name : 'Left ' + plan.name + '. Your progress is kept.');
+}
+
+function _planStatus(plan, st, pr) {
+  var total = pr.overall.total, done = total > 0 && pr.overall.checked === total;
+  if (done) return 'Finished';
+  var pct = pr.overall.pct ? ' \u00b7 ' + pr.overall.pct + '%' : '';
+  if (rpIsEnrolled(st)) return 'Enrolled' + pct;
+  if (rpHasProgress(st)) return 'In progress' + (pr.overall.pct ? ' (' + pr.overall.pct + '%)' : '');
+  return 'Not started';
+}
+
+function _rpBrowseRender() {
+  var body = document.getElementById('rp-browse-body');
+  if (!body) return;
+  var store = rpLoad(), keep = body.scrollTop, html = [];
+  RP_PLAN_LIST.forEach(function(meta) {
+    var plan = _getPlan(meta.id), st = _planState(store, meta.id), pr = rpProgress(plan, st, false);
+    var enr = rpIsEnrolled(st), prog = rpHasProgress(st), open = !!_ui.browseAbout[meta.id];
+    html.push('<div class="rp-bcard' + (enr ? ' enr' : '') + '">' +
+      '<div class="rp-bhead"><div class="rp-bname">' + escHtml(plan.name) + '</div><div class="rp-bstat">' + escHtml(_planStatus(plan, st, pr)) + '</div></div>' +
+      '<div class="rp-bby">By ' + escHtml(plan.about.by) + ' · ' + plan.items.length + ' ' + (plan.items.every(function(it) { return it.type === 'ev'; }) ? 'events' : plan.items.every(function(it) { return it.type === 'ch'; }) ? 'chapters' : 'items') + '</div>' +
+      '<div class="rp-bblurb">' + escHtml(meta.blurb) + '</div>' +
+      '<div class="rp-babout-link" data-rp-babout="' + meta.id + '">' + (open ? 'Hide About ▴' : 'About this plan ▾') + '</div>' +
+      (open ? '<div class="rp-about-body" style="padding:0 2px 8px">' + _aboutBodyHtml(plan.about) + '</div>' : '') +
+      '<div class="rp-bbtns">' +
+        (enr
+          ? '<button class="btn btn-primary btn-sm" style="flex:1" data-rp-bopen="' + meta.id + '">Open</button><button class="btn btn-sec btn-sm" style="flex:1" data-rp-bleave="' + meta.id + '">Leave plan</button>'
+          : '<button class="btn btn-primary btn-sm" style="flex:1" data-rp-bstart="' + meta.id + '">' + 'Start this plan' + '</button>' +
+            (prog ? '<button class="btn btn-sec btn-sm" style="flex:1" data-rp-bopen="' + meta.id + '">Open</button>' : '')) +
+      '</div></div>');
+  });
+  body.innerHTML = html.join('');
+  body.scrollTop = keep;
+}
+function _rpBrowseRefresh() {
+  var o = document.getElementById('rp-browse-overlay');
+  if (o && o.classList.contains('on')) _rpBrowseRender();
+}
+function _rpBrowseClick(ev) {
+  var t = ev.target;
+  while (t && t !== ev.currentTarget && !(t.getAttribute && (t.getAttribute('data-rp-babout') || t.getAttribute('data-rp-bstart') || t.getAttribute('data-rp-bleave') || t.getAttribute('data-rp-bopen')))) t = t.parentNode;
+  if (!t || t === ev.currentTarget || !t.getAttribute) return;
+  var a = t.getAttribute('data-rp-babout'), s = t.getAttribute('data-rp-bstart'), l = t.getAttribute('data-rp-bleave'), o = t.getAttribute('data-rp-bopen');
+  if (a) { _ui.browseAbout[a] = !_ui.browseAbout[a]; _rpBrowseRender(); return; }
+  if (s) { rpEnroll(s, true); return; }
+  if (l) { rpEnroll(l, false); return; }
+  if (o) rpOpenPlan(o);
+}
+/** Opens Browse plans (full-screen list of every plan with Start / Open / Leave). */
+function rpOpenBrowse() {
+  var o = document.getElementById('rp-browse-overlay');
+  if (!o) return;
+  _rpCloseStart();
+  if (!_ui.browseBound) {
+    var b = document.getElementById('rp-browse-body');
+    if (b) b.addEventListener('click', _rpBrowseClick);
+    _ui.browseBound = true;
+  }
+  o.classList.add('on');
+  _rpBrowseRender();
+  var bb = document.getElementById('rp-browse-body'); if (bb) bb.scrollTop = 0;
+}
+function rpCloseBrowse() {
+  var o = document.getElementById('rp-browse-overlay');
+  if (o) o.classList.remove('on');
+  rpRenderCard();
 }
 
 export {
   rpWireSync, rpLoad, rpSave, rpExportStore, rpHasData, rpMergeRemote, rpReplaceFromRemote,
   rpRenderCard, rpOpenPlan, rpClosePlan, rpBackToPlan, rpJumpLast,
   rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpExitPlan, rpStartSession, rpContinue, rpStartGroup,
-  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpOnPassageEnd, rpOpenStart, rpCloseStart
+  rpPlanMove, rpMarkRead, rpSetStopAtEnd, rpSetRepeat, rpOnPassageEnd, rpOpenStart, rpCloseStart,
+  rpOpenBrowse, rpCloseBrowse, rpEnroll
 };

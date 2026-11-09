@@ -1,4 +1,4 @@
-// readingplan-core.js — Pilgrim Private ES Module (v4.58.0)
+// readingplan-core.js — Pilgrim Private ES Module (v4.61.0)
 // Pure Reading Plans helpers: NO imports, NO DOM, NO localStorage (tests/readingplan-core.test.js runs under plain node).
 // Storage + UI live in readingplan.js; the outline lives in readingplan-data.js (a plan object is passed in).
 //
@@ -111,6 +111,29 @@ function rpRestore(state, id, prev, now) {
   state.items[id] = prev.r === 1 ? { r: 1, d: prev.d, u: now } : { r: 0, u: now };
 }
 function rpSetHideChron(state, on, now) { state.opts.hideChron = { v: !!on, u: now }; }
+
+// ── Enrollment (v4.61.0): a plan is active only after the user taps Start. Stored as opts.enrolled = { v, u } ──
+// Never written = not enrolled, for everyone (including users who already have checks). Leaving writes v:false and
+// keeps every check; Start again restores them. Syncs through the existing per-option last-write-wins merge.
+
+/** @returns {boolean} true only when the plan state has enrolled.v === true */
+function rpIsEnrolled(state) { return !!(state && state.opts && state.opts.enrolled && state.opts.enrolled.v === true); }
+/** Start (on = true) or Leave (on = false). In place; stamps the merge clock. */
+function rpSetEnrolled(state, on, now) { state.opts.enrolled = { v: !!on, u: now }; }
+/** @returns {boolean} true if any item in the plan state is checked */
+function rpHasProgress(state) { return !!state && Object.keys(state.items || {}).some(function(id) { return state.items[id].r === 1; }); }
+/**
+ * Enrolled plan ids in the order they were started (ties: registry order).
+ * @param {*} store
+ * @param {string[]} order - plan ids in registry order
+ * @returns {string[]}
+ */
+function rpEnrolledIds(store, order) {
+  var s = rpNormalizeStore(store);
+  function since(id) { var e = s.plans[id].opts.enrolled; return e && _isNum(e.u) ? e.u : 0; }
+  return order.filter(function(id) { return s.plans[id] && rpIsEnrolled(s.plans[id]); })
+    .sort(function(a, b) { return since(a) - since(b) || order.indexOf(a) - order.indexOf(b); });
+}
 
 // ── Derived values ────────────────────────────────────────────────────────────────────────
 
@@ -269,6 +292,7 @@ export {
   RP_STORE_VERSION, RP_PLAN_ID,
   rpEmptyStore, rpEmptyPlanState, rpNormalizeStore, rpStoreHasData, rpMerge,
   rpSetChecked, rpRestore, rpSetHideChron,
+  rpIsEnrolled, rpSetEnrolled, rpHasProgress, rpEnrolledIds,
   rpVisibleItems, rpProgress, rpBookmark, rpGaps,
   rpItemPassages, rpContinuePos, rpGroupStartPos, rpIsGroupEnd, rpStep
 };

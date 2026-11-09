@@ -585,7 +585,18 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.60.5',date:'Nov 8, 2026',label:'Latest \u2014 untested',
+    version:'4.61.0',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Reading Plans is now a library. Progress has a Reading Plans section with a card for each plan you have started, and a Browse plans button.",
+      "new: six plans: The Biblical Story, The Life of Jesus, Genesis to Revelation, The New Testament, Acts and the Letters, and The Old Testament Story. Each has its own About text and a note that it is a prototype.",
+      "new: Start and Leave. Nobody is signed up for a plan until they tap Start. Leaving a plan keeps your progress, and Start again brings your checks back. Progress is kept separately for each plan, and you can have several plans going at once.",
+      "new: Read and Listen, Continue, Choose where to start, Repeat and Stop at the end of this section all work in any plan, and checks count only toward the plan you are in.",
+      "note: your Biblical Story progress is untouched, but its card is hidden from Progress until you tap Start on it in Browse plans. The one-line plan summaries in Browse plans are new wording. Nothing new is stored except a Start/Leave flag for each plan. Cache-buster bumped to 4.61.0."
+    ]
+  },
+  {
+    version:'4.60.5',date:'Nov 8, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: the white screen while the app opens is gone. The page no longer waits for fonts and outside libraries (Quill, PDF tools) before it shows your theme, so dark mode paints dark right away even on a slow connection. The app itself still appears once those finish loading.",

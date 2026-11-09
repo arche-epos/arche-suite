@@ -1,4 +1,4 @@
-// readingplan-data.js — Pilgrim Private ES Module (v4.59.0)
+// readingplan-data.js — Pilgrim Private ES Module (v4.61.0)
 // Reading Plans: the Story Flow outline as static data. NO imports, NO DOM, NO localStorage.
 // Source: claude/spec-reading-plans-v1.md (Rev 2) + claude/spec-reading-plan-story-flow-outline-v1.md.
 // Psalm placement (v4.59.0): claude/spec-psalms-story-placement-v1.md. All 150 Psalms sit by author and story position.
@@ -387,7 +387,8 @@ function rpBuildStoryFlow() {
       outro: [
         'Every chapter appears once. You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place.',
         'I hope this plan helps you follow the story that God has woven through His Word, and see how much He loves us.'
-      ]
+      ],
+      note: RP_PROTO_NOTE
     } };
   RP_STORYFLOW_DEF.forEach(function(pd) {
     var part = { id: pd[0], name: pd[1], groups: [] };
@@ -442,7 +443,151 @@ function rpBuildStoryFlow() {
   return plan;
 }
 
+
+// ══ Plan library (v4.61.0) ═══════════════════════════════════════════════════════════════════
+// Source: claude/spec-reading-plan-library-v1.md (Rev 3) + claude/spec-reading-plan-about-texts-v1.md (approved Nov 2, 2026).
+// Every plan is built from code, never stored; only progress and the per-plan "enrolled" option are stored (readingplan.js).
+// Plan ids are PERMANENT. Item ids inside different plans may repeat (e.g. 'Gen.1'); progress is per plan.
+var RP_ABOUT_DATE = 'Nov 2, 2026';
+var RP_PROTO_NOTE = 'This plan is a prototype. It is not an authoritative study plan, only one that I put together, and I know it can be improved. Your feedback and suggestions are welcome.';
+
+/** Ordered list shown in Browse plans. `blurb` is the one-line summary on the card. */
+var RP_PLAN_LIST = [
+  { id: 'storyflow', name: 'The Biblical Story', blurb: 'The whole Bible in story order: Job among the patriarchs, each prophet beside his king, the Psalms where they fit, and the Gospels as one life of Jesus.' },
+  { id: 'life-of-jesus', name: 'The Life of Jesus', blurb: 'The four Gospels woven into one account, event by event, from His birth to His ascension.' },
+  { id: 'canon', name: 'Genesis to Revelation', blurb: 'Straight through the Bible in book order, one chapter at a time.' },
+  { id: 'nt', name: 'The New Testament', blurb: 'Matthew 1 to Revelation 22, one chapter at a time.' },
+  { id: 'acts-letters', name: 'Acts and the Letters', blurb: 'Paul’s letters read beside the part of Acts where they fit.' },
+  { id: 'ot-story', name: 'The Old Testament Story', blurb: 'The Old Testament in a near-chronological order, from creation to Malachi.' }
+];
+
+var RP_ABOUTS = {
+  'life-of-jesus': { title: "The Life of Jesus", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["The four Gospels tell one life from four angles, and reading them one after another means meeting the same events again and again. This plan weaves Matthew, Mark, Luke and John into a single account of Jesus, organized event by event, from His birth to His resurrection and ascension.",
+        "Each event lists every Gospel passage that tells it, so you can read them together and see what each writer adds."],
+      list: [],
+      outro: ["You can check events off as you finish them, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you see Jesus more clearly and love Him more."],
+      note: RP_PROTO_NOTE },
+  'canon': { title: "Genesis to Revelation", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["This plan takes you straight through the Bible in the order the books are arranged, from Genesis 1 to Revelation 22, one chapter at a time. It is the simplest way to read the whole thing, and every chapter appears once.",
+        "Two long books are divided so no section feels endless: the Psalms are read in their five books, and Isaiah is read in two halves (chapters 1 to 39, and 40 to 66). Acts is read straight through, without the letters placed inside it."],
+      list: [],
+      outro: ["You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you read all of God’s Word and see how it fits together."],
+      note: RP_PROTO_NOTE },
+  'nt': { title: "The New Testament", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["This plan reads the New Testament from Matthew 1 to Revelation 22, one chapter at a time, in the order the books are arranged: the Gospels, Acts, Paul’s letters and the other letters, and Revelation.",
+        "If you want the Gospels as one story, or the letters placed inside Acts, the Life of Jesus and Acts and the Letters plans do that. This plan simply goes straight through."],
+      list: [],
+      outro: ["You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you grow in the good news of Jesus and in the life of His church."],
+      note: RP_PROTO_NOTE },
+  'acts-letters': { title: "Acts and the Letters", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["Acts tells the story of the early church, and Paul wrote many of his letters while it was happening. This plan reads them together, so each letter sits next to the part of Acts where it was written.",
+        "This is the same arrangement as the last part of The Biblical Story, on its own. Acts is divided into short sections so the letters can be read at the point they fit. Each chapter appears once."],
+      list: [],
+      outro: ["You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you see the early church the way those first believers lived it."],
+      note: RP_PROTO_NOTE },
+  'ot-story': { title: "The Old Testament Story", by: 'Jesse Caldwell', date: RP_ABOUT_DATE,
+      intro: ["The books of the Old Testament are not arranged in the order the story happened. This plan reads the Old Testament in a progression close to chronological order, from creation to Malachi, so the story is easier to follow.",
+        "It uses the same arrangement as The Biblical Story, without the New Testament:"],
+      list: ["Job is read among the patriarchs.",
+        "Each prophet is read beside the king he served.",
+        "Chronicles comes right after the Samuel and Kings history it retells.",
+        "Each Psalm is read where it fits the story, and the Psalms with no clear setting are gathered in two groups."],
+      outro: ["Every chapter appears once. You can check chapters off as you read, skip ahead whenever you like, and use Last Read to find your place. I hope this plan helps you see the story God was telling before Jesus came."],
+      note: RP_PROTO_NOTE }
+};
+
+/** A slice of The Biblical Story: the chosen parts, same item ids, same order. Single-part slices drop the part number. */
+function _sliceStory(id, name, partIds) {
+  var base = rpBuildStoryFlow();
+  var plan = { id: id, name: name, parts: [], groups: [], items: [], index: {}, about: RP_ABOUTS[id] };
+  base.parts.forEach(function(p) {
+    if (partIds.indexOf(p.id) < 0) return;
+    var part = { id: p.id, name: partIds.length === 1 ? p.name.replace(/^\d+\.\s*/, '') : p.name, groups: p.groups };
+    plan.parts.push(part);
+    p.groups.forEach(function(g) {
+      plan.groups.push(g);
+      g.items.forEach(function(it) { plan.index[it.id] = plan.items.length; plan.items.push(it); });
+    });
+  });
+  return plan;
+}
+
+// Canon parts: [id, name, first book index, last book index] into RP_BOOKS.
+var RP_CANON_PARTS = [
+  ['c1', 'Law', 0, 4], ['c2', 'History', 5, 16], ['c3', 'Wisdom and Poetry', 17, 21], ['c4', 'Prophets', 22, 38],
+  ['c5', 'Gospels and Acts', 39, 43], ['c6', 'Letters', 44, 64], ['c7', 'Revelation', 65, 65]
+];
+// Two long books are divided so no group is endless (Psalms by its five books, Isaiah in two halves).
+var RP_CANON_SPLITS = { Ps: [[1, 41], [42, 72], [73, 89], [90, 106], [107, 150]], Isa: [[1, 39], [40, 66]] };
+var RP_CANON_BUNDLE_MAX = 45;   // small books are bundled in canon order up to about this many chapters
+var RP_CANON_OWN_MIN = 20;      // a book with at least this many chapters is its own group
+
+/** Every chapter in canon order (Acts whole), grouped by book, small books bundled. `partDefs` picks the parts. */
+function _buildCanon(id, name, partDefs) {
+  var books = rpBookTable();
+  var plan = { id: id, name: name, parts: [], groups: [], items: [], index: {}, about: RP_ABOUTS[id] };
+  partDefs.forEach(function(pd) {
+    var part = { id: pd[0], name: pd[1], groups: [] };
+    var bundle = [], bundleN = 0;
+    function addGroup(gid, gname, segs) {
+      var group = { id: gid, name: gname, partId: part.id, chron: false, items: [], mixed: segs.length > 1 };
+      segs.forEach(function(s) {
+        for (var ch = s[1]; ch <= s[2]; ch++) {
+          var b = books[s[0]];
+          group.items.push({ id: s[0] + '.' + ch, type: 'ch', book: s[0], label: b.name + ' ' + ch,
+            short: (group.mixed ? b.short + ' ' : '') + ch, w: RP_W_CH, partId: part.id, groupId: gid, chron: false });
+        }
+      });
+      part.groups.push(group);
+      plan.groups.push(group);
+      group.items.forEach(function(it) { plan.index[it.id] = plan.items.length; plan.items.push(it); });
+    }
+    function flush() {
+      if (!bundle.length) return;
+      var first = bundle[0][0], last = bundle[bundle.length - 1][0];
+      var nm = bundle.length === 1 ? books[first].name : bundle.length === 2 ? books[first].name + ' and ' + books[last].name : books[first].name + ' to ' + books[last].name;
+      addGroup('g.' + first + (last !== first ? '-' + last : ''), nm, bundle);
+      bundle = []; bundleN = 0;
+    }
+    for (var bi = pd[2]; bi <= pd[3]; bi++) {
+      var code = RP_BOOKS[bi][0], n = RP_BOOKS[bi][3];
+      if (RP_CANON_SPLITS[code]) {
+        flush();
+        RP_CANON_SPLITS[code].forEach(function(r) { addGroup('g.' + code + '-' + r[0] + '-' + r[1], books[code].name + ' ' + r[0] + '–' + r[1], [[code, r[0], r[1]]]); });
+      } else if (n >= RP_CANON_OWN_MIN) {
+        flush();
+        addGroup('g.' + code, books[code].name, [[code, 1, n]]);
+      } else {
+        if (bundleN + n > RP_CANON_BUNDLE_MAX) flush();
+        bundle.push([code, 1, n]); bundleN += n;
+      }
+    }
+    flush();
+    plan.parts.push(part);
+  });
+  return plan;
+}
+
+/**
+ * Builds any plan in the library by id.
+ * @param {string} id - one of RP_PLAN_LIST
+ * @returns {Object|null} plan (same shape as rpBuildStoryFlow), or null for an unknown id
+ */
+function rpBuildPlan(id) {
+  var name = (RP_PLAN_LIST.filter(function(p) { return p.id === id; })[0] || {}).name;
+  switch (id) {
+    case 'storyflow': return rpBuildStoryFlow();
+    case 'life-of-jesus': return _sliceStory(id, name, ['p7']);
+    case 'acts-letters': return _sliceStory(id, name, ['p8']);
+    case 'ot-story': return _sliceStory(id, name, ['p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
+    case 'canon': return _buildCanon(id, name, RP_CANON_PARTS);
+    case 'nt': return _buildCanon(id, name, RP_CANON_PARTS.slice(4));
+  }
+  return null;
+}
+
 export {
   RP_BOOKS, RP_SPLITS, RP_EVENTS, RP_STORYFLOW_DEF, RP_W_CH, RP_W_EV, PS_AFTER, PS_CLUSTERS, PS_AUTHORS,
-  rpBuildStoryFlow, rpPassageChapters
+  rpBuildStoryFlow, rpPassageChapters, RP_PLAN_LIST, RP_CANON_PARTS, rpBuildPlan
 };

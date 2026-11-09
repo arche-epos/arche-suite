@@ -9,13 +9,13 @@
 // Imports only utils.js + memory-core.js so sync.js / ui.js / studyTools.js can all import
 // this module without creating a dependency cycle.
 
-import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.60.5';
-import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat } from './tts.js?v=4.60.5';
+import { SK_MEM, online, escHtml, toast, logError } from './utils.js?v=4.61.0';
+import { ttsPracticeStart, ttsPracticeStop, getTTSPracticeGap, setTTSPracticeGap, getTTSPracticeRepeat, toggleTTSPracticeRepeat, resetTTSPracticeRepeat } from './tts.js?v=4.61.0';
 import {
   memEmptyStore, memNormalizeStore, memAddKey, memMakeItem, memMerge, memBuildVerseRef,
   memRangeLabel, memJoinVerses, memGetDueChunks, memGetAllChunks, memBuildBlankedText,
   memGradeAttempt, memNextChunkState, MEM_LEVEL_MAX
-} from './memory-core.js?v=4.60.5';
+} from './memory-core.js?v=4.61.0';
 
 // ── Sync trigger (wired by app.js so this module never imports sync.js) ─────
 var _memSyncFn = null;
