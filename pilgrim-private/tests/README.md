@@ -10,6 +10,7 @@
 | `layout.spec.js` | Playwright | Phone-width layout sweep at 360px and 390px: no sideways scroll, nothing under the Guide button, Read-tab bottom buttons side by side, nav tabs at least 44px tall. One known finding is parked as `test.fixme` (Study > Notes, Listen button under the Guide button). |
 | `release-check.js` | Node.js | Release bookkeeping gate: every `?v=` cache-buster equals CHANGELOG[0].version, and only the newest entry is labeled "untested". Run before every push. |
 | `secret-scan.js` | Node.js | Public-repo secret gate: scans the lines about to be pushed (or `--all` tracked files) for GitHub tokens, the proxy secret and private keys. Never prints the secret. Run before every push. |
+| `gate.js` | Node.js | One-command pre-push gate: `node --check` on every module, bridge-check, all node unit tests, release-check, secret-scan, then the headless Playwright specs (boot, layout, batch10). Stops at the first failure. `npm run gate`, or `node tests/gate.js --no-browser` for static only. |
 | `batch10.spec.js` | Playwright | Reading-plan regression (v4.60.0 to v4.63.2): Browse/Start, plan bar, Mark read, Stop at the end, Repeat popup, per-plan progress, content-plan data, streak, storage untouched. No PIN needed; 360px viewport. Cannot test audio or look and feel (phone test). |
 
 ---

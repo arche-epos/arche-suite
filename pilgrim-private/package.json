@@ -5,6 +5,7 @@
   "description": "Smoke test suite for Pilgrim Private — see tests/README.md",
   "scripts": {
     "test": "playwright test",
+    "gate": "node tests/gate.js",
     "test:headed": "playwright test --headed"
   },
   "devDependencies": {
