@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.2',date:'Nov 9, 2026',label:'Latest \u2014 untested',
+    version:'4.63.3',date:'Nov 10, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: on the Study > Notes screen of a phone, the floating Guide button no longer covers the right edge of the Listen button. The row of buttons above the notes (Look Up Word, Listen, A\u2212 and A+) now stops short of the Guide button, so each is a little narrower.",
+      "note: nothing is stored or changed in your data. Cache-buster bumped to 4.63.3."
+    ]
+  },
+  {
+    version:'4.63.2',date:'Nov 9, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "change: the plan bar and the Prev Chapter / Next Chapter / Reading plan row are a little tighter, so the passage starts higher.",

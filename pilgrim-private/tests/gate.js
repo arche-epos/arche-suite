@@ -2,7 +2,7 @@
 // tests/gate.js — one-command pre-push gate for Pilgrim Private
 //
 // Runs, in order: node --check on every module, bridge-check, the node unit tests, release-check, secret-scan,
-// then the headless Playwright specs (boot, layout, batch10). Stops at the first failing step and exits 1.
+// then the headless Playwright specs (boot, layout, batch10, datasafety, regress). Stops at the first failing step and exits 1.
 // smoke.spec.js is NOT run (it needs a real PIN and the live Worker).
 //
 // From pilgrim-private/:   node tests/gate.js
@@ -48,10 +48,10 @@ process.on('exit', stop);
 spawnSync('sleep', ['2']);
 const env = Object.assign({}, process.env, { PILGRIM_BASE_URL: 'http://127.0.0.1:' + port });
 const bin = fs.existsSync('/tmp/pwt/node_modules/.bin/playwright') ? '/tmp/pwt/node_modules/.bin/playwright' : 'npx';
-const args = (bin === 'npx' ? ['playwright'] : []).concat(['test', 'tests/boot.spec.js', 'tests/layout.spec.js', 'tests/batch10.spec.js']);
+const args = (bin === 'npx' ? ['playwright'] : []).concat(['test', 'tests/boot.spec.js', 'tests/layout.spec.js', 'tests/batch10.spec.js', 'tests/datasafety.spec.js', 'tests/regress.spec.js']);
 if (fs.existsSync('/tmp/pwt/node_modules')) env.NODE_PATH = '/tmp/pwt/node_modules' + (env.NODE_PATH ? path.delimiter + env.NODE_PATH : '');
 if (!env.PW_CHROMIUM && fs.existsSync('/opt/pw-browsers/chromium-1243/chrome-linux64/chrome')) env.PW_CHROMIUM = '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome';
-const out = run('Playwright: boot + layout + batch10', bin, args, { env });
+const out = run('Playwright: boot + layout + batch10 + datasafety + regress', bin, args, { env });
 const summary = out.split('\n').filter(l => /passed|skipped|failed/.test(l)).join(' | ');
 console.log('     ' + summary);
 fs.rmSync(path.join(root, 'test-results'), { recursive: true, force: true });

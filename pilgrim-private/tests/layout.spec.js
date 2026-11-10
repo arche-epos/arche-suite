@@ -42,17 +42,16 @@ for (const width of [360, 390]) {
       await boot(page, baseURL);
       for (const id of ['library', 'study', 'read', 'stats', 'settings']) {
         await page.click('#nav-' + id);
-        if (id === 'study') continue; // see the fixme test below; sideways scroll on Study is still checked there
+        if (id === 'study') continue; // Study has its own tests below (Guide-button check and sideways scroll)
         expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), 'sideways scroll on ' + id).toBe(false);
         const hits = await page.evaluate(fabCollisions);
         expect(hits, 'controls under the Guide button on ' + id).toEqual([]);
       }
     });
 
-    // FOUND Nov 10, 2026 (first run of this sweep): on Study > Notes with an empty study, the Guide button covers the
-    // right edge of the "Listen" button (listen-fn-btn, about 56px wide overlap at 390px). Not fixed yet; Boss to decide.
-    // Remove .fixme once fixed so the check guards it.
-    test.fixme('Study > Notes: no control sits under the Guide button', async ({ page, baseURL }) => {
+    // Found Nov 10, 2026 (first run of this sweep): on Study > Notes with an empty study, the Guide button covered the right
+    // edge of the "Listen" button (about 56px at 390px). Fixed in v4.63.3 (the button row keeps a 64px lane for the Guide button).
+    test('Study > Notes: no control sits under the Guide button', async ({ page, baseURL }) => {
       await boot(page, baseURL);
       await page.click('#nav-study');
       expect(await page.evaluate(fabCollisions), 'controls under the Guide button on study').toEqual([]);
