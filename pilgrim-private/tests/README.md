@@ -6,6 +6,7 @@
 |---|---|---|
 | `bridge-check.js` | Node.js | Static — verifies all inline HTML handlers are exported + bridged to `window.*` |
 | `smoke.spec.js` | Playwright | Dynamic — boots the real app in a browser and fails on any console/runtime error. Not a feature-regression suite — see "Scope" below. |
+| `batch10.spec.js` | Playwright | Reading-plan regression (v4.60.0 to v4.63.2): Browse/Start, plan bar, Mark read, Stop at the end, Repeat popup, per-plan progress, content-plan data, streak, storage untouched. No PIN needed; 360px viewport. Cannot test audio or look and feel (phone test). |
 
 ---
 
@@ -80,3 +81,23 @@ PILGRIM_TEST_PIN=1234 npx playwright test --headed   # watch it run
 3. git merge dev → main
 4. Deploy via github-proxy
 ```
+
+
+---
+
+## Running the Playwright suites in Claude's sandbox (added Nov 10, 2026)
+
+Claude runs these itself before every push (see `ways-of-working.md` > "Playwright regression suite"). Setup in the sandbox:
+
+```bash
+# one time per chat (container resets): the test runner
+mkdir -p /tmp/pwt && cd /tmp/pwt && npm init -y && npm i @playwright/test
+# from pilgrim-private/: serve the folder, run the suite(s)
+python3 -m http.server 8765 &
+NODE_PATH=/tmp/pwt/node_modules PW_CHROMIUM=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome \
+PILGRIM_BASE_URL=http://127.0.0.1:8765 /tmp/pwt/node_modules/.bin/playwright test tests/batch10.spec.js
+```
+
+- `PILGRIM_BASE_URL` and `PW_CHROMIUM` are optional overrides in `playwright.config.js`; leave both unset on Boss's machine (Live Server at 5500, Playwright's own Chromium).
+- `smoke.spec.js` needs `PILGRIM_TEST_PIN` (a real tester PIN, never committed), so Claude cannot run it; `batch10.spec.js` needs none.
+- The suite blocks all non-local network, so Scripture text, AI and the Worker are never reached.

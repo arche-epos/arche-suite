@@ -14,7 +14,9 @@ module.exports = defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:5500',
+    baseURL: process.env.PILGRIM_BASE_URL || 'http://127.0.0.1:5500',
+    // Optional: point at an installed Chromium (used by Claude's sandbox). Unset on Boss's machine.
+    launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
