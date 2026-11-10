@@ -6,6 +6,7 @@
 |---|---|---|
 | `bridge-check.js` | Node.js | Static — verifies all inline HTML handlers are exported + bridged to `window.*` |
 | `smoke.spec.js` | Playwright | Dynamic — boots the real app in a browser and fails on any console/runtime error. Not a feature-regression suite — see "Scope" below. |
+| `boot.spec.js` | Playwright | No-login boot check (same job as `smoke.spec.js`, no PIN): app boots, every bottom-nav tab opens, FAB menu opens, no runtime errors, no sideways scroll at 390px. Claude runs it before every push. |
 | `batch10.spec.js` | Playwright | Reading-plan regression (v4.60.0 to v4.63.2): Browse/Start, plan bar, Mark read, Stop at the end, Repeat popup, per-plan progress, content-plan data, streak, storage untouched. No PIN needed; 360px viewport. Cannot test audio or look and feel (phone test). |
 
 ---
@@ -99,5 +100,5 @@ PILGRIM_BASE_URL=http://127.0.0.1:8765 /tmp/pwt/node_modules/.bin/playwright tes
 ```
 
 - `PILGRIM_BASE_URL` and `PW_CHROMIUM` are optional overrides in `playwright.config.js`; leave both unset on Boss's machine (Live Server at 5500, Playwright's own Chromium).
-- `smoke.spec.js` needs `PILGRIM_TEST_PIN` (a real tester PIN, never committed), so Claude cannot run it; `batch10.spec.js` needs none.
+- `smoke.spec.js` needs `PILGRIM_TEST_PIN` (a real tester PIN, never committed) and the live Worker, which Claude's sandbox cannot reach, so Claude cannot run it; `boot.spec.js` and `batch10.spec.js` need neither.
 - The suite blocks all non-local network, so Scripture text, AI and the Worker are never reached.
