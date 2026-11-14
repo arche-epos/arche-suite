@@ -5,35 +5,36 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.63.5';
+} from './utils.js?v=4.64.0';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.63.5';
+} from './storage.js?v=4.64.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.63.5';
+} from './sync.js?v=4.64.0';
 
 import {
   loadTTSSett, initTTSVoices, ttsSyncAfterResume
-} from './tts.js?v=4.63.5';
+} from './tts.js?v=4.64.0';
 
-import { mediaInit } from './media.js?v=4.63.5';
+import { mediaInit } from './media.js?v=4.64.0';
 
-import { memWireSync } from './memory.js?v=4.63.5';
-import { rpWireSync } from './readingplan.js?v=4.63.5';
+import { memWireSync } from './memory.js?v=4.64.0';
+import { rpWireSync } from './readingplan.js?v=4.64.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.63.5';
-import * as Storage from './storage.js?v=4.63.5';
-import * as TTS from './tts.js?v=4.63.5';
-import * as Sync from './sync.js?v=4.63.5';
-import * as StudyTools from './studyTools.js?v=4.63.5';
-import * as UI from './ui.js?v=4.63.5';
-import * as Media from './media.js?v=4.63.5';
-import * as Memory from './memory.js?v=4.63.5';
-import * as ReadingPlan from './readingplan.js?v=4.63.5';
+import * as Utils from './utils.js?v=4.64.0';
+import * as Storage from './storage.js?v=4.64.0';
+import * as TTS from './tts.js?v=4.64.0';
+import * as Sync from './sync.js?v=4.64.0';
+import * as StudyTools from './studyTools.js?v=4.64.0';
+import * as UI from './ui.js?v=4.64.0';
+import * as Media from './media.js?v=4.64.0';
+import * as Memory from './memory.js?v=4.64.0';
+import * as ReadingPlan from './readingplan.js?v=4.64.0';
+import * as Offline from './offline.js?v=4.64.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -112,7 +113,7 @@ setInterval(autoSave, 30000);
 
 // ── Expose functions on window.* for inline onclick= HTML handlers ───────────
 // Each module's exports assigned to window so onclick="navTo(...)" etc. work.
-[Utils, Storage, TTS, Sync, StudyTools, UI, Media, Memory, ReadingPlan].forEach(function(mod) {
+[Utils, Storage, TTS, Sync, StudyTools, UI, Media, Memory, ReadingPlan, Offline].forEach(function(mod) {
   Object.keys(mod).forEach(function(name) {
     if (typeof mod[name] === 'function' && window[name] === undefined) {
       window[name] = mod[name];

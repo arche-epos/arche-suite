@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.5',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    version:'4.64.0',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Settings now has an Offline Downloads section. It is the foundation for reading the Bible and using study tools with no internet. Nothing can be downloaded yet; Bible text comes in the next update.",
+      "new: when you look up a Bible passage, the app now checks this device first and only goes online if the passage is not saved here. Nothing changes for you until downloads arrive.",
+      "note: downloads live in their own storage area, separate from your studies. They are not part of backups, and Clear All Data does not remove them. No study, tag or setting data is changed. Cache-buster bumped to 4.64.0."
+    ]
+  },
+  {
+    version:'4.63.5',date:'Nov 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: when your device storage is completely full, tapping a tab for the first time no longer causes an error; the tips just close and may appear again next launch.",

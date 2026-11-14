@@ -1,0 +1,237 @@
+// offline.js — Pilgrim Private: offline downloads store (Phase 1, v4.64.0 — Nov 2026)
+// Spec: spec-offline-packs-v2.md (Project Knowledge). Phase 1 = the store, the Settings section and the lookup hook.
+// No pack content ships in this phase; Bible text packs arrive in Phase 3, word-tool packs in Phase 2.
+//
+// Everything here lives in ONE shared IndexedDB (pilgrimOffline), NOT per user, NOT in localStorage, NOT on any study.
+// The text is public data, so one copy serves every PIN user on the device. By design:
+//   - studies, the data model, backups, safety copies and sync are never touched,
+//   - Clear All Data does NOT delete downloads (Settings > Offline Downloads has its own Delete),
+//   - the backup file never includes downloads.
+//
+//   packs : packId -> { id, name, version, format, size, count, installedAt, license }
+//   data  : "<packId>|<key>" -> payload (Bible packs: "<bookNum>:<chapter>" -> [{verse, text}, ...])
+//
+// `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
+
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.64.0';
+
+var DB_NAME = 'pilgrimOffline';
+var DB_VERSION = 1;
+var BATCH = 40;            // entries written per transaction while installing a pack
+var _db = null;
+var _armed = {};           // pack id -> true while its Delete button waits for a second tap
+var _persisted = null;     // result of the last navigator.storage.persist()/persisted() check
+
+// ════════════════════════════════════════════════════════
+// DB LAYER
+// ════════════════════════════════════════════════════════
+
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise(function (resolve, reject) {
+    if (!window.indexedDB) { reject(new Error('Offline storage is not available in this browser')); return; }
+    var req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = function () {
+      var d = req.result;
+      if (!d.objectStoreNames.contains('packs')) d.createObjectStore('packs');
+      if (!d.objectStoreNames.contains('data')) d.createObjectStore('data');
+    };
+    req.onsuccess = function () {
+      _db = req.result;
+      _db.onversionchange = function () { try { _db.close(); } catch (e) {} _db = null; };
+      resolve(_db);
+    };
+    req.onerror = function () { reject(req.error || new Error('Could not open offline storage')); };
+  });
+}
+
+/** Runs fn(tx) in one transaction. Resolves with fn's returned request .result (if any) when the transaction completes. */
+function run(stores, mode, fn) {
+  return openDB().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var t = db.transaction(stores, mode), out;
+      try { out = fn(t); } catch (e) { reject(e); return; }
+      t.oncomplete = function () { resolve(out && typeof out === 'object' && 'result' in out ? out.result : undefined); };
+      t.onerror = t.onabort = function () { reject(t.error || new Error('Offline storage transaction failed')); };
+    });
+  });
+}
+
+function dataKey(packId, key) { return packId + '|' + key; }
+function packRange(packId) { return IDBKeyRange.bound(packId + '|', packId + '|￿'); }
+
+// ════════════════════════════════════════════════════════
+// PACK API
+// ════════════════════════════════════════════════════════
+
+/**
+ * Lists installed packs (metadata only), sorted by name. Never throws; resolves [] if storage is unavailable.
+ * @returns {Promise<Array<{id:string,name:string,version:string,format:string,size:number,count:number,installedAt:number,license:string}>>}
+ */
+export function offlineListPacks() {
+  return run(['packs'], 'readonly', function (t) { return t.objectStore('packs').getAll(); })
+    .then(function (rows) { return (rows || []).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); }); })
+    .catch(function () { return []; });
+}
+
+/**
+ * Installs (or replaces) a pack. Data is written in batches; the pack's metadata is written LAST, so a pack only
+ * "exists" once every entry is stored. On any failure (for example a full device) the partial data is removed and
+ * the error is rethrown, leaving nothing half-installed. Asks the browser for persistent storage on first use.
+ * @param {{id:string,name:string,version:string,license?:string}} meta - Pack description. id is e.g. "bible-kjv".
+ * @param {Array<[string, *]>} entries - [key, payload] pairs. Payloads must be structured-cloneable (plain JSON data).
+ * @param {function(number,number):void} [onProgress] - Called with (done, total) after each batch.
+ * @returns {Promise<object>} The stored metadata record.
+ */
+export function offlineInstallPack(meta, entries, onProgress) {
+  if (!meta || !meta.id || /\|/.test(meta.id)) return Promise.reject(new Error('Invalid pack id'));
+  var id = meta.id, total = entries.length, size = 0;
+  offlineRequestPersist();
+  // Replace semantics: clear any older copy first, then write fresh.
+  return offlineRemovePack(id).then(function () {
+    var i = 0;
+    function next() {
+      if (i >= total) return Promise.resolve();
+      var slice = entries.slice(i, i + BATCH);
+      return run(['data'], 'readwrite', function (t) {
+        var st = t.objectStore('data');
+        slice.forEach(function (e) { st.put(e[1], dataKey(id, e[0])); size += JSON.stringify(e[1]).length; });
+      }).then(function () { i += slice.length; if (onProgress) { try { onProgress(i, total); } catch (e) {} } return next(); });
+    }
+    return next();
+  }).then(function () {
+    var rec = { id: id, name: meta.name || id, version: String(meta.version || '1'), format: 'json', size: size, count: total, installedAt: Date.now(), license: meta.license || '' };
+    return run(['packs'], 'readwrite', function (t) { t.objectStore('packs').put(rec, id); }).then(function () { return rec; });
+  }).catch(function (err) {
+    return offlineRemovePack(id).catch(function () {}).then(function () { throw err; });
+  });
+}
+
+/**
+ * Removes one pack (its data and its metadata). Resolves even if the pack was not installed.
+ * @param {string} packId
+ * @returns {Promise<void>}
+ */
+export function offlineRemovePack(packId) {
+  return run(['data', 'packs'], 'readwrite', function (t) {
+    t.objectStore('data').delete(packRange(packId));
+    t.objectStore('packs').delete(packId);
+  });
+}
+
+/**
+ * Removes every downloaded pack. Only ever called from the Settings "Delete all downloads" path, never from Clear All Data.
+ * @returns {Promise<void>}
+ */
+export function offlineRemoveAll() {
+  return run(['data', 'packs'], 'readwrite', function (t) { t.objectStore('data').clear(); t.objectStore('packs').clear(); });
+}
+
+/**
+ * Reads one entry from a pack. Never throws: resolves null when the pack, the entry or the storage itself is missing.
+ * @param {string} packId
+ * @param {string} key
+ * @returns {Promise<*|null>}
+ */
+export function offlineGet(packId, key) {
+  return run(['data'], 'readonly', function (t) { return t.objectStore('data').get(dataKey(packId, key)); })
+    .then(function (v) { return v === undefined ? null : v; })
+    .catch(function () { return null; });
+}
+
+/**
+ * Asks the browser to keep this site's storage (so a low-space phone does not silently delete downloads).
+ * Safe to call repeatedly. Resolves true / false / null (unknown or unsupported).
+ * @returns {Promise<boolean|null>}
+ */
+export function offlineRequestPersist() {
+  try {
+    if (!navigator.storage || !navigator.storage.persist) return Promise.resolve(null);
+    return navigator.storage.persisted().then(function (p) { return p ? true : navigator.storage.persist(); })
+      .then(function (p) { _persisted = !!p; return _persisted; }).catch(function () { return null; });
+  } catch (e) { return Promise.resolve(null); }
+}
+
+// ════════════════════════════════════════════════════════
+// LOOKUP HOOK (used by getBibleAPI in studyTools.js)
+// ════════════════════════════════════════════════════════
+
+/**
+ * Offline scripture lookup. Mirrors the text shape getBibleAPI returns ("[16] text [17] text").
+ * Returns null when there is no downloaded pack, the chapter is missing, or the reference cannot be parsed, so the
+ * caller can fall through to the network. Never throws. Handles a whole chapter, a verse, a range and a comma list.
+ * @param {string} ref - Bible reference, e.g. "John 3:16-17".
+ * @param {string} trans - Lowercase translation code, e.g. "kjv". Pack id is "bible-" + trans.
+ * @returns {Promise<string|null>}
+ */
+export function offlineBibleText(ref, trans) {
+  var p;
+  try { p = parseRef(ref); } catch (e) { return Promise.resolve(null); }
+  if (!p) return Promise.resolve(null);
+  return offlineGet('bible-' + String(trans).toLowerCase(), p.book + ':' + p.chapter).then(function (verses) {
+    if (!verses || !verses.length) return null;
+    var commaMatch = ref.match(/:(\d+(?:,\d+)+)$/);
+    if (commaMatch) {
+      var listed = commaMatch[1].split(',').map(Number);
+      verses = verses.filter(function (v) { return listed.indexOf(v.verse) >= 0; });
+      verses.sort(function (a, b) { return listed.indexOf(a.verse) - listed.indexOf(b.verse); });
+    } else if (p.startVerse) {
+      var end = p.endVerse || p.startVerse;
+      verses = verses.filter(function (v) { return v.verse >= p.startVerse && v.verse <= end; });
+    }
+    if (!verses.length) return null;
+    return verses.map(function (v) { return '[' + v.verse + '] ' + String(v.text).trim(); }).join(' ');
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// SETTINGS > OFFLINE DOWNLOADS
+// ════════════════════════════════════════════════════════
+
+function mb(n) { return (n / 1000000).toFixed(1); }
+
+/**
+ * Renders Settings > Offline Downloads: the installed packs with size and a two-tap Delete, the total, and whether
+ * the browser has promised to keep them. Read-only apart from the Delete buttons. Never throws.
+ */
+export function renderOfflineSection() {
+  var el = document.getElementById('offline-list');
+  if (!el) return Promise.resolve();
+  return offlineListPacks().then(function (packs) {
+    var html = '', total = 0;
+    if (!packs.length) {
+      html = '<div style="font-size:13px;color:var(--txt3);line-height:1.5">Nothing downloaded yet. Bible text and word-study downloads are coming in the next updates.</div>';
+    } else {
+      packs.forEach(function (p) {
+        total += p.size || 0;
+        var armed = !!_armed[p.id];
+        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+          + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(p.name) + '</div>'
+          + '<div style="font-size:12px;color:var(--txt3)">' + mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.license ? ' &middot; ' + escHtml(p.license) : '') + '</div></div>'
+          + '<button class="btn ' + (armed ? 'btn-danger' : 'btn-ghost') + '" style="padding:8px 12px" data-pack="' + escHtml(p.id) + '" onclick="offlineDeleteClick(this)">' + (armed ? 'Tap again to delete' : 'Delete') + '</button></div>';
+      });
+      html += '<div style="font-size:12px;color:var(--txt3);margin-top:8px">Downloads use ' + mb(total) + ' MB. They are not part of backups and Clear All Data does not remove them.</div>';
+      if (_persisted === false) html += '<div style="font-size:12px;color:var(--gold);margin-top:4px">If this device runs low on space, it may clear these downloads. You can download them again.</div>';
+    }
+    el.innerHTML = html;
+  }).catch(function (e) { logError('renderOfflineSection', e); });
+}
+
+/**
+ * Click handler for a pack's Delete button. First tap arms it ("Tap again to delete", resets after 4 seconds),
+ * second tap deletes that pack only.
+ * @param {HTMLElement} btn - The button; its data-pack attribute holds the pack id.
+ */
+export function offlineDeleteClick(btn) {
+  var id = btn && btn.getAttribute('data-pack');
+  if (!id) return;
+  if (!_armed[id]) {
+    _armed[id] = true;
+    renderOfflineSection();
+    setTimeout(function () { delete _armed[id]; renderOfflineSection(); }, 4000);
+    return;
+  }
+  delete _armed[id];
+  offlineRemovePack(id).then(function () { toast('Download deleted'); return renderOfflineSection(); })
+    .catch(function (e) { logError('offlineDeleteClick', e); toast('Could not delete that download'); });
+}

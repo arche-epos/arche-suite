@@ -13,15 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.63.5';
+} from './utils.js?v=4.64.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.63.5';
-import { openConfirm } from './media.js?v=4.63.5';
-import { syncToGist } from './sync.js?v=4.63.5';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.63.5';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.63.5';
-import { decodeMorph } from './morph.js?v=4.63.5';
-import { hebrewVerses } from './versemap.js?v=4.63.5';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.64.0';
+import { offlineBibleText } from './offline.js?v=4.64.0';
+import { openConfirm } from './media.js?v=4.64.0';
+import { syncToGist } from './sync.js?v=4.64.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.64.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.64.0';
+import { decodeMorph } from './morph.js?v=4.64.0';
+import { hebrewVerses } from './versemap.js?v=4.64.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -187,12 +188,16 @@ async function getBollsBible(ref,trans){
  * Bolls.life translations (in BOLLS_TRANS map) go to getBollsBible();
  * all others go to bible-api.com directly.
  * Supports comma-separated verse lists for all backends (e.g. "John 1:1,14").
+ * A downloaded offline pack (offline.js) is checked before any network call.
  * For bible-api.com, comma lists are split into individual fetches and concatenated.
  * @param {string} ref - A Bible reference string.
  * @param {string} trans - Translation code (e.g. "nkjv", "kjv").
  * @returns {Promise<string>} Verse-numbered passage text.
  */
 async function getBibleAPI(ref,trans){
+  // v4.64.0: a downloaded pack on this phone is used first; null means "no pack / not found", so fall through to the network
+  var offText=await offlineBibleText(ref,trans);
+  if(offText!==null)return offText;
   if(BOLLS_TRANS[trans])return getBollsBible(ref,BOLLS_TRANS[trans]);
   // bible-api.com does not support comma-separated verse lists — split and fetch individually
   var commaMatch=ref.match(/^(.+):(\d+(?:,\d+)+)$/);

@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.63.5';
+} from './utils.js?v=4.64.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.63.5';
+} from './storage.js?v=4.64.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.63.5';
+} from './media.js?v=4.64.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.63.5';
+} from './tts.js?v=4.64.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.63.5';
+} from './sync.js?v=4.64.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,13 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.63.5';
+} from './studyTools.js?v=4.64.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.63.5';
-import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.5';
+} from './memory.js?v=4.64.0';
+import { renderOfflineSection } from './offline.js?v=4.64.0';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.64.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -809,7 +810,7 @@ function navTo(id){
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
-  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();renderStorageMeter();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
+  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();renderStorageMeter();renderOfflineSection();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
 }
 /**
  * Switches between the Study tab's Notes and Study Tools sub-panels.
