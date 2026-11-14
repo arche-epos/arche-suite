@@ -46,3 +46,28 @@ test.describe('Pilgrim Private: Study tab with no study open (qa-local, localhos
     await ctx.close();
   });
 });
+
+// v4.68.3: in a study's Scripture panel, tapping anywhere on a verse selects it (like Read), tapping it again clears it.
+test.describe('Pilgrim Private: Scripture panel verse tap (qa-local, localhost only)', () => {
+  test('tap verse text selects it, tap again clears it, and the verse number still works', async ({ browser, baseURL }) => {
+    const { ctx, page, errors } = await openApp(browser, baseURL);
+    await page.evaluate(async () => {
+      const j = []; for (let v = 1; v <= 3; v++) j.push({ verse: v, text: 'zz-verse-' + v + ' text here' });
+      await window.offlineInstallPack({ id: 'bible-kjv', name: 'Fake KJV', version: '1', license: 'T' }, [['43:3', j]]);
+      window.createFromTemplate('blank');
+    });
+    await page.locator('#f-trans').selectOption('kjv');
+    await page.locator('#f-ref').click();
+    await page.keyboard.type('John 3:1-3');
+    await page.locator('#f-ref').press('Tab');
+    await expect(page.locator('#scr-v-1')).toBeVisible();
+    await page.locator('#scr-v-1').dispatchEvent('click');            // tap on the verse itself (not the number)
+    await expect(page.locator('#scr-v-1')).toHaveClass(/readverse-focus/);
+    await page.locator('#scr-v-1').dispatchEvent('click');            // tap the selected verse again
+    await expect(page.locator('#scr-v-1')).not.toHaveClass(/readverse-focus/);
+    await page.locator('#scr-v-2 .vnum').click();                                    // the number still works
+    await expect(page.locator('#scr-v-2')).toHaveClass(/readverse-focus/);
+    expect(errors).toEqual([]);
+    await ctx.close();
+  });
+});

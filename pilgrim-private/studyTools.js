@@ -13,16 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.68.2';
+} from './utils.js?v=4.68.3';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.68.2';
-import { offlineBibleText, offlineGroundData, offlineHasPack, offlineCanRead, OFFLINE_DATA_CDN } from './offline.js?v=4.68.2';
-import { openConfirm } from './media.js?v=4.68.2';
-import { syncToGist } from './sync.js?v=4.68.2';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.68.2';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.68.2';
-import { decodeMorph } from './morph.js?v=4.68.2';
-import { hebrewVerses } from './versemap.js?v=4.68.2';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.68.3';
+import { offlineBibleText, offlineGroundData, offlineHasPack, offlineCanRead, OFFLINE_DATA_CDN } from './offline.js?v=4.68.3';
+import { openConfirm } from './media.js?v=4.68.3';
+import { syncToGist } from './sync.js?v=4.68.3';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.68.3';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.68.3';
+import { decodeMorph } from './morph.js?v=4.68.3';
+import { hebrewVerses } from './versemap.js?v=4.68.3';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -238,7 +238,7 @@ function renderScrText(text,trans){
   }
   var html=_scrVerses.map(function(v,i){
     if(v.plain)return '<span class="readverse" id="scr-v-'+i+'">'+escHtml(v.text).replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>')+'</span>';
-    return '<span class="readverse" id="scr-v-'+i+'"><sup class="vnum" onclick="scrSelectVerse('+i+')" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
+    return '<span class="readverse" id="scr-v-'+i+'" onclick="scrVerseTap('+i+')"><sup class="vnum" title="Select verse">'+v.num+'</sup>'+v.text.replace(/\n\n/g,'<br><br>')+'</span>';
   }).join(' ');
   document.getElementById('scrdisplay').innerHTML='<div class="scrtext">'+html+'</div>';
 }
@@ -304,6 +304,25 @@ function scrSelectVerse(idx){
   if(idx<0||idx>=chunks.length)return;
   _scrSelectedIdx=idx;
   highlightScrVerse(idx);
+}
+/**
+ * v4.68.3: click/tap handler for the whole verse in the Scripture panel (text and number), matching the Read tab
+ * (readVerseTap, v4.55.0). Selects the verse; tapping the selected verse again clears the selection. Does nothing
+ * while the user is dragging/holding to select text (copying still works), and never deselects while the panel's
+ * audio is playing.
+ * @param {number} idx - Index into _scrVerses / the TTS chunk array.
+ */
+function scrVerseTap(idx){
+  var sel=window.getSelection&&window.getSelection();
+  if(sel&&String(sel).length>0)return;
+  var playing=(_ttsSource==='scr'&&_ttsActive);
+  if(!playing&&_scrSelectedIdx===idx){scrDeselectVerse();return;}
+  scrSelectVerse(idx);
+}
+/** v4.68.3: clears the Scripture panel's selected verse and its focus effect. */
+function scrDeselectVerse(){
+  _scrSelectedIdx=null;
+  clearScrFocus();
 }
 /**
  * Skips Scripture-panel TTS playback forward or backward by one verse.
@@ -3479,7 +3498,7 @@ function openBibleToolsFromStudy(){
 export {
   // S11 — Bible API
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText, fetchGroundData,
-  getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
+  getScrVerseChunks, getScrStartIdx, scrSelectVerse, scrVerseTap, scrDeselectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
   // S12b — Bible Tools (v4.40.0; Translation Comparison v4.42.0; Interlinear v4.43.0)
   openBibleTools, openBibleToolsFromStudy, btToggleTool, btToggleVerse, btRetry,

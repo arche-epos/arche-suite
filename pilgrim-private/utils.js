@@ -585,7 +585,14 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.68.2',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    version:'4.68.3',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: in a study's Scripture panel, tap anywhere on a verse to select it, like Read (before, only the verse number worked). Tap the selected verse again to clear it. Pressing and dragging to copy text still works."
+    ]
+  },
+  {
+    version:'4.68.2',date:'Nov 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: tapping the Study tab with no study open used to show an empty Study screen where notes could not be saved and Bible Tools said Load a passage first even with a passage showing. It now opens the new-study template picker instead."
