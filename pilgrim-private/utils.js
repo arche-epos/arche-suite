@@ -584,7 +584,20 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.68.3',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    version:'4.69.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Pilgrim now OPENS with no signal. Open it once online, wait a moment while it saves itself, and from then on it starts from the app icon even in airplane mode: Library, Read (with downloaded Bible versions), Study with the notes editor, Bible Tools with downloaded study data. Your studies, downloads, settings and backups are not touched.",
+      "new: Settings > Offline Downloads has an Offline app line with a Turn off / Turn on button. Turning it off removes the saved app files from this device and keeps it off until you turn it on again.",
+      "new: when a newer version is ready, the Update ready banner appears as before. Refresh Now now switches over cleanly (one reload) instead of showing the old saved copy.",
+      "change: Pilgrim no longer clears every saved file on the whole website when the version changes; it only removes its own leftovers, so Scribe and Pilgrim Public keep theirs. Force refresh does the same.",
+      "change: the editor, sanitiser, PDF and Word-import libraries are now kept inside the app instead of loading from a public CDN, and the app has a real install icon file, so it can be added to the home screen as an app.",
+      "change: entering a PIN with no connection now says you need to connect once to sign in; a signed-in phone opens offline with no PIN prompt.",
+      "safety: a remote off switch (sw-kill.json) and a self-destruct backup exist in case a release ever misbehaves. They only remove the saved app files; they never touch studies, downloads or backups."
+    ]
+  },
+  {
+    version:'4.68.3',date:'Nov 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: in a study's Scripture panel, tap anywhere on a verse to select it, like Read (before, only the verse number worked). Tap the selected verse again to clear it. Pressing and dragging to copy text still works."

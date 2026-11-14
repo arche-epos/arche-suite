@@ -11,8 +11,8 @@
  *
  * What it NEVER touches (the browser handles these as if no worker existed)
  *   - /data/* (offline packs use their own fetch + IndexedDB), /auth/* and every Worker/API call,
- *     bolls.life, bible-api.com, the pdf.js CDN, and any request with cache:'no-store' / 'reload' or a ?t= parameter
- *     (so the update check sees the real server).
+ *     bolls.life, bible-api.com, the pdf.js CDN, and any non-navigation request with cache:'no-store' or a ?t=
+ *     parameter (so the update check sees the real server). Page navigations, including reloads, are always answered.
  *
  * Updates: a new worker installs in the background and WAITS. The page shows the "Update ready" banner; Refresh Now
  * posts SKIP_WAITING. There is no skipWaiting at install.
@@ -26,37 +26,37 @@
 'use strict';
 
 /* VERSION:BEGIN */
-const VERSION = '4.68.3';
+const VERSION = '4.69.0';
 /* VERSION:END */
 /* PRECACHE:BEGIN */
 const PRECACHE = [
-  'app.js?v=4.68.3',
+  'app.js?v=4.69.0',
   'icons/icon-192.png',
   'icons/icon-512-maskable.png',
   'icons/icon-512.png',
   'index.html',
   'manifest.json',
-  'media.js?v=4.68.3',
-  'memory-core.js?v=4.68.3',
-  'memory.js?v=4.68.3',
-  'morph.js?v=4.68.3',
-  'offline.js?v=4.68.3',
-  'readingplan-core.js?v=4.68.3',
-  'readingplan-data.js?v=4.68.3',
-  'readingplan.js?v=4.68.3',
-  'shell.js?v=4.68.3',
-  'storage.js?v=4.68.3',
-  'studyTools.js?v=4.68.3',
-  'sync.js?v=4.68.3',
-  'tts.js?v=4.68.3',
-  'ui.js?v=4.68.3',
-  'utils.js?v=4.68.3',
+  'media.js?v=4.69.0',
+  'memory-core.js?v=4.69.0',
+  'memory.js?v=4.69.0',
+  'morph.js?v=4.69.0',
+  'offline.js?v=4.69.0',
+  'readingplan-core.js?v=4.69.0',
+  'readingplan-data.js?v=4.69.0',
+  'readingplan.js?v=4.69.0',
+  'shell.js?v=4.69.0',
+  'storage.js?v=4.69.0',
+  'studyTools.js?v=4.69.0',
+  'sync.js?v=4.69.0',
+  'tts.js?v=4.69.0',
+  'ui.js?v=4.69.0',
+  'utils.js?v=4.69.0',
   'vendor/jspdf.umd.min.js',
   'vendor/mammoth.browser.min.js',
   'vendor/purify.min.js',
   'vendor/quill.min.js',
   'vendor/quill.snow.css',
-  'versemap.js?v=4.68.3'
+  'versemap.js?v=4.69.0'
 ];
 /* PRECACHE:END */
 
@@ -140,7 +140,11 @@ function checkKill() {
  */
 function bypass(req, url) {
   if (req.method !== 'GET') { return true; }
-  if (req.cache === 'no-store' || req.cache === 'reload') { return true; }
+  // Cache mode 'reload' is NOT a reason to bypass: Chrome marks a normal reload (and pull-to-refresh) of the page, and
+  // the files it loads, as cache:'reload', and the app must still open from the cache with no signal.
+  // Only an explicit no-store fetch or a ?t= cache-buster (the app's own update checks) goes to the real server.
+  if (req.mode === 'navigate') { return false; }
+  if (req.cache === 'no-store') { return true; }
   if (url.searchParams.has('t')) { return true; }
   return false;
 }
@@ -174,7 +178,7 @@ self.addEventListener('fetch', function (e) {
   var key = url.origin + url.pathname + url.search;
   if (PRECACHE.some(function (rel) { return abs(rel) === key; })) {
     e.respondWith(
-      caches.open(SHELL_CACHE).then(function (c) { return c.match(key); }).then(function (hit) {
+      caches.match(key, { cacheName: SHELL_CACHE }).then(function (hit) {   // match() never creates the cache (open() would, after a kill)
         return hit || fetch(req);
       })
     );
@@ -191,7 +195,7 @@ self.addEventListener('fetch', function (e) {
 function navigationResponse(req, url) {
   var shellIndex = abs('index.html');
   var fromCache = function () {
-    return caches.open(SHELL_CACHE).then(function (c) { return c.match(shellIndex); });
+    return caches.match(shellIndex, { cacheName: SHELL_CACHE });
   };
   if (url.searchParams.has('fresh')) {
     return fetch(req).catch(function () { return fromCache().then(function (r) { return r || Response.error(); }); });

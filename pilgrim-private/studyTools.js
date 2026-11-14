@@ -13,16 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.68.3';
+} from './utils.js?v=4.69.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.68.3';
-import { offlineBibleText, offlineGroundData, offlineHasPack, offlineCanRead, OFFLINE_DATA_CDN } from './offline.js?v=4.68.3';
-import { openConfirm } from './media.js?v=4.68.3';
-import { syncToGist } from './sync.js?v=4.68.3';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.68.3';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.68.3';
-import { decodeMorph } from './morph.js?v=4.68.3';
-import { hebrewVerses } from './versemap.js?v=4.68.3';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.69.0';
+import { offlineBibleText, offlineGroundData, offlineHasPack, offlineCanRead, OFFLINE_DATA_CDN } from './offline.js?v=4.69.0';
+import { openConfirm } from './media.js?v=4.69.0';
+import { syncToGist } from './sync.js?v=4.69.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.69.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.69.0';
+import { decodeMorph } from './morph.js?v=4.69.0';
+import { hebrewVerses } from './versemap.js?v=4.69.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.

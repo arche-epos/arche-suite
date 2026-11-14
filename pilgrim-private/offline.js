@@ -13,7 +13,7 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.68.3';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.69.0';
 
 /** Where the static study data lives: the same site Pilgrim is served from (archestudytools.com/data/), reached by a relative
  *  path so it is same-origin. v4.68.1: was a jsDelivr mirror, which answered 403 to some phones. studyTools.js reuses this as GROUND_CDN. */

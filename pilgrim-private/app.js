@@ -5,37 +5,37 @@
 
 import {
   CHANGELOG, setAppHeight, updateOffline, todayStr, logError
-} from './utils.js?v=4.68.3';
+} from './utils.js?v=4.69.0';
 
 import {
   wireCallbacks, loadStudies, autoSave, reportStorageSnapshot
-} from './storage.js?v=4.68.3';
+} from './storage.js?v=4.69.0';
 
 import {
   syncToGist, markDeleted
-} from './sync.js?v=4.68.3';
+} from './sync.js?v=4.69.0';
 
 import {
   loadTTSSett, initTTSVoices, ttsSyncAfterResume
-} from './tts.js?v=4.68.3';
+} from './tts.js?v=4.69.0';
 
-import { mediaInit } from './media.js?v=4.68.3';
+import { mediaInit } from './media.js?v=4.69.0';
 
-import { memWireSync } from './memory.js?v=4.68.3';
-import { rpWireSync } from './readingplan.js?v=4.68.3';
-import { cleanupLegacyWorkers } from './shell.js?v=4.68.3';
+import { memWireSync } from './memory.js?v=4.69.0';
+import { rpWireSync } from './readingplan.js?v=4.69.0';
+import { cleanupLegacyWorkers, startShell } from './shell.js?v=4.69.0';
 
 // Namespace imports give live bindings for all exports of each module
-import * as Utils from './utils.js?v=4.68.3';
-import * as Storage from './storage.js?v=4.68.3';
-import * as TTS from './tts.js?v=4.68.3';
-import * as Sync from './sync.js?v=4.68.3';
-import * as StudyTools from './studyTools.js?v=4.68.3';
-import * as UI from './ui.js?v=4.68.3';
-import * as Media from './media.js?v=4.68.3';
-import * as Memory from './memory.js?v=4.68.3';
-import * as ReadingPlan from './readingplan.js?v=4.68.3';
-import * as Offline from './offline.js?v=4.68.3';
+import * as Utils from './utils.js?v=4.69.0';
+import * as Storage from './storage.js?v=4.69.0';
+import * as TTS from './tts.js?v=4.69.0';
+import * as Sync from './sync.js?v=4.69.0';
+import * as StudyTools from './studyTools.js?v=4.69.0';
+import * as UI from './ui.js?v=4.69.0';
+import * as Media from './media.js?v=4.69.0';
+import * as Memory from './memory.js?v=4.69.0';
+import * as ReadingPlan from './readingplan.js?v=4.69.0';
+import * as Offline from './offline.js?v=4.69.0';
 
 // ── Wire storage callbacks (breaks storage ↔ ui circular dep) ───────────────
 wireCallbacks({
@@ -129,7 +129,10 @@ setInterval(autoSave, 30000);
 // (see shell.js). Idempotent: runs each boot, reloads once only if something old was actually found.
 (function() {
   cleanupLegacyWorkers().then(function(found) {
-    if (found) { window.location.reload(); }
+    if (found) { window.location.reload(); return; }
+    // v4.69.0 (Offline Phase 5): register the app-shell worker (honours the Settings "Offline app" switch and the
+    // sw-kill.json kill switch). Runs after the legacy cleanup so an old worker is never left competing with ours.
+    startShell(UI.onShellUpdateReady);
   });
 })();
 
@@ -181,6 +184,7 @@ function startPilgrim() {
     }
   } catch (e) { /* cosmetic only */ }
   UI.checkForUpdate();
+  UI.renderOfflineAppSetting();
   UI.tourCleanupDemoData();
   UI.checkAiLockdownNotice(); // v4.47.0 one-time notice
 }

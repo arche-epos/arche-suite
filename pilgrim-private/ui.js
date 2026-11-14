@@ -30,29 +30,29 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.68.3';
-import { cleanupLegacyWorkers } from './shell.js?v=4.68.3';
+} from './utils.js?v=4.69.0';
+import { cleanupLegacyWorkers, setOfflineAppEnabled, getOfflineAppStatus, checkWorkerUpdate, applyUpdate, goFresh } from './shell.js?v=4.69.0';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.68.3';
+} from './storage.js?v=4.69.0';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.68.3';
+} from './media.js?v=4.69.0';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.68.3';
+} from './tts.js?v=4.69.0';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.68.3';
+} from './sync.js?v=4.69.0';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -73,13 +73,13 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.68.3';
+} from './studyTools.js?v=4.69.0';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.68.3';
-import { renderOfflineSection, offlineCanRead } from './offline.js?v=4.68.3';
-import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.68.3';
+} from './memory.js?v=4.69.0';
+import { renderOfflineSection, offlineCanRead } from './offline.js?v=4.69.0';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.69.0';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -814,7 +814,7 @@ function navTo(id){
   // Study tab always lands on the Notes sub-tab (v1 — "remember last sub-tab" deferred, spec v4)
   if(id==='study')switchStudyTab('notes');
   if(id==='stats')renderStats();
-  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();renderStorageMeter();renderOfflineSection();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
+  if(id==='settings'){renderTagManager();renderChangelog();renderErrorLog();renderTransSpectrum();renderStorageMeter();renderOfflineSection();renderOfflineAppSetting();if(!localStorage.getItem(SK_TOUR_SETTINGS_SEEN)&&!window._skipSettingsTourOnce)setTimeout(function(){startTour('settings');},300);}
 }
 /**
  * Switches between the Study tab's Notes and Study Tools sub-panels.
@@ -4216,7 +4216,9 @@ async function submitPin(){
     if(ov)ov.classList.remove('on');
     window.startPilgrim();
   }catch(e){
-    if(errEl)errEl.textContent='Connection error — check your internet and try again';
+    if(errEl)errEl.textContent=(navigator.onLine===false)
+      ?'You are offline. Connect once to sign in with your PIN; after that Pilgrim opens without internet.'
+      :'Connection error — check your internet and try again';
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -4284,6 +4286,7 @@ function updateWordCount(){
  * — no banner, no error shown to the user.
  */
 function checkForUpdate(){
+  checkWorkerUpdate(); // v4.69.0: ask the offline app-shell worker to look for a new release too (silent; the banner follows if one installs)
   fetch('./utils.js?t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.text();})
     .then(function(html){
@@ -4303,7 +4306,22 @@ function checkForUpdate(){
  * "Refresh Now" handler — reloads the page to load the newer version detected
  * by checkForUpdate().
  */
-function refreshForUpdate(){window.location.reload();}
+function refreshForUpdate(){
+  // v4.69.0: with the offline app shell installed, a plain reload would serve the OLD cached shell. Activate the waiting
+  // worker instead (the page reloads once when it takes over); with no worker, reload on a ?fresh= URL.
+  applyUpdate().then(function(handled){if(!handled)goFresh();});
+}
+/**
+ * Called by shell.js when a new app-shell worker has installed and is waiting. Shows the same "Update ready" banner
+ * unless the person already skipped that exact version.
+ * @param {string} version - the waiting worker's version ('' if it did not answer)
+ */
+function onShellUpdateReady(version){
+  if(version&&localStorage.getItem(SK_UPDATE_SKIP)===version)return;
+  _pendingUpdateVersion=version||_pendingUpdateVersion;
+  var b=document.getElementById('update-banner');
+  if(b)b.classList.add('on');
+}
 /**
  * "Skip" handler — dismisses the banner for the specific version that was
  * detected. Stored un-namespaced (device-level, not per-user) since this is
@@ -4315,6 +4333,56 @@ function dismissUpdateBanner(){
   if(_pendingUpdateVersion)localStorage.setItem(SK_UPDATE_SKIP,_pendingUpdateVersion);
   var b=document.getElementById('update-banner');
   if(b)b.classList.remove('on');
+}
+
+// ── Settings > Offline Downloads: "Offline app" switch (v4.69.0) ────────────────────────────────────────────
+var _offlineAppPoll=null;
+/**
+ * Draws the "Offline app" line in Settings > Offline Downloads: current status plus a Turn off / Turn on button.
+ * While the worker is still installing it re-checks once a second (up to 15 times). Never throws.
+ */
+function renderOfflineAppSetting(){
+  var el=document.getElementById('offline-app-box');
+  if(!el)return Promise.resolve();
+  return getOfflineAppStatus().then(function(st){
+    var text={
+      ready:'On. Pilgrim opens with no signal once it has been opened online.',
+      starting:'Turning on. Keep Pilgrim open online for a moment while it saves itself.',
+      off:'Off. Pilgrim needs a connection to open.',
+      killed:'Switched off remotely for now. Pilgrim works as usual when online.',
+      unsupported:'This browser cannot open Pilgrim offline.'
+    }[st]||'';
+    var btn='';
+    if(st==='off')btn='<button class="btn btn-sec" id="offline-app-btn" onclick="toggleOfflineApp()">Turn on</button>';
+    else if(st==='ready'||st==='starting'||st==='killed')btn='<button class="btn btn-ghost" id="offline-app-btn" onclick="toggleOfflineApp()">Turn off</button>';
+    el.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">Offline app</div>'
+      +'<div id="offline-app-status" class="setsub" style="margin:2px 0 0">'+text+'</div></div>'+btn+'</div>';
+    clearTimeout(_offlineAppPoll);
+    if(st==='starting'){
+      _offlineAppPoll=setTimeout(function(){
+        _offlineAppTries=(_offlineAppTries||0)+1;
+        if(_offlineAppTries<=15)renderOfflineAppSetting();
+      },1000);
+    }else{_offlineAppTries=0;}
+  }).catch(function(){});
+}
+var _offlineAppTries=0;
+/**
+ * Settings "Turn off" / "Turn on" for the offline app shell. Off removes the worker and its shell caches (studies,
+ * downloads and settings are never touched) and keeps it off; On registers it again.
+ */
+function toggleOfflineApp(){
+  var btn=document.getElementById('offline-app-btn');
+  if(btn)btn.disabled=true;
+  getOfflineAppStatus().then(function(st){
+    var turnOn=(st==='off');
+    return setOfflineAppEnabled(turnOn,onShellUpdateReady).then(function(){
+      toast(turnOn?'Offline app turned on':'Offline app turned off');
+      _offlineAppTries=0;
+      return renderOfflineAppSetting();
+    });
+  });
 }
 
 // ── Settings > About (v4.45.0) ──────────────────────────────────────────────
@@ -4484,7 +4552,7 @@ export {
   // S27-partial — PIN Auth UI
   initPinGate, submitPin, switchUser, checkAiLockdownNotice, ackAiLockdownNotice,
   // S28-partial — Startup helpers
-  updateWordCount, checkForUpdate,
+  updateWordCount, checkForUpdate, onShellUpdateReady, renderOfflineAppSetting, toggleOfflineApp,
   refreshForUpdate, dismissUpdateBanner,
   checkAboutUpdate, forceRefreshApp, aboutReload,
   // Pilgrim Guide — App Help mode (added Sep 7 2026)

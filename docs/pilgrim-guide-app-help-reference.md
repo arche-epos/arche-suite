@@ -142,7 +142,9 @@ that avoids the excluded list.
   **Progress**, **Settings**. On a phone or tablet they run along the top; on a
   desktop they are a sidebar on the left.
 - The app shows "Offline" when there is no connection. Pilgrim Guide, the AI
-  tools, and Study Sync need internet.
+  tools, and Study Sync need internet. Once the app has been opened online it
+  also OPENS with no connection (v4.69.0): Library, Read (downloaded versions),
+  Study and the notes editor work; the first sign-in with a PIN needs internet.
 
 ### Library (home)
 - Find a study I saved → **Library > Studies** tab; tap a study to open it
@@ -357,7 +359,7 @@ that avoids the excluded list.
 ### Settings
 Settings sections, top to bottom: Study Sync, Appearance, Listen / Text-to-Speech,
 Available Translations, About Translations, Study Tags, Share Arché · Pilgrim,
-Data & Storage, Account, About, What's New, Error Log, Diagnostics, Guided Tours.
+Data & Storage, Offline Downloads, Account, About, What's New, Error Log, Diagnostics, Guided Tours.
 - "Back up my studies" is AMBIGUOUS — two separate, unrelated mechanisms
   both use the word "backup." Do NOT answer directly; ask which one the user
   means:
@@ -390,6 +392,11 @@ Data & Storage, Account, About, What's New, Error Log, Diagnostics, Guided Tours
 - Erase everything and start over → **Settings > Data & Storage > Clear All
   Data** (destructive — confirm the user actually wants this before treating it
   as routine)
+- Use the app with no internet → open it once online and wait a moment; it then
+  starts from the app icon with no signal. Check or change this → **Settings >
+  Offline Downloads > Offline app** (**Turn off** / **Turn on**). Bible versions
+  and study data for offline use are saved from the same section (**Download**).
+  Turning the Offline app off never deletes studies, downloads or backups.
 - Switch to a different user/PIN → **Settings > Account > Switch User**
 - See which app version I'm on, or check whether a newer version is live →
   **Settings > About** (shows the version; **Check for updates** says whether
