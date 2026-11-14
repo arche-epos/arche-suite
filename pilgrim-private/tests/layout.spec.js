@@ -32,7 +32,11 @@ for (const width of [360, 390]) {
         if (r.width < 4 || r.height < 4) return;
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' || cs.display === 'none' || el.offsetParent === null) return;
-        const hit = r.left < fab.right && r.right > fab.left && r.top < fab.bottom && r.bottom > fab.top;
+        // v4.68.2: measure against the round button (nearest point of the control to the circle's centre), not its square box;
+        // a real study puts the translation select's box corner inside the FAB's box but outside the circle.
+        const cx = (fab.left + fab.right) / 2, cy = (fab.top + fab.bottom) / 2, rad = fab.width / 2;
+        const nx = Math.max(r.left, Math.min(cx, r.right)), ny = Math.max(r.top, Math.min(cy, r.bottom));
+        const hit = Math.hypot(nx - cx, ny - cy) < rad;
         if (hit) out.push((el.id || el.className || el.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
       });
       return out;
@@ -42,7 +46,7 @@ for (const width of [360, 390]) {
       await boot(page, baseURL);
       for (const id of ['library', 'study', 'read', 'stats', 'settings']) {
         await page.click('#nav-' + id);
-        if (id === 'study') continue; // Study has its own tests below (Guide-button check and sideways scroll)
+        if (id === 'study') { await expect(page.locator('#tpl-overlay')).toHaveClass(/\bon\b/); await page.evaluate(() => window.closeOverlay('tpl-overlay')); continue; } // Study has its own tests below; v4.68.2: with no study open the tab offers the template picker
         expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), 'sideways scroll on ' + id).toBe(false);
         const hits = await page.evaluate(fabCollisions);
         expect(hits, 'controls under the Guide button on ' + id).toEqual([]);
@@ -53,13 +57,13 @@ for (const width of [360, 390]) {
     // edge of the "Listen" button (about 56px at 390px). Fixed in v4.63.3 (the button row keeps a 64px lane for the Guide button).
     test('Study > Notes: no control sits under the Guide button', async ({ page, baseURL }) => {
       await boot(page, baseURL);
-      await page.click('#nav-study');
+      await page.evaluate(() => window.createFromTemplate('blank'));   // v4.68.2: a real, empty study (the Study tab alone now opens the template picker)
       expect(await page.evaluate(fabCollisions), 'controls under the Guide button on study').toEqual([]);
     });
 
     test('Study screen has no sideways scroll', async ({ page, baseURL }) => {
       await boot(page, baseURL);
-      await page.click('#nav-study');
+      await page.evaluate(() => window.createFromTemplate('blank'));   // v4.68.2
       expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)).toBe(false);
     });
 

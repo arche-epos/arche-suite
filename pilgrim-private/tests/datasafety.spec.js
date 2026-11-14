@@ -412,9 +412,12 @@ test.describe('Pilgrim Private: data safety (qa-local, localhost only)', () => {
         for (;;) { try { localStorage.setItem('qa_fill_' + i, 'x'.repeat(size)); i++; } catch (e) { break; } }
       }
     });
-    await page.click('#nav-study');
-    await expect(page.locator('#scr-study')).toHaveClass(/\bon\b/);
+    await page.click('#nav-study');   // v4.68.2: with no study open this offers the template picker (the hints still close)
+    await expect(page.locator('#tpl-overlay')).toHaveClass(/\bon\b/);
     await expect(page.locator('nav.tab-hints-on')).toHaveCount(0);
+    await page.evaluate(() => window.closeOverlay('tpl-overlay'));
+    await page.click('#nav-read');
+    await expect(page.locator('#scr-read')).toHaveClass(/\bon\b/);
     await page.click('#nav-library');
     await expect(page.locator('#scr-library')).toHaveClass(/\bon\b/);
     expect(app.errors, 'uncaught errors:\n' + app.errors.join('\n')).toEqual([]);

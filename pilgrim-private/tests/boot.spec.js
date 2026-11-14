@@ -42,6 +42,11 @@ test.describe('Pilgrim Private — no-login boot check', () => {
     const errors = await boot(page, baseURL);
     for (const id of ['study', 'read', 'stats', 'settings', 'library']) {
       await page.click('#nav-' + id);
+      if (id === 'study') {   // v4.68.2: with no study open the Study tab offers the template picker instead of an empty screen
+        await expect(page.locator('#tpl-overlay')).toHaveClass(/\bon\b/);
+        await page.evaluate(() => window.closeOverlay('tpl-overlay'));
+        continue;
+      }
       await expect(page.locator('#scr-' + id)).toHaveClass(/\bon\b/);
       await expect(page.locator('#nav-' + id)).toHaveClass(/\bon\b/);
     }
@@ -58,7 +63,8 @@ test.describe('Pilgrim Private — no-login boot check', () => {
   test('no screen scrolls sideways at 390px', async ({ page, baseURL }) => {
     await boot(page, baseURL);
     for (const id of ['library', 'study', 'read', 'stats', 'settings']) {
-      await page.click('#nav-' + id);
+      if (id === 'study') await page.evaluate(() => window.createFromTemplate('blank'));   // v4.68.2: Study needs a real study open
+      else await page.click('#nav-' + id);
       const over = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
       expect(over, 'horizontal overflow on ' + id).toBe(false);
     }
