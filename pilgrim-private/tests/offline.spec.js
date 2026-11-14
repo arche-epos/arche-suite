@@ -12,6 +12,9 @@
 //   7. (v4.66.0) The five Bible text packs (the REAL data/bibles/*.json files, served through a faked CDN) download,
 //      then read with the CDN blocked: omitted verses say so, WEB keeps its published Romans numbering, the YLT
 //      has the Old Testament, and a file that is not a whole Bible installs nothing.
+//   8. (v4.67.0) Cross-references and the Old / New Testament interlinear (the REAL data/crossrefs and data/macula files,
+//      served through a faked CDN) download file by file, then answer fetchGroundData with the CDN blocked; each pack
+//      answers only its own books; a file that fails mid-download installs nothing.
 //
 // Only behavior that is verified good is asserted. The fake pack uses made-up text on purpose, so a test can never be
 // satisfied by real network text. Seeds qa-local in a throwaway context, blocks all non-local network, localhost only.
@@ -320,5 +323,88 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     await expect(page.locator('#offline-list')).toContainText('looks incomplete');
     expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
     await expect(page.locator('#offline-list [data-pack="bible-kjv"]')).toContainText('Download');
+  });
+
+  // ───────── v4.67.0: cross-references and interlinear, using the real data files ─────────
+  const STUDY_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/(crossrefs|macula)\//;
+  const DATA = path.join(__dirname, '..', '..', 'data');
+  const onDisk = rel => JSON.parse(fs.readFileSync(path.join(DATA, rel), 'utf8'));
+  /** Serves data/<dir>/<NN>.json from disk. `failAt` (optional) is a path fragment that answers 404 instead. */
+  async function serveStudy(page, failAt) {
+    await page.route(STUDY_CDN, r => {
+      const m = r.request().url().match(/\/data\/((?:crossrefs|macula)\/\d\d\.json)/);
+      if (!m || (failAt && m[1].includes(failAt))) return r.fulfill({ status: 404, headers: cors, body: '{}' });
+      r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: fs.readFileSync(path.join(DATA, m[1])) });
+    });
+  }
+  /** Downloads one study pack from Settings, then blocks the CDN and reloads so only the stored pack can answer. */
+  async function downloadStudy(page, id) {
+    await serveStudy(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="' + id + '"]').click();
+    await expect(page.locator('#offline-list [data-pack="' + id + '"]')).toContainText('Delete', { timeout: 120000 });
+    await page.unroute(STUDY_CDN);
+    await page.reload();
+    await ready(page);
+  }
+  const ground = (page, p) => page.evaluate(x => window.fetchGroundData(x).then(d => ({ ok: true, d }), e => ({ ok: false, d: String(e.message) })), p);
+  const packCounts = page => page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id + ':' + x.count)));
+
+  test('Cross-references download (66 books) and answer with the CDN blocked, only for their own path', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.evaluate(() => window.navTo('settings'));
+    await expect(page.locator('#offline-list')).toContainText('STUDY DATA');
+    for (const id of ['words-core', 'crossrefs', 'macula-nt', 'macula-ot']) await expect(page.locator('#offline-list [data-pack="' + id + '"]')).toContainText('Download');
+    await downloadStudy(page, 'crossrefs');
+    expect(await packCounts(page)).toEqual(['crossrefs:66']);
+    const john = await ground(page, 'crossrefs/43.json');
+    expect(john.ok).toBe(true);
+    expect(john.d).toEqual(onDisk('crossrefs/43.json'));
+    expect(Object.keys(john.d).length).toBeGreaterThan(100);
+    expect((await ground(page, 'macula/43.json')).ok, 'interlinear is not in the cross-reference pack').toBe(false);
+    expect(app.errors).toEqual([]);
+  });
+
+  test('Interlinear NT downloads 27 books; the Old Testament is not answered until its own pack is installed', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadStudy(page, 'macula-nt');
+    expect(await packCounts(page)).toEqual(['macula-nt:27']);
+    const john = await ground(page, 'macula/43.json');
+    expect(john.ok).toBe(true);
+    expect(john.d).toEqual(onDisk('macula/43.json'));
+    expect(john.d['1:1'][0].strongs).toBe('G1722');
+    expect((await ground(page, 'macula/66.json')).ok).toBe(true);
+    expect((await ground(page, 'macula/01.json')).ok, 'Genesis is Old Testament: not in the NT pack').toBe(false);
+    expect(app.errors).toEqual([]);
+  });
+
+  test('Interlinear OT downloads 39 books and answers Genesis to Malachi with no network', async ({ browser, baseURL }) => {
+    test.setTimeout(180000);
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadStudy(page, 'macula-ot');
+    expect(await packCounts(page)).toEqual(['macula-ot:39']);
+    for (const n of ['01', '19', '39']) expect((await ground(page, 'macula/' + n + '.json')).d).toEqual(onDisk('macula/' + n + '.json'));
+    expect((await ground(page, 'macula/40.json')).ok, 'Matthew is New Testament: not in the OT pack').toBe(false);
+    expect(app.errors).toEqual([]);
+  });
+
+  test('a study pack where one file fails mid-download installs nothing and can be retried', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await serveStudy(page, 'macula/60.json');          // 21 of 27 files succeed, then 404
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="macula-nt"]').click();
+    await expect(page.locator('#offline-list')).toContainText('could not be downloaded', { timeout: 60000 });
+    expect(await packCounts(page)).toEqual([]);
+    expect(await page.evaluate(() => window.offlineGet('macula-nt', 'macula/40.json')), 'files stored before the failure must be removed').toBeNull();
+    await expect(page.locator('#offline-list [data-pack="macula-nt"]')).toContainText('Download');
+    await page.unroute(STUDY_CDN);                      // retry with a good CDN
+    await serveStudy(page);
+    await page.locator('#offline-list [data-pack="macula-nt"]').click();
+    await expect(page.locator('#offline-list [data-pack="macula-nt"]')).toContainText('Delete', { timeout: 60000 });
+    expect(await packCounts(page)).toEqual(['macula-nt:27']);
   });
 });

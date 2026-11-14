@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.66.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    version:'4.67.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Settings > Offline Downloads > Study data now has Cross-references (about 4 MB), Interlinear: New Testament (about 13 MB) and Interlinear: Old Testament (about 31 MB). Download them once, with internet, and the Cross-References tool and the Interlinear word view work with no connection.",
+      "improved: study data now downloads and saves one file at a time instead of all at once, so the large Old Testament download does not need much memory. If any file fails, nothing from that download is kept and you can try again.",
+      "note: sources are OpenBible.info (CC BY), MACULA Greek and Hebrew glosses (Clear-Bible, CC BY 4.0) and the Open Scriptures Hebrew Bible. Downloads stay apart from your studies and backups, and Clear All Data does not remove them. No study, tag or setting data is changed. Cache-buster bumped to 4.67.0."
+    ]
+  },
+  {
+    version:'4.66.0',date:'Nov 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Settings > Offline Downloads now has Bible text: KJV, ASV, WEB, YLT and Darby (about 5 MB each, whole Bible). Download a version once, with internet, and you can read it, pull it into a study, and use it in Scripture Memory and Reading Plans with no connection.",

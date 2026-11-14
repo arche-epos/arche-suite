@@ -1,4 +1,4 @@
-// offline.js — Pilgrim Private: offline downloads store (Phase 1, v4.64.0 — Nov 2026)
+// offline.js — Pilgrim Private: offline downloads store (Phase 1, v4.64.0; word data 4.65.0; Bible text 4.66.0; cross-references and interlinear 4.67.0 — Nov 2026)
 // Spec: spec-offline-packs-v2.md (Project Knowledge). Phase 1 = the store, the Settings section and the lookup hook.
 // No pack content ships in this phase; Bible text packs arrive in Phase 3, word-tool packs in Phase 2.
 //
@@ -13,7 +13,7 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.66.0';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.67.0';
 
 /** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
 export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
@@ -22,10 +22,28 @@ export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suit
  * Downloadable packs. `files` are paths under OFFLINE_DATA_CDN; each is stored parsed under its own path, so
  * fetchGroundData(path) can be answered from the phone. Bump `version` when the files change (Settings then offers Update).
  */
+/** Paths "<prefix>NN.json" for Bible book numbers from..to (two digits, 01 = Genesis, 66 = Revelation). */
+function bookFiles(prefix, from, to) {
+  var out = [];
+  for (var n = from; n <= to; n++) out.push(prefix + (n < 10 ? '0' + n : '' + n) + '.json');
+  return out;
+}
+
 var OFFLINE_CATALOG = [
   { id: 'words-core', name: 'Word study data', about: 'Hebrew and Greek dictionaries and the word index, for Look Up Word and word lists',
     version: '1', approxMB: 4.9, license: 'Open Scriptures (CC BY-SA / public domain)',
     files: ['strongs/hebrew.json', 'strongs/greek.json', 'strongs/gloss-index.json', 'strongs/occurrence-index.json'] },
+  // v4.67.0 study-data packs: one file per Bible book, stored under its own path (like words-core), so the existing
+  // fetchGroundData(path) lookup answers from the phone. Installed file by file (see offlineInstallStreamed).
+  { id: 'crossrefs', name: 'Cross-references', about: 'the top cross-references for every verse, for the Cross-References tool',
+    version: '1', approxMB: 4.2, license: 'OpenBible.info Cross-References (CC BY)',
+    files: bookFiles('crossrefs/', 1, 66) },
+  { id: 'macula-nt', name: 'Interlinear: New Testament', about: 'Greek words, Strong\'s numbers, morphology and English glosses for Matthew to Revelation',
+    version: '1', approxMB: 13.1, license: 'MACULA Greek, Biblica / Clear-Bible (CC BY 4.0)',
+    files: bookFiles('macula/', 40, 66) },
+  { id: 'macula-ot', name: 'Interlinear: Old Testament', about: 'Hebrew words, Strong\'s numbers, morphology and English glosses for Genesis to Malachi',
+    version: '1', approxMB: 31, license: 'Open Scriptures Hebrew Bible (CC BY) with MACULA Hebrew glosses, Clear-Bible (CC BY 4.0)',
+    files: bookFiles('macula/', 1, 39) },
   // v4.66.0 Bible text packs. `file` is ONE JSON under OFFLINE_DATA_CDN shaped {"<bookNum>:<chapter>": [{verse,text}]}; the
   // download splits it into one stored entry per chapter, which is what offlineBibleText() reads. Built by data/build-bibles.py.
   { id: 'bible-kjv', kind: 'bible', name: 'King James Version (KJV)', about: 'the whole Bible', file: 'bibles/kjv.json',
@@ -39,7 +57,7 @@ var OFFLINE_CATALOG = [
   { id: 'bible-darby', kind: 'bible', name: 'Darby Bible (Darby)', about: 'the whole Bible', file: 'bibles/darby.json',
     version: '1', approxMB: 4.8, license: 'Public domain (1890). Source: eBible.org' }
 ];
-var GROUND_PACKS = ['words-core']; // packs consulted by offlineGroundData, in order (Phase 4 adds crossrefs and interlinear)
+var GROUND_PACKS = ['words-core', 'crossrefs', 'macula-nt', 'macula-ot']; // packs consulted by offlineGroundData, in order
 
 var DB_NAME = 'pilgrimOffline';
 var DB_VERSION = 1;
@@ -129,6 +147,38 @@ export function offlineInstallPack(meta, entries, onProgress) {
     return next();
   }).then(function () {
     var rec = { id: id, name: meta.name || id, version: String(meta.version || '1'), format: 'json', size: size, count: total, installedAt: Date.now(), license: meta.license || '' };
+    return run(['packs'], 'readwrite', function (t) { t.objectStore('packs').put(rec, id); }).then(function () { return rec; });
+  }).catch(function (err) {
+    return offlineRemovePack(id).catch(function () {}).then(function () { throw err; });
+  });
+}
+
+/**
+ * Installs (or replaces) a pack one file at a time, so a large pack (the 31 MB Old Testament interlinear) never has to
+ * sit in memory all at once. Same safety rules as offlineInstallPack: the old copy is cleared first, the pack's metadata
+ * is written LAST (a pack only "exists" once every file is stored), and any failure removes everything written so far
+ * and rethrows. Files are fetched and stored strictly in order.
+ * @param {{id:string,name:string,version:string,license?:string}} meta - Pack description.
+ * @param {string[]} keys - One key per file (here: the file's path under the data CDN).
+ * @param {function(string):Promise<*>} load - Resolves the payload (plain JSON data) for one key; may reject.
+ * @returns {Promise<object>} The stored metadata record.
+ */
+export function offlineInstallStreamed(meta, keys, load) {
+  if (!meta || !meta.id || /\|/.test(meta.id)) return Promise.reject(new Error('Invalid pack id'));
+  var id = meta.id, size = 0, i = 0;
+  offlineRequestPersist();
+  return offlineRemovePack(id).then(function () {
+    function next() {
+      if (i >= keys.length) return Promise.resolve();
+      var key = keys[i];
+      return Promise.resolve(load(key)).then(function (payload) {
+        size += JSON.stringify(payload).length;
+        return run(['data'], 'readwrite', function (t) { t.objectStore('data').put(payload, dataKey(id, key)); });
+      }).then(function () { i++; return next(); });
+    }
+    return next();
+  }).then(function () {
+    var rec = { id: id, name: meta.name || id, version: String(meta.version || '1'), format: 'json', size: size, count: keys.length, installedAt: Date.now(), license: meta.license || '' };
     return run(['packs'], 'readwrite', function (t) { t.objectStore('packs').put(rec, id); }).then(function () { return rec; });
   }).catch(function (err) {
     return offlineRemovePack(id).catch(function () {}).then(function () { throw err; });
@@ -251,26 +301,30 @@ export function offlineDownloadPack(packId) {
   var paths = def.kind === 'bible' ? [def.file] : def.files;
   _dl = { id: packId, done: 0, total: paths.length };
   renderOfflineSection();
-  var entries = [];
   var v = '?v=' + encodeURIComponent(def.version);
-  return paths.reduce(function (chain, path) {
-    return chain.then(function () {
-      return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
-        if (!r.ok) throw new Error('A file could not be downloaded (code ' + r.status + ').');
-        return r.json();
-      }).then(function (data) {
-        if (def.kind === 'bible') {
-          // one file holds every chapter: store one entry per "book:chapter"; refuse a file that is not a whole Bible
-          var keys = Object.keys(data);
-          if (keys.length < 1100) throw new Error('A file could not be downloaded (it looks incomplete).');
-          keys.forEach(function (k) { entries.push([k, data[k]]); });
-        } else entries.push([path, data]);
-        _dl.done++; renderOfflineSection();
-      });
+  var meta = { id: def.id, name: def.name, version: def.version, license: def.license };
+  function fetchJson(path) {
+    return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
+      if (!r.ok) throw new Error('A file could not be downloaded (code ' + r.status + ').');
+      return r.json();
     });
-  }, Promise.resolve()).then(function () {
-    return offlineInstallPack({ id: def.id, name: def.name, version: def.version, license: def.license }, entries);
-  }).then(function () { toast(def.name + ' downloaded'); return true; })
+  }
+  var done;
+  if (def.kind === 'bible') {
+    // one file holds every chapter: store one entry per "book:chapter"; refuse a file that is not a whole Bible
+    done = fetchJson(def.file).then(function (data) {
+      var keys = Object.keys(data);
+      if (keys.length < 1100) throw new Error('A file could not be downloaded (it looks incomplete).');
+      _dl.done++; renderOfflineSection();
+      return offlineInstallPack(meta, keys.map(function (k) { return [k, data[k]]; }));
+    });
+  } else {
+    // study data, many files: fetch and store one at a time; nothing is kept if any file fails
+    done = offlineInstallStreamed(meta, def.files, function (path) {
+      return fetchJson(path).then(function (data) { _dl.done++; renderOfflineSection(); return data; });
+    });
+  }
+  return done.then(function () { toast(def.name + ' downloaded'); return true; })
     .catch(function (e) {
       logError('offlineDownloadPack', e);
       _dlErr[packId] = (e && e.name === 'QuotaExceededError') ? 'Not enough space on this device.' : (e && e.message && /^A file/.test(e.message)) ? e.message : 'Download failed. Check your connection and try again.';
@@ -298,13 +352,15 @@ export function renderOfflineSection() {
   var el = document.getElementById('offline-list');
   if (!el) return Promise.resolve();
   return offlineListPacks().then(function (packs) {
-    var byId = {}, total = 0, html = '', bibleHeadDone = false;
+    var byId = {}, total = 0, html = '', lastGroup = '';
     packs.forEach(function (p) { byId[p.id] = p; total += p.size || 0; });
     var rowStart = '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
     OFFLINE_CATALOG.forEach(function (c) {
-      if (c.kind === 'bible' && !bibleHeadDone) {
-        bibleHeadDone = true;
-        html += '<div style="font-size:12px;color:var(--gold);margin-top:12px;letter-spacing:.04em">BIBLE TEXT (read and pull into studies with no internet)</div>';
+      var group = c.kind === 'bible' ? 'bible' : 'study';
+      if (group !== lastGroup) {
+        lastGroup = group;
+        html += '<div style="font-size:12px;color:var(--gold);margin-top:12px;letter-spacing:.04em">' + (group === 'bible'
+          ? 'BIBLE TEXT (read and pull into studies with no internet)' : 'STUDY DATA (word tools, cross-references and interlinear)') + '</div>';
       }
       var p = byId[c.id], busy = _dl && _dl.id === c.id, err = _dlErr[c.id];
       var sub = busy ? (c.kind === 'bible' ? 'Downloading and saving\u2026' : 'Downloading file ' + Math.min(_dl.done + 1, _dl.total) + ' of ' + _dl.total + '\u2026')
