@@ -13,16 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.64.0';
+} from './utils.js?v=4.65.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.64.0';
-import { offlineBibleText } from './offline.js?v=4.64.0';
-import { openConfirm } from './media.js?v=4.64.0';
-import { syncToGist } from './sync.js?v=4.64.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.64.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.64.0';
-import { decodeMorph } from './morph.js?v=4.64.0';
-import { hebrewVerses } from './versemap.js?v=4.64.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.65.0';
+import { offlineBibleText, offlineGroundData, OFFLINE_DATA_CDN } from './offline.js?v=4.65.0';
+import { openConfirm } from './media.js?v=4.65.0';
+import { syncToGist } from './sync.js?v=4.65.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.65.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.65.0';
+import { decodeMorph } from './morph.js?v=4.65.0';
+import { hebrewVerses } from './versemap.js?v=4.65.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -427,7 +427,7 @@ function openTransDetail(abbr){
 // (Section 15) consume the strongs/gloss-index/occurrences files directly, without an
 // AI call for the factual lookup itself.
 // ════════════════════════════════════════════════════════
-var GROUND_CDN='https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
+var GROUND_CDN=OFFLINE_DATA_CDN; // one URL, defined in offline.js (the download uses the same one)
 // Per-session in-memory cache — a study session commonly runs 3-4 grounded tools
 // against the same book, so this avoids re-fetching the same per-book file repeatedly.
 var _groundCache={};
@@ -474,6 +474,9 @@ function _isContentWordMorph(morph,isOT){
  */
 async function fetchGroundData(path){
   if(_groundCache[path])return _groundCache[path];
+  // v4.65.0: a downloaded word-study pack on this phone is used first; null means not downloaded, so use the network
+  var offData=await offlineGroundData(path);
+  if(offData!==null){_groundCache[path]=offData;return offData;}
   // v4.60.3: the app version in the URL makes the phone's browser re-download this data after every release
   // (a changed data file used to stay cached on the phone for up to 12 h). jsDelivr ignores the query string.
   var r=await fetch(GROUND_CDN+path+'?v='+((CHANGELOG&&CHANGELOG[0]&&CHANGELOG[0].version)||'0'));
@@ -3463,7 +3466,7 @@ function openBibleToolsFromStudy(){
 // State setters and all public functions
 export {
   // S11 — Bible API
-  fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
+  fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText, fetchGroundData,
   getScrVerseChunks, getScrStartIdx, scrSelectVerse, highlightScrVerse, clearScrFocus, scrSkipVerse,
   copyScrip, openPasteModal, confirmPaste, openScrErrorModal, renderTransSpectrum, openTransDetail,
   // S12b — Bible Tools (v4.40.0; Translation Comparison v4.42.0; Interlinear v4.43.0)

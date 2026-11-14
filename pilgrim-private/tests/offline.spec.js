@@ -7,6 +7,8 @@
 //   3. A pack survives a reload, shows in Settings > Offline Downloads, and the two-tap Delete removes only that pack.
 //   4. Clear All Data leaves downloads alone, and the backup file never contains them.
 //   5. A failed install (a payload IndexedDB cannot store) leaves nothing half-installed.
+//   6. (v4.65.0) The Word study data pack downloads from a faked CDN, then fetchGroundData answers from the phone with
+//      the CDN blocked; one failing file installs nothing and shows an error; offline shows a clear message.
 //
 // Only behavior that is verified good is asserted. The fake pack uses made-up text on purpose, so a test can never be
 // satisfied by real network text. Seeds qa-local in a throwaway context, blocks all non-local network, localhost only.
@@ -112,7 +114,7 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     expect((await fetchText(page, 'John 3:16', 'kjv')).x).toBe('[16] zz-john-16');
 
     await page.evaluate(() => window.navTo('settings'));
-    const rows = page.locator('#offline-list [data-pack]');
+    const rows = page.locator('#offline-list [data-pack^="bible-"]'); // the Word study row is always listed too
     await expect(rows).toHaveCount(2);
     await expect(page.locator('#offline-list')).toContainText('Fake KJV');
     await expect(page.locator('#offline-list')).toContainText('MB');
@@ -158,5 +160,63 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     expect(await page.evaluate(() => window.offlineGet('bible-bad', '43:3'))).toBeNull();
     const idErr = await page.evaluate(() => window.offlineInstallPack({ id: 'a|b', name: 'x' }, []).then(() => 'no error', e => String(e && e.message || e)));
     expect(idErr).toContain('Invalid pack id');
+  });
+
+  const CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/strongs\//;
+  const cors = { 'access-control-allow-origin': '*', 'content-type': 'application/json' };
+
+  test('Word study data downloads, then study data is answered from the phone with the CDN blocked', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.route(CDN, r => r.fulfill({ status: 200, headers: cors, body: JSON.stringify({ fake: r.request().url().split('/').pop().split('?')[0] }) }));
+    await page.evaluate(() => window.navTo('settings'));
+    const btn = page.locator('#offline-list [data-pack="words-core"]');
+    await expect(btn).toContainText('Download');
+    await btn.click();
+    await expect(page.locator('#offline-list [data-pack="words-core"]')).toContainText('Delete');
+    const packs = await page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id + ':' + x.count)));
+    expect(packs).toEqual(['words-core:4']);
+
+    await page.unroute(CDN);                 // the CDN is blocked again (all non-local network is aborted)
+    await page.reload();                     // fresh page: the in-memory cache is empty, so only the pack can answer
+    await ready(page);
+    const gloss = await page.evaluate(() => window.fetchGroundData('strongs/gloss-index.json').then(x => ({ ok: true, x }), e => ({ ok: false, x: String(e.message) })));
+    expect(gloss).toEqual({ ok: true, x: { fake: 'gloss-index.json' } });
+    const heb = await page.evaluate(() => window.fetchGroundData('strongs/hebrew.json'));
+    expect(heb).toEqual({ fake: 'hebrew.json' });
+    const notInPack = await page.evaluate(() => window.fetchGroundData('strongs/occurrences.json').then(() => 'loaded', () => 'failed'));
+    expect(notInPack, 'a file that is not in the pack must fall through to the (blocked) network').toBe('failed');
+    expect(app.errors).toEqual([]);
+
+    // Deleting the pack removes the offline answer.
+    await page.evaluate(() => window.offlineRemovePack('words-core'));
+    await page.reload();
+    await ready(page);
+    const after = await page.evaluate(() => window.fetchGroundData('strongs/gloss-index.json').then(() => 'loaded', () => 'failed'));
+    expect(after).toBe('failed');
+  });
+
+  test('a download where one file fails installs nothing and shows an error', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.route(CDN, r => r.request().url().includes('greek.json')
+      ? r.fulfill({ status: 404, headers: cors, body: '{}' })
+      : r.fulfill({ status: 200, headers: cors, body: '{"ok":1}' }));
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="words-core"]').click();
+    await expect(page.locator('#offline-list')).toContainText('could not be downloaded');
+    expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
+    expect(await page.evaluate(() => window.offlineGet('words-core', 'strongs/hebrew.json'))).toBeNull();
+    await expect(page.locator('#offline-list [data-pack="words-core"]')).toContainText('Download');   // can try again
+  });
+
+  test('with no internet the Download button explains instead of failing', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.evaluate(() => window.navTo('settings'));
+    await app.ctx.setOffline(true);
+    await page.locator('#offline-list [data-pack="words-core"]').click();
+    await expect(page.locator('#offline-list')).toContainText('You are offline');
+    expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
   });
 });

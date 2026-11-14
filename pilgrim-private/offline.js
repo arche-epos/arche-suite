@@ -13,13 +13,29 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.64.0';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.65.0';
+
+/** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
+export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
+
+/**
+ * Downloadable packs. `files` are paths under OFFLINE_DATA_CDN; each is stored parsed under its own path, so
+ * fetchGroundData(path) can be answered from the phone. Bump `version` when the files change (Settings then offers Update).
+ */
+var OFFLINE_CATALOG = [
+  { id: 'words-core', name: 'Word study data', about: 'Hebrew and Greek dictionaries and the word index, for Look Up Word and word lists',
+    version: '1', approxMB: 4.9, license: 'Open Scriptures (CC BY-SA / public domain)',
+    files: ['strongs/hebrew.json', 'strongs/greek.json', 'strongs/gloss-index.json', 'strongs/occurrence-index.json'] }
+];
+var GROUND_PACKS = ['words-core']; // packs consulted by offlineGroundData, in order (Phase 4 adds crossrefs and interlinear)
 
 var DB_NAME = 'pilgrimOffline';
 var DB_VERSION = 1;
 var BATCH = 40;            // entries written per transaction while installing a pack
 var _db = null;
 var _armed = {};           // pack id -> true while its Delete button waits for a second tap
+var _dl = null;            // { id, done, total } while a download runs
+var _dlErr = {};           // pack id -> last download error text
 var _persisted = null;     // result of the last navigator.storage.persist()/persisted() check
 
 // ════════════════════════════════════════════════════════
@@ -184,6 +200,59 @@ export function offlineBibleText(ref, trans) {
   });
 }
 
+/**
+ * Offline study-data lookup for fetchGroundData(path). Returns the parsed file from a downloaded pack, or null
+ * (no pack, file missing, storage unavailable) so the caller falls through to the network. Never throws.
+ * @param {string} path - e.g. "strongs/gloss-index.json".
+ * @returns {Promise<*|null>}
+ */
+export function offlineGroundData(path) {
+  var i = 0;
+  function next() {
+    if (i >= GROUND_PACKS.length) return Promise.resolve(null);
+    return offlineGet(GROUND_PACKS[i++], path).then(function (v) { return v === null ? next() : v; });
+  }
+  return next();
+}
+
+/**
+ * Downloads a catalog pack: fetches each file (no partial installs: a failure keeps nothing), then stores them all.
+ * Updates the Settings section as it goes. Never throws; failures are shown on the pack row.
+ * @param {string} packId - A catalog id, e.g. "words-core".
+ * @returns {Promise<boolean>} true when installed.
+ */
+export function offlineDownloadPack(packId) {
+  var def = OFFLINE_CATALOG.filter(function (c) { return c.id === packId; })[0];
+  if (!def || _dl) return Promise.resolve(false);
+  if (navigator.onLine === false) { _dlErr[packId] = 'You are offline. Connect to the internet to download.'; renderOfflineSection(); return Promise.resolve(false); }
+  delete _dlErr[packId];
+  _dl = { id: packId, done: 0, total: def.files.length };
+  renderOfflineSection();
+  var entries = [];
+  var v = '?v=' + encodeURIComponent(def.version);
+  return def.files.reduce(function (chain, path) {
+    return chain.then(function () {
+      return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
+        if (!r.ok) throw new Error('A file could not be downloaded (code ' + r.status + ').');
+        return r.json();
+      }).then(function (data) { entries.push([path, data]); _dl.done++; renderOfflineSection(); });
+    });
+  }, Promise.resolve()).then(function () {
+    return offlineInstallPack({ id: def.id, name: def.name, version: def.version, license: def.license }, entries);
+  }).then(function () { toast(def.name + ' downloaded'); return true; })
+    .catch(function (e) {
+      logError('offlineDownloadPack', e);
+      _dlErr[packId] = (e && e.name === 'QuotaExceededError') ? 'Not enough space on this device.' : (e && e.message && /^A file/.test(e.message)) ? e.message : 'Download failed. Check your connection and try again.';
+      return false;
+    }).then(function (ok) { _dl = null; renderOfflineSection(); return ok; });
+}
+
+/** Click handler for a catalog pack's Download / Update button (data-pack holds the id). */
+export function offlineDownloadClick(btn) {
+  var id = btn && btn.getAttribute('data-pack');
+  if (id) offlineDownloadPack(id);
+}
+
 // ════════════════════════════════════════════════════════
 // SETTINGS > OFFLINE DOWNLOADS
 // ════════════════════════════════════════════════════════
@@ -191,30 +260,45 @@ export function offlineBibleText(ref, trans) {
 function mb(n) { return (n / 1000000).toFixed(1); }
 
 /**
- * Renders Settings > Offline Downloads: the installed packs with size and a two-tap Delete, the total, and whether
- * the browser has promised to keep them. Read-only apart from the Delete buttons. Never throws.
+ * Renders Settings > Offline Downloads: each downloadable pack with Download / Update / two-tap Delete, its size, any
+ * error, and whether the browser has promised to keep downloads. Read-only apart from the Delete buttons. Never throws.
  */
 export function renderOfflineSection() {
   var el = document.getElementById('offline-list');
   if (!el) return Promise.resolve();
   return offlineListPacks().then(function (packs) {
-    var html = '', total = 0;
-    if (!packs.length) {
-      html = '<div style="font-size:13px;color:var(--txt3);line-height:1.5">Nothing downloaded yet. Bible text and word-study downloads are coming in the next updates.</div>';
-    } else {
-      packs.forEach(function (p) {
-        total += p.size || 0;
-        var armed = !!_armed[p.id];
-        html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'
-          + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(p.name) + '</div>'
-          + '<div style="font-size:12px;color:var(--txt3)">' + mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.license ? ' &middot; ' + escHtml(p.license) : '') + '</div></div>'
-          + '<button class="btn ' + (armed ? 'btn-danger' : 'btn-ghost') + '" style="padding:8px 12px" data-pack="' + escHtml(p.id) + '" onclick="offlineDeleteClick(this)">' + (armed ? 'Tap again to delete' : 'Delete') + '</button></div>';
-      });
-      html += '<div style="font-size:12px;color:var(--txt3);margin-top:8px">Downloads use ' + mb(total) + ' MB. They are not part of backups and Clear All Data does not remove them.</div>';
-      if (_persisted === false) html += '<div style="font-size:12px;color:var(--gold);margin-top:4px">If this device runs low on space, it may clear these downloads. You can download them again.</div>';
-    }
+    var byId = {}, total = 0, html = '';
+    packs.forEach(function (p) { byId[p.id] = p; total += p.size || 0; });
+    var rowStart = '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+    OFFLINE_CATALOG.forEach(function (c) {
+      var p = byId[c.id], busy = _dl && _dl.id === c.id, err = _dlErr[c.id];
+      var sub = busy ? 'Downloading file ' + Math.min(_dl.done + 1, _dl.total) + ' of ' + _dl.total + '\u2026'
+        : p ? mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.version !== c.version ? ' &middot; <span style="color:var(--gold)">update available</span>' : '')
+        : 'about ' + c.approxMB + ' MB &middot; ' + escHtml(c.about);
+      html += rowStart + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(c.name) + '</div>'
+        + '<div style="font-size:12px;color:var(--txt3)">' + sub + '</div>'
+        + (err ? '<div style="font-size:12px;color:var(--crimsonbright)">' + escHtml(err) + '</div>' : '')
+        + '<div style="font-size:11px;color:var(--txt4)">' + escHtml(c.license) + '</div></div>';
+      if (busy) html += '<button class="btn btn-ghost" style="padding:8px 12px" disabled>Please wait</button>';
+      else if (p && p.version === c.version) html += deleteButton(p.id);
+      else html += '<button class="btn btn-sec" style="padding:8px 12px" data-pack="' + escHtml(c.id) + '" onclick="offlineDownloadClick(this)">' + (p ? 'Update' : 'Download') + '</button>';
+      html += '</div>';
+    });
+    packs.forEach(function (p) {
+      if (OFFLINE_CATALOG.some(function (c) { return c.id === p.id; })) return;
+      html += rowStart + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(p.name) + '</div>'
+        + '<div style="font-size:12px;color:var(--txt3)">' + mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.license ? ' &middot; ' + escHtml(p.license) : '') + '</div></div>' + deleteButton(p.id) + '</div>';
+    });
+    html += '<div style="font-size:12px;color:var(--txt3);margin-top:8px">' + (total ? 'Downloads use ' + mb(total) + ' MB. ' : '') + 'Bible text downloads are coming in an update. Downloads are not part of backups, and Clear All Data does not remove them.</div>';
+    if (total && _persisted === false) html += '<div style="font-size:12px;color:var(--gold);margin-top:4px">If this device runs low on space, it may clear these downloads. You can download them again.</div>';
     el.innerHTML = html;
   }).catch(function (e) { logError('renderOfflineSection', e); });
+}
+
+/** Two-tap Delete button markup for one pack row. */
+function deleteButton(id) {
+  var armed = !!_armed[id];
+  return '<button class="btn ' + (armed ? 'btn-danger' : 'btn-ghost') + '" style="padding:8px 12px" data-pack="' + escHtml(id) + '" onclick="offlineDeleteClick(this)">' + (armed ? 'Tap again to delete' : 'Delete') + '</button>';
 }
 
 /**

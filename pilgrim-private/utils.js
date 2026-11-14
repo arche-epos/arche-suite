@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.64.0',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    version:'4.65.0',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Settings > Offline Downloads now has Word study data (about 5 MB). Tap Download once, with internet, and Look Up Word and the word lists work with no connection afterwards. Delete removes it again.",
+      "note: Bible text and Interlinear / Cross-References downloads come in later updates, so passage text still needs internet for now.",
+      "note: downloads are kept apart from your studies and backups, and Clear All Data does not remove them. No study, tag or setting data is changed. Cache-buster bumped to 4.65.0."
+    ]
+  },
+  {
+    version:'4.64.0',date:'Nov 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Settings now has an Offline Downloads section. It is the foundation for reading the Bible and using study tools with no internet. Nothing can be downloaded yet; Bible text comes in the next update.",
