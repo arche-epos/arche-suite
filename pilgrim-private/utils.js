@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.4',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    version:'4.63.5',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: when your device storage is completely full, tapping a tab for the first time no longer causes an error; the tips just close and may appear again next launch.",
+      "fix: restoring an older backup no longer puts a tag you already deleted back onto your studies behind the scenes. Tags you still use are kept. Restore still makes a safety copy first, so Undo works.",
+      "note: no other data is changed. Cache-buster bumped to 4.63.5."
+    ]
+  },
+  {
+    version:'4.63.4',date:'Nov 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: a study title, passage reference or tag name that contains code-like text (for example text in angle brackets) is now shown as plain text on the Library cards and the Progress recent list, instead of being run as part of the page. This matters most for studies that arrive from a shared link.",

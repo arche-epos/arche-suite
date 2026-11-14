@@ -292,8 +292,10 @@ test.describe('Pilgrim Private: data safety (qa-local, localhost only)', () => {
     expect(after.tagsDel.map(d => d.id)).toContain('tag_a');
     expect(memView(after.mem), 'deleted verse came back').toEqual([['esv', 'The LORD is my shepherd; I shall not want.']]);
     expect(after.mem.deleted.map(d => d.id)).toContain(romans.id);
-    // The restored study still lists the dead tag id internally (an invisible leftover, noted for Boss, not asserted),
-    // but the dead tag must not show as a chip on its Library card, and the live tag must.
+    // v4.63.5: the dead tag id is no longer left behind on the restored studies (it used to stay there, invisible),
+    // and the dead tag must not show as a chip on its Library card, and the live tag must.
+    for (const st of after.studies) expect(st.tags || [], 'dead tag id left on study ' + st.title).not.toContain('tag_a');
+    expect(after.studies.some(st => (st.tags || []).includes('tag_b')), 'the live tag was stripped too').toBe(true);
     await page.click('#nav-library');
     const chips = await page.evaluate(() => {
       const card = [...document.querySelectorAll('.studycard')].find(c => c.textContent.indexOf('Plain study') >= 0);
@@ -392,6 +394,29 @@ test.describe('Pilgrim Private: data safety (qa-local, localhost only)', () => {
     await expect(banner).toHaveCount(0);
     const saved = (await snap(page)).studies.map(s => s.title);
     expect(saved).toContain('Study written while storage is full');
+    expect(app.errors, 'uncaught errors:\n' + app.errors.join('\n')).toEqual([]);
+  });
+
+  // v4.63.5: dismissTabHints saved its "seen" flag with an unguarded setItem, so with full storage the first tab tap threw.
+  test('full device storage: the first-run tab hints close and tab switching still works', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const page = app.page;
+    await seedStorage(page);
+    await page.evaluate(() => localStorage.removeItem('bsn_tab_hints_shown_qa-local'));
+    await page.reload();
+    await ready(page);
+    await expect(page.locator('nav.tab-hints-on'), 'the hints are not showing, so this test proves nothing').toHaveCount(1);
+    await page.evaluate(() => {
+      let i = 0;
+      for (let size = 500000; size >= 1; size = Math.floor(size / 2)) {
+        for (;;) { try { localStorage.setItem('qa_fill_' + i, 'x'.repeat(size)); i++; } catch (e) { break; } }
+      }
+    });
+    await page.click('#nav-study');
+    await expect(page.locator('#scr-study')).toHaveClass(/\bon\b/);
+    await expect(page.locator('nav.tab-hints-on')).toHaveCount(0);
+    await page.click('#nav-library');
+    await expect(page.locator('#scr-library')).toHaveClass(/\bon\b/);
     expect(app.errors, 'uncaught errors:\n' + app.errors.join('\n')).toEqual([]);
   });
 });

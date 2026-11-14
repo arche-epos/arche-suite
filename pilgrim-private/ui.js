@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.63.4';
+} from './utils.js?v=4.63.5';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.63.4';
+} from './storage.js?v=4.63.5';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.63.4';
+} from './media.js?v=4.63.5';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.63.4';
+} from './tts.js?v=4.63.5';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.63.4';
+} from './sync.js?v=4.63.5';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.63.4';
+} from './studyTools.js?v=4.63.5';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.63.4';
-import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.4';
+} from './memory.js?v=4.63.5';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.5';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -1710,6 +1710,11 @@ function importDataFromFile(input){
         DELETED_TAGS=mergedDeleted;
         persistDeletedTags();
         persistTags();
+        // v4.63.5: an older backup can bring a deleted tag's id back onto a study; drop ids on the deleted list (only those)
+        var _dead={};mergedDeleted.forEach(function(d){_dead[typeof d==='object'?d.id:d]=1;});
+        var _tagFix=false;
+        studies.forEach(function(s){if(Array.isArray(s.tags)&&s.tags.some(function(id){return _dead[id];})){s.tags=s.tags.filter(function(id){return !_dead[id];});_tagFix=true;}});
+        if(_tagFix)persist();
         renderTagManager();
         renderTagPicker();
       }
@@ -2953,7 +2958,7 @@ function checkTabHints(){
 function dismissTabHints(){
   if(document.querySelector('nav').classList.contains('tab-hints-on')){
     document.querySelector('nav').classList.remove('tab-hints-on');
-    localStorage.setItem(SK_TAB_HINTS,'1');
+    try{localStorage.setItem(SK_TAB_HINTS,'1');}catch(e){} // v4.63.5: a full device must not break tab switching (the hints may show again next launch)
   }
 }
 /**
