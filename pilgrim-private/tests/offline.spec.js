@@ -178,7 +178,7 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     expect(idErr).toContain('Invalid pack id');
   });
 
-  const CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/strongs\//;
+  const CDN = /\/data\/strongs\//;
   const cors = { 'access-control-allow-origin': '*', 'content-type': 'application/json' };
 
   test('Word study data downloads, then study data is answered from the phone with the CDN blocked', async ({ browser, baseURL }) => {
@@ -237,7 +237,7 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
   });
 
   // ───────── v4.66.0: Bible text packs, using the real built files ─────────
-  const BIBLE_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/bibles\//;
+  const BIBLE_CDN = /\/data\/bibles\//;
   const BIBLES = path.join(__dirname, '..', '..', 'data', 'bibles');
   /** Serves data/bibles/<name>.json from disk for any BIBLE_CDN request ending in that name. */
   async function serveBibles(page) {
@@ -331,7 +331,7 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
   });
 
   // ───────── v4.67.0: cross-references and interlinear, using the real data files ─────────
-  const STUDY_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/(crossrefs|macula)\//;
+  const STUDY_CDN = /\/data\/(crossrefs|macula)\//;
   const DATA = path.join(__dirname, '..', '..', 'data');
   const onDisk = rel => JSON.parse(fs.readFileSync(path.join(DATA, rel), 'utf8'));
   /** Serves data/<dir>/<NN>.json from disk. `failAt` (optional) is a path fragment that answers 404 instead. */
@@ -490,7 +490,7 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
   });
 
   // ───────── v4.68.0: queued downloads, Download all, retries (fake small files, any CDN path) ─────────
-  const ANY_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\//;
+  const ANY_CDN = /\/data\//;
   const fakeBible = () => { const o = {}; for (let i = 0; i < 1189; i++) o['k' + i] = [{ verse: 1, text: 'zz' }]; return JSON.stringify(o); };
   /** Answers every data request with a tiny fake file (a fake whole Bible for bibles/), after `delayMs`. */
   async function fakeAll(page, delayMs) {

@@ -13,10 +13,11 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.68.0';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.68.1';
 
-/** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
-export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
+/** Where the static study data lives: the same site Pilgrim is served from (archestudytools.com/data/), reached by a relative
+ *  path so it is same-origin. v4.68.1: was a jsDelivr mirror, which answered 403 to some phones. studyTools.js reuses this as GROUND_CDN. */
+export var OFFLINE_DATA_CDN = '../data/';
 
 /**
  * Downloadable packs. `files` are paths under OFFLINE_DATA_CDN; each is stored parsed under its own path, so
