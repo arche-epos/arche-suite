@@ -247,7 +247,7 @@ function todayStr(){return localDateStr(new Date());}
  * Toggles the offline badge visibility based on the global `online` flag.
  * Badge is shown when offline, hidden when online.
  */
-function updateOffline(){document.getElementById('offbadge').classList.toggle('show',!online);}
+function updateOffline(){online=navigator.onLine;document.getElementById('offbadge').classList.toggle('show',!online);}
 /**
  * Returns a numeric sort index for a Bible book reference string.
  * Matches the start of the ref against BIBLE_BOOKS in canonical order.
@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.67.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    version:'4.67.1',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: if Pilgrim is opened with no connection, downloaded Bible versions now still load in the Read tab, in a study's scripture panel and in Memory, and Bible Tools (Cross-References and Interlinear) opens when the cross-reference download is installed. Before this, those screens refused to run offline even with the downloads saved. ESV, versions you have not downloaded, AI tools and Pilgrim Guide still need internet.",
+      "fix: the offline badge and the app's idea of being online now follow the phone. Before this, a Pilgrim opened with no connection stayed in offline mode after the connection came back, until you reloaded. No study, tag or setting data is changed. Cache-buster bumped to 4.67.1."
+    ]
+  },
+  {
+    version:'4.67.0',date:'Nov 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Settings > Offline Downloads > Study data now has Cross-references (about 4 MB), Interlinear: New Testament (about 13 MB) and Interlinear: Old Testament (about 31 MB). Download them once, with internet, and the Cross-References tool and the Interlinear word view work with no connection.",

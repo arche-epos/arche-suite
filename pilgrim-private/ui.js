@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.67.0';
+} from './utils.js?v=4.67.1';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.67.0';
+} from './storage.js?v=4.67.1';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.67.0';
+} from './media.js?v=4.67.1';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.67.0';
+} from './tts.js?v=4.67.1';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.67.0';
+} from './sync.js?v=4.67.1';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,13 +72,13 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.67.0';
+} from './studyTools.js?v=4.67.1';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.67.0';
-import { renderOfflineSection } from './offline.js?v=4.67.0';
-import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.67.0';
+} from './memory.js?v=4.67.1';
+import { renderOfflineSection, offlineCanRead } from './offline.js?v=4.67.1';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.67.1';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -2397,9 +2397,10 @@ async function memAutoFetchVerseText(){
   if(!refInput||!textInput)return;
   var ref=refInput.value.trim();
   if(!ref)return;
-  if(!online){toast('Offline \u2014 verse text requires a connection');return;}
   var transSel=document.getElementById('mem-in-trans');
   var t=transSel?transSel.value:'esv';
+  // v4.67.1: a downloaded Bible pack still answers while offline
+  if(!online&&!(await offlineCanRead(t))){toast('Offline \u2014 verse text requires a connection');return;}
   var prevPh=textInput.placeholder;
   textInput.value='';
   textInput.placeholder='Loading\u2026';
@@ -2438,7 +2439,8 @@ async function fetchReadChapter(){
   disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
   var btn=document.getElementById('read-start-study-btn');if(btn)btn.style.display='none';
   readSetPlayerEnabled(false);
-  if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
+  // v4.67.1: a downloaded Bible pack still answers while offline
+  if(!online&&!(await offlineCanRead(_readTranslation))){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Offline — reading requires a connection</p></div>';return;}
 
   // A plan passage that is a single verse (e.g. "Luke 2:39") must load as just that verse, not widen to its chapter.
   if(isReadRangeRef(ref)||(planLoad&&/:\d+$/.test(ref))){

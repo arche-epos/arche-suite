@@ -13,16 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.67.0';
+} from './utils.js?v=4.67.1';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.67.0';
-import { offlineBibleText, offlineGroundData, offlineHasPack, OFFLINE_DATA_CDN } from './offline.js?v=4.67.0';
-import { openConfirm } from './media.js?v=4.67.0';
-import { syncToGist } from './sync.js?v=4.67.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.67.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.67.0';
-import { decodeMorph } from './morph.js?v=4.67.0';
-import { hebrewVerses } from './versemap.js?v=4.67.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.67.1';
+import { offlineBibleText, offlineGroundData, offlineHasPack, offlineCanRead, OFFLINE_DATA_CDN } from './offline.js?v=4.67.1';
+import { openConfirm } from './media.js?v=4.67.1';
+import { syncToGist } from './sync.js?v=4.67.1';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.67.1';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.67.1';
+import { decodeMorph } from './morph.js?v=4.67.1';
+import { hebrewVerses } from './versemap.js?v=4.67.1';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -113,7 +113,8 @@ async function fetchScr(){
   _updateBarRefLabel();
   var disp=document.getElementById('scrdisplay');
   disp.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--txt3);font-style:italic;font-size:14px;padding:8px 0"><div class="spin"></div>Loading...</div>';
-  if(!online){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal("You're offline \u2014 check your connection, try again, or paste the passage in yourself.");return;}
+  // v4.67.1: a downloaded Bible pack still answers while offline, so only refuse when none could
+  if(!online&&!(await offlineCanRead(trans))){disp.innerHTML='<div class="empty" style="padding:14px 0"><p style="font-style:italic;font-size:13px">Enter a reference above to load the passage</p></div>';openScrErrorModal("You're offline \u2014 check your connection, try again, or paste the passage in yourself.");return;}
   try{
     var text=trans==='esv'?await getESV(ref):await getBibleAPI(ref,trans);
     if(!text)throw new Error('Empty response');
@@ -3105,7 +3106,8 @@ function _btInSec(sec,c,v){
 async function openBibleTools(ref,trans,focusKey,verseNums){
   var sec=_btParseSection(ref);
   if(!sec){toast('Bible Tools works within one book — pick a chapter or verse range');return;}
-  if(!online){toast('Bible Tools needs a connection');return;}
+  // v4.67.1: the downloaded cross-reference pack lets Bible Tools open offline (versions you have not downloaded still need a connection)
+  if(!online&&!(await offlineHasPack('crossrefs'))){toast('Bible Tools needs a connection');return;}
   _btCtx={ref:ref,trans:trans||'esv',sec:sec,verses:null,tool:null,open:{},focus:null,state:'loading',nums:verseNums||null,cmpSel:focusKey||null,cmpEdit:false};
   document.getElementById('bt-overlay').classList.add('on');
   _btRender();

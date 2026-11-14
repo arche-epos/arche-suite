@@ -15,6 +15,9 @@
 //   8. (v4.67.0) Cross-references and the Old / New Testament interlinear (the REAL data/crossrefs and data/macula files,
 //      served through a faked CDN) download file by file, then answer fetchGroundData with the CDN blocked; each pack
 //      answers only its own books; a file that fails mid-download installs nothing.
+//   9. (v4.67.1) The app OPENED with no connection (navigator.onLine false at boot, as when Phase 5 lets it open offline):
+//      Read tab, study scripture, Memory auto-fill and Bible Tools (Cross-References, Interlinear) still use downloaded packs;
+//      and the app notices when the connection comes back.
 //
 // Only behavior that is verified good is asserted. The fake pack uses made-up text on purpose, so a test can never be
 // satisfied by real network text. Seeds qa-local in a throwaway context, blocks all non-local network, localhost only.
@@ -406,5 +409,81 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     await page.locator('#offline-list [data-pack="macula-nt"]').click();
     await expect(page.locator('#offline-list [data-pack="macula-nt"]')).toContainText('Delete', { timeout: 60000 });
     expect(await packCounts(page)).toEqual(['macula-nt:27']);
+  });
+
+  // ───────── v4.67.1: screens used when the app is OPENED offline (navigator.onLine false at boot) ─────────
+  /** Installs small FAKE packs: KJV (John 3), crossrefs, macula-nt and the Greek dictionary (John 3:16), with invented values. */
+  async function installScreenFakes(page) {
+    await page.evaluate(async () => {
+      const john3 = []; for (let v = 1; v <= 20; v++) john3.push({ verse: v, text: 'zz-john-' + v });
+      await window.offlineInstallPack({ id: 'bible-kjv', name: 'Fake KJV', version: '1', license: 'Test' }, [['43:3', john3]]);
+      await window.offlineInstallPack({ id: 'crossrefs', name: 'Fake refs', version: '1', license: 'Test' }, [['crossrefs/43.json', { '3:16': [['Romans 5:8', 10], ['1 John 4:9', 7]] }]]);
+      await window.offlineInstallPack({ id: 'macula-nt', name: 'Fake interlinear', version: '1', license: 'Test' },
+        [['macula/43.json', { '3:16': [{ word: 'zzword', lemma: 'zz', strongs: 'G25', morph: 'V-AAI-3S', gloss: 'zzgloss' }] }]]);
+      await window.offlineInstallPack({ id: 'words-core', name: 'Fake words', version: '1', license: 'Test' },
+        [['strongs/greek.json', { G25: { translit: 'zztranslit', strongs_def: 'zz definition', kjv_def: 'zz' } }]]);
+    });
+  }
+  /** Reloads the page as a phone that has no connection: navigator.onLine is false from the first line of the app. */
+  async function reopenOffline(page) {
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'onLine', { get: () => !window.__offline, configurable: true }); window.__offline = true; });
+    await page.reload();
+    await ready(page);
+    expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+  }
+
+  test('opened with no connection, the Read tab shows a downloaded Bible chapter', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await installScreenFakes(page);
+    await reopenOffline(page);
+    await page.evaluate(() => { window.navTo('read'); document.getElementById('read-trans').value = 'kjv'; document.getElementById('read-ref').value = 'John 3'; return window.fetchReadChapter(); });
+    await expect(page.locator('#read-display')).toContainText('zz-john-16');
+    await expect(page.locator('#read-display')).not.toContainText('requires a connection');
+    expect(app.errors).toEqual([]);
+  });
+
+  test('opened with no connection, study scripture loads from a downloaded version', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await installScreenFakes(page);
+    await reopenOffline(page);
+    await page.evaluate(() => { document.getElementById('f-trans').value = 'kjv'; document.getElementById('f-ref').value = 'John 3:16'; return window.fetchScr(); });
+    await expect(page.locator('#scrdisplay')).toContainText('zz-john-16');
+    expect(await page.locator('#scr-error-overlay.on').count()).toBe(0);
+  });
+
+  test('opened with no connection, Memory fills the verse text from a downloaded version', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await installScreenFakes(page);
+    await reopenOffline(page);
+    await page.evaluate(() => { document.getElementById('mem-in-trans').value = 'kjv'; document.getElementById('mem-in-ref').value = 'John 3:16'; return window.memAutoFetchVerseText(); });
+    await expect.poll(() => page.evaluate(() => document.getElementById('mem-in-text').value)).toContain('zz-john-16');
+  });
+
+  test('opened with no connection, Bible Tools shows cross-references and interlinear words from downloaded packs', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await installScreenFakes(page);
+    await reopenOffline(page);
+    await page.evaluate(() => window.openBibleTools('John 3:16', 'kjv'));
+    await expect(page.locator('#bt-overlay')).toHaveClass(/on/);
+    await page.evaluate(() => window.btToggleTool('xref'));
+    await expect(page.locator('#bt-overlay')).toContainText('2 refs');                 // read from the cross-reference pack
+    await page.evaluate(() => window.btToggleVerse('3:16'));
+    await expect(page.locator('#bt-overlay')).toContainText('Romans 5:8');           // from the cross-reference pack
+    await page.evaluate(() => window.btToggleTool('ilx'));
+    await expect(page.locator('#bt-il-rows')).toContainText('zzword', { timeout: 10000 });   // from the interlinear pack
+  });
+
+  test('the app notices when the connection comes back after being opened offline', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await reopenOffline(page);
+    await page.evaluate(() => { window.__offline = false; window.dispatchEvent(new Event('online')); });
+    await expect(page.locator('#offbadge'), 'the offline badge must clear after a reconnect').not.toHaveClass(/show/);
+    await page.evaluate(() => { window.__offline = true; window.dispatchEvent(new Event('offline')); });
+    await expect(page.locator('#offbadge')).toHaveClass(/show/);
   });
 });

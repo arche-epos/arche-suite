@@ -13,7 +13,7 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.67.0';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.67.1';
 
 /** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
 export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
@@ -241,6 +241,16 @@ export function offlineRequestPersist() {
  */
 export function offlineHasPack(packId) {
   return offlineListPacks().then(function (ps) { return ps.some(function (p) { return p.id === packId; }); }).catch(function () { return false; });
+}
+
+/**
+ * True when a downloaded Bible pack could answer for this version (so an offline phone should still try the lookup
+ * instead of refusing). ESV has no pack, so it is always false.
+ * @param {string} trans - Version id from a translation picker, e.g. "kjv".
+ * @returns {Promise<boolean>} Never rejects.
+ */
+export function offlineCanRead(trans) {
+  return trans && trans !== 'esv' ? offlineHasPack('bible-' + trans) : Promise.resolve(false);
 }
 
 /**
