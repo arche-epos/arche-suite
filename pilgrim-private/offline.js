@@ -13,7 +13,7 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.65.0';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.66.0';
 
 /** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
 export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
@@ -25,7 +25,19 @@ export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suit
 var OFFLINE_CATALOG = [
   { id: 'words-core', name: 'Word study data', about: 'Hebrew and Greek dictionaries and the word index, for Look Up Word and word lists',
     version: '1', approxMB: 4.9, license: 'Open Scriptures (CC BY-SA / public domain)',
-    files: ['strongs/hebrew.json', 'strongs/greek.json', 'strongs/gloss-index.json', 'strongs/occurrence-index.json'] }
+    files: ['strongs/hebrew.json', 'strongs/greek.json', 'strongs/gloss-index.json', 'strongs/occurrence-index.json'] },
+  // v4.66.0 Bible text packs. `file` is ONE JSON under OFFLINE_DATA_CDN shaped {"<bookNum>:<chapter>": [{verse,text}]}; the
+  // download splits it into one stored entry per chapter, which is what offlineBibleText() reads. Built by data/build-bibles.py.
+  { id: 'bible-kjv', kind: 'bible', name: 'King James Version (KJV)', about: 'the whole Bible', file: 'bibles/kjv.json',
+    version: '1', approxMB: 4.8, license: 'Public domain (1769 text). Source: scrollmapper/bible_databases' },
+  { id: 'bible-asv', kind: 'bible', name: 'American Standard Version (ASV)', about: 'the whole Bible', file: 'bibles/asv.json',
+    version: '1', approxMB: 4.8, license: 'Public domain (1901). Source: scrollmapper/bible_databases' },
+  { id: 'bible-web', kind: 'bible', name: 'World English Bible (WEB)', about: 'the whole Bible, numbered as the WEB publishes it', file: 'bibles/web.json',
+    version: '1', approxMB: 4.7, license: 'Public domain, text unaltered ("World English Bible" is a trademark of eBible.org). Source: eBible.org' },
+  { id: 'bible-ylt', kind: 'bible', name: "Young's Literal Translation (YLT)", about: 'the whole Bible', file: 'bibles/ylt.json',
+    version: '1', approxMB: 4.8, license: 'Public domain (1898). Source: scrollmapper/bible_databases' },
+  { id: 'bible-darby', kind: 'bible', name: 'Darby Bible (Darby)', about: 'the whole Bible', file: 'bibles/darby.json',
+    version: '1', approxMB: 4.8, license: 'Public domain (1890). Source: eBible.org' }
 ];
 var GROUND_PACKS = ['words-core']; // packs consulted by offlineGroundData, in order (Phase 4 adds crossrefs and interlinear)
 
@@ -173,6 +185,15 @@ export function offlineRequestPersist() {
 // ════════════════════════════════════════════════════════
 
 /**
+ * True when the named pack is fully installed on this phone (metadata is written last, so it only exists once complete).
+ * @param {string} packId - e.g. "bible-ylt".
+ * @returns {Promise<boolean>} Never rejects.
+ */
+export function offlineHasPack(packId) {
+  return offlineListPacks().then(function (ps) { return ps.some(function (p) { return p.id === packId; }); }).catch(function () { return false; });
+}
+
+/**
  * Offline scripture lookup. Mirrors the text shape getBibleAPI returns ("[16] text [17] text").
  * Returns null when there is no downloaded pack, the chapter is missing, or the reference cannot be parsed, so the
  * caller can fall through to the network. Never throws. Handles a whole chapter, a verse, a range and a comma list.
@@ -196,7 +217,8 @@ export function offlineBibleText(ref, trans) {
       verses = verses.filter(function (v) { return v.verse >= p.startVerse && v.verse <= end; });
     }
     if (!verses.length) return null;
-    return verses.map(function (v) { return '[' + v.verse + '] ' + String(v.text).trim(); }).join(' ');
+    // A verse this version leaves out is stored with empty text; say so instead of showing a blank
+    return verses.map(function (v) { var t = String(v.text).trim(); return '[' + v.verse + '] ' + (t || '(omitted in this version)'); }).join(' ');
   });
 }
 
@@ -226,16 +248,25 @@ export function offlineDownloadPack(packId) {
   if (!def || _dl) return Promise.resolve(false);
   if (navigator.onLine === false) { _dlErr[packId] = 'You are offline. Connect to the internet to download.'; renderOfflineSection(); return Promise.resolve(false); }
   delete _dlErr[packId];
-  _dl = { id: packId, done: 0, total: def.files.length };
+  var paths = def.kind === 'bible' ? [def.file] : def.files;
+  _dl = { id: packId, done: 0, total: paths.length };
   renderOfflineSection();
   var entries = [];
   var v = '?v=' + encodeURIComponent(def.version);
-  return def.files.reduce(function (chain, path) {
+  return paths.reduce(function (chain, path) {
     return chain.then(function () {
       return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
         if (!r.ok) throw new Error('A file could not be downloaded (code ' + r.status + ').');
         return r.json();
-      }).then(function (data) { entries.push([path, data]); _dl.done++; renderOfflineSection(); });
+      }).then(function (data) {
+        if (def.kind === 'bible') {
+          // one file holds every chapter: store one entry per "book:chapter"; refuse a file that is not a whole Bible
+          var keys = Object.keys(data);
+          if (keys.length < 1100) throw new Error('A file could not be downloaded (it looks incomplete).');
+          keys.forEach(function (k) { entries.push([k, data[k]]); });
+        } else entries.push([path, data]);
+        _dl.done++; renderOfflineSection();
+      });
     });
   }, Promise.resolve()).then(function () {
     return offlineInstallPack({ id: def.id, name: def.name, version: def.version, license: def.license }, entries);
@@ -267,12 +298,16 @@ export function renderOfflineSection() {
   var el = document.getElementById('offline-list');
   if (!el) return Promise.resolve();
   return offlineListPacks().then(function (packs) {
-    var byId = {}, total = 0, html = '';
+    var byId = {}, total = 0, html = '', bibleHeadDone = false;
     packs.forEach(function (p) { byId[p.id] = p; total += p.size || 0; });
     var rowStart = '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
     OFFLINE_CATALOG.forEach(function (c) {
+      if (c.kind === 'bible' && !bibleHeadDone) {
+        bibleHeadDone = true;
+        html += '<div style="font-size:12px;color:var(--gold);margin-top:12px;letter-spacing:.04em">BIBLE TEXT (read and pull into studies with no internet)</div>';
+      }
       var p = byId[c.id], busy = _dl && _dl.id === c.id, err = _dlErr[c.id];
-      var sub = busy ? 'Downloading file ' + Math.min(_dl.done + 1, _dl.total) + ' of ' + _dl.total + '\u2026'
+      var sub = busy ? (c.kind === 'bible' ? 'Downloading and saving\u2026' : 'Downloading file ' + Math.min(_dl.done + 1, _dl.total) + ' of ' + _dl.total + '\u2026')
         : p ? mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.version !== c.version ? ' &middot; <span style="color:var(--gold)">update available</span>' : '')
         : 'about ' + c.approxMB + ' MB &middot; ' + escHtml(c.about);
       html += rowStart + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(c.name) + '</div>'
@@ -289,7 +324,7 @@ export function renderOfflineSection() {
       html += rowStart + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(p.name) + '</div>'
         + '<div style="font-size:12px;color:var(--txt3)">' + mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.license ? ' &middot; ' + escHtml(p.license) : '') + '</div></div>' + deleteButton(p.id) + '</div>';
     });
-    html += '<div style="font-size:12px;color:var(--txt3);margin-top:8px">' + (total ? 'Downloads use ' + mb(total) + ' MB. ' : '') + 'Bible text downloads are coming in an update. Downloads are not part of backups, and Clear All Data does not remove them.</div>';
+    html += '<div style="font-size:12px;color:var(--txt3);margin-top:8px">' + (total ? 'Downloads use ' + mb(total) + ' MB. ' : '') + 'Downloads are not part of backups, and Clear All Data does not remove them.</div>';
     if (total && _persisted === false) html += '<div style="font-size:12px;color:var(--gold);margin-top:4px">If this device runs low on space, it may clear these downloads. You can download them again.</div>';
     el.innerHTML = html;
   }).catch(function (e) { logError('renderOfflineSection', e); });

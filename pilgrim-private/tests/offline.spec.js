@@ -9,6 +9,9 @@
 //   5. A failed install (a payload IndexedDB cannot store) leaves nothing half-installed.
 //   6. (v4.65.0) The Word study data pack downloads from a faked CDN, then fetchGroundData answers from the phone with
 //      the CDN blocked; one failing file installs nothing and shows an error; offline shows a clear message.
+//   7. (v4.66.0) The five Bible text packs (the REAL data/bibles/*.json files, served through a faked CDN) download,
+//      then read with the CDN blocked: omitted verses say so, WEB keeps its published Romans numbering, the YLT
+//      has the Old Testament, and a file that is not a whole Bible installs nothing.
 //
 // Only behavior that is verified good is asserted. The fake pack uses made-up text on purpose, so a test can never be
 // satisfied by real network text. Seeds qa-local in a throwaway context, blocks all non-local network, localhost only.
@@ -18,6 +21,8 @@
 'use strict';
 
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 
 test.use({ viewport: { width: 390, height: 780 } });
 
@@ -114,9 +119,11 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     expect((await fetchText(page, 'John 3:16', 'kjv')).x).toBe('[16] zz-john-16');
 
     await page.evaluate(() => window.navTo('settings'));
-    const rows = page.locator('#offline-list [data-pack^="bible-"]'); // the Word study row is always listed too
-    await expect(rows).toHaveCount(2);
-    await expect(page.locator('#offline-list')).toContainText('Fake KJV');
+    // v4.66.0: the five Bible catalog rows are always listed (Download or Delete); a catalog id shows its catalog name
+    await expect(page.locator('#offline-list [data-pack^="bible-"]')).toHaveCount(5);
+    await expect(page.locator('#offline-list [data-pack="bible-asv"]')).toContainText('Delete');
+    await expect(page.locator('#offline-list [data-pack="bible-web"]')).toContainText('Download');
+    await expect(page.locator('#offline-list')).toContainText('King James Version');
     await expect(page.locator('#offline-list')).toContainText('MB');
 
     const del = page.locator('#offline-list [data-pack="bible-kjv"]');
@@ -124,7 +131,8 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     await expect(del).toContainText('Tap again');
     expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(2);
     await del.click();                                    // second tap deletes
-    await expect(rows).toHaveCount(1);
+    await expect(page.locator('#offline-list [data-pack="bible-kjv"]')).toContainText('Download');
+    await expect(page.locator('#offline-list [data-pack="bible-asv"]')).toContainText('Delete');
     expect(await page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id)))).toEqual(['bible-asv']);
     expect((await fetchText(page, 'John 3:16', 'kjv')).ok).toBe(false);
     expect((await fetchText(page, 'John 3:16', 'asv')).x).toBe('[16] zz-john-16');
@@ -218,5 +226,99 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     await page.locator('#offline-list [data-pack="words-core"]').click();
     await expect(page.locator('#offline-list')).toContainText('You are offline');
     expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
+  });
+
+  // ───────── v4.66.0: Bible text packs, using the real built files ─────────
+  const BIBLE_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\/bibles\//;
+  const BIBLES = path.join(__dirname, '..', '..', 'data', 'bibles');
+  /** Serves data/bibles/<name>.json from disk for any BIBLE_CDN request ending in that name. */
+  async function serveBibles(page) {
+    await page.route(BIBLE_CDN, r => {
+      const m = r.request().url().match(/\/bibles\/([a-z]+)\.json/);
+      if (!m) return r.fulfill({ status: 404, headers: cors, body: '{}' });
+      r.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: fs.readFileSync(path.join(BIBLES, m[1] + '.json')) });
+    });
+  }
+  /** Downloads one Bible pack from Settings, then blocks the BIBLE_CDN and reloads so only the stored pack can answer. */
+  async function downloadBible(page, trans) {
+    await serveBibles(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="bible-' + trans + '"]').click();
+    await expect(page.locator('#offline-list [data-pack="bible-' + trans + '"]')).toContainText('Delete', { timeout: 20000 });
+    await page.unroute(BIBLE_CDN);
+    await page.reload();
+    await ready(page);
+  }
+
+  test('KJV downloads whole (1,189 chapters) and reads with no network', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadBible(page, 'kjv');
+    const packs = await page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id + ':' + x.count)));
+    expect(packs).toEqual(['bible-kjv:1189']);
+    const john = await fetchText(page, 'John 3:16', 'kjv');
+    expect(john.ok).toBe(true);
+    expect(john.x.startsWith('[16] For God so loved the world, that he gave his only begotten Son')).toBe(true);
+    const gen = await fetchText(page, 'Genesis 1:1', 'kjv');
+    expect(gen).toEqual({ ok: true, x: '[1] In the beginning God created the heaven and the earth.' });
+    const rev = await fetchText(page, 'Revelation 22:21', 'kjv');
+    expect(rev.ok && rev.x.startsWith('[21] The grace of our Lord Jesus Christ')).toBe(true);
+    const ps = await fetchText(page, 'Psalm 23', 'kjv');
+    expect(ps.ok && (ps.x.match(/\[\d+\]/g) || []).length).toBe(6);
+    expect((await fetchText(page, 'John 3:16', 'asv')).ok, 'a version that is not downloaded must not answer from the KJV pack').toBe(false);
+    expect(app.errors).toEqual([]);
+  });
+
+  test('ASV: a verse the version omits says so instead of showing a blank', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadBible(page, 'asv');
+    expect(await fetchText(page, 'Matthew 17:21', 'asv')).toEqual({ ok: true, x: '[21] (omitted in this version)' });
+    const around = await fetchText(page, 'Matthew 17:20-22', 'asv');
+    expect(around.ok && around.x.includes('[21] (omitted in this version) [22] ')).toBe(true);
+    const ok = await fetchText(page, 'Matthew 17:20', 'asv');
+    expect(ok.ok && ok.x.startsWith('[20] ') && !ok.x.includes('omitted')).toBe(true);
+  });
+
+  test('WEB keeps its published Romans numbering (doxology at 14:24-26, nothing at 16:25-27)', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadBible(page, 'web');
+    const dox = await fetchText(page, 'Romans 14:24-26', 'web');
+    expect(dox.ok && dox.x.startsWith('[24] Now to him who is able to establish you') && dox.x.includes('[26] ')).toBe(true);
+    expect(await fetchText(page, 'Romans 16:25', 'web')).toEqual({ ok: true, x: '[25] (omitted in this version)' });
+    expect((await fetchText(page, 'Romans 16:26', 'web')).ok, 'WEB has no Romans 16:26, so it falls through to the blocked network').toBe(false);
+    const ps = await fetchText(page, 'Psalm 23:1', 'web');
+    expect(ps.ok && ps.x.startsWith('[1] Yahweh is my shepherd')).toBe(true);  // WEB's own text: no title added
+  });
+
+  test('YLT and Darby download whole; the YLT has the Old Testament', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await downloadBible(page, 'ylt');
+    const gen = await fetchText(page, 'Genesis 1:1', 'ylt');
+    expect(gen.ok && gen.x.startsWith("[1] In the beginning of God's preparing the heavens and the earth")).toBe(true);
+    await serveBibles(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="bible-darby"]').click();
+    await expect(page.locator('#offline-list [data-pack="bible-darby"]')).toContainText('Delete', { timeout: 20000 });
+    await page.unroute(BIBLE_CDN);
+    await page.reload();
+    await ready(page);
+    const d = await fetchText(page, 'Genesis 1:1', 'darby');
+    expect(d).toEqual({ ok: true, x: '[1] In the beginning God created the heavens and the earth.' });
+    expect(await page.evaluate(() => window.offlineHasPack('bible-ylt'))).toBe(true);
+    expect(await page.evaluate(() => window.offlineHasPack('bible-web'))).toBe(false);
+  });
+
+  test('a Bible file that is not a whole Bible installs nothing and shows an error', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.route(BIBLE_CDN, r => r.fulfill({ status: 200, headers: cors, body: JSON.stringify({ '1:1': [{ verse: 1, text: 'zz' }] }) }));
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="bible-kjv"]').click();
+    await expect(page.locator('#offline-list')).toContainText('looks incomplete');
+    expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
+    await expect(page.locator('#offline-list [data-pack="bible-kjv"]')).toContainText('Download');
   });
 });

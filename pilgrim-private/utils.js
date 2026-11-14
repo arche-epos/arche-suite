@@ -585,7 +585,17 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.65.0',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    version:'4.66.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: Settings > Offline Downloads now has Bible text: KJV, ASV, WEB, YLT and Darby (about 5 MB each, whole Bible). Download a version once, with internet, and you can read it, pull it into a study, and use it in Scripture Memory and Reading Plans with no connection.",
+      "new: a verse a version leaves out (for example Matthew 17:21 in the ASV) shows \"(omitted in this version)\" instead of a blank.",
+      "new: with the YLT downloaded, the Bible Tools comparison shows the YLT for the Old Testament too; online it only has the New Testament. The WEB is numbered as its publisher numbers it, so the Romans 14 and 16 verse counts differ from the KJV.",
+      "note: all five versions are public domain. Downloads are kept apart from your studies and backups, and Clear All Data does not remove them. No study, tag or setting data is changed. Cache-buster bumped to 4.66.0."
+    ]
+  },
+  {
+    version:'4.65.0',date:'Nov 13, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "new: Settings > Offline Downloads now has Word study data (about 5 MB). Tap Download once, with internet, and Look Up Word and the word lists work with no connection afterwards. Delete removes it again.",

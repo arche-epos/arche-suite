@@ -1,0 +1,33 @@
+{
+  "sources": {
+    "scrollmapper/bible_databases": "59b18c5af5845728c275d5b7178ad0d024172b1f",
+    "seven1m/open-bibles": "8b330654ade69f7c96268c761da18dc83a1f49b7"
+  },
+  "packs": {
+    "kjv": {
+      "verses": 31102,
+      "emptyVerses": 0,
+      "bytes": 4835779
+    },
+    "asv": {
+      "verses": 31102,
+      "emptyVerses": 16,
+      "bytes": 4836915
+    },
+    "ylt": {
+      "verses": 31102,
+      "emptyVerses": 0,
+      "bytes": 4817973
+    },
+    "darby": {
+      "verses": 31102,
+      "emptyVerses": 0,
+      "bytes": 4792700
+    },
+    "web": {
+      "verses": 31103,
+      "emptyVerses": 5,
+      "bytes": 4713227
+    }
+  }
+}

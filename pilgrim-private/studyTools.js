@@ -13,16 +13,16 @@ import {
   online, studyScope, setStudyScope,
   closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml,
   toast, toastSuccess, parseVerseChunks, logError, CHANGELOG
-} from './utils.js?v=4.65.0';
+} from './utils.js?v=4.66.0';
 
-import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.65.0';
-import { offlineBibleText, offlineGroundData, OFFLINE_DATA_CDN } from './offline.js?v=4.65.0';
-import { openConfirm } from './media.js?v=4.65.0';
-import { syncToGist } from './sync.js?v=4.65.0';
-import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.65.0';
-import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.65.0';
-import { decodeMorph } from './morph.js?v=4.65.0';
-import { hebrewVerses } from './versemap.js?v=4.65.0';
+import { saveStudy, persist, syncFromInputs } from './storage.js?v=4.66.0';
+import { offlineBibleText, offlineGroundData, offlineHasPack, OFFLINE_DATA_CDN } from './offline.js?v=4.66.0';
+import { openConfirm } from './media.js?v=4.66.0';
+import { syncToGist } from './sync.js?v=4.66.0';
+import { memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList } from './memory.js?v=4.66.0';
+import { _ttsActive, _ttsSource, _ttsIdx, ttsStop } from './tts.js?v=4.66.0';
+import { decodeMorph } from './morph.js?v=4.66.0';
+import { hebrewVerses } from './versemap.js?v=4.66.0';
 
 // ── Cross-module accessors (window.* during extraction phase) ───────────────
 // These live in ui.js. Replaced with direct imports in Session 5.
@@ -3321,9 +3321,19 @@ function _btCmpHydrate(){
   var cit=_btCmpCit(),sel=x.cmpSel;
   _btCmpOrder().forEach(function(t){_btCmpLoadRow(t,cit,sel);});
 }
-function _btCmpLoadRow(t,cit,sel){
+function _btCmpLoadRow(t,cit,sel,yltOk){
   var x=_btCtx,el=document.getElementById('bt-c-'+t);if(!x||!el)return;
-  if(t==='ylt'&&x.sec.book<=39){el.innerHTML='<span class="bt-na">Not available for the Old Testament in this source (YLT covers the New Testament only).</span>';return;}
+  if(t==='ylt'&&x.sec.book<=39&&!yltOk){
+    // v4.66.0: the online source only has the YLT New Testament; a downloaded YLT pack has the whole Bible
+    el.textContent='Loading…';
+    offlineHasPack('bible-ylt').then(function(has){
+      if(_btCtx!==x||x.cmpSel!==sel||x.tool!=='cmp')return;
+      if(has){_btCmpLoadRow(t,cit,sel,true);return;}
+      var e=document.getElementById('bt-c-'+t);
+      if(e)e.innerHTML='<span class="bt-na">Not available for the Old Testament in this source (YLT covers the New Testament only). Download the YLT in Settings &gt; Offline Downloads to read all of it.</span>';
+    });
+    return;
+  }
   // v4.51.0 (finding U): the free source returns unrelated licensing text for the NIV, so show Not available instead.
   if(t==='niv'){el.innerHTML='<span class="bt-na">Not available in this source (the NIV text is licensed and cannot be shown here).</span>';return;}
   el.textContent='Loading…';
