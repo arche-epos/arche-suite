@@ -30,28 +30,28 @@ import {
   parseVerseChunks,
   // Section 29 — changelog
   CHANGELOG
-} from './utils.js?v=4.63.3';
+} from './utils.js?v=4.63.4';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
   deleteStudy, showDeleteModal, showDeleteById, duplicateStudy, syncFromInputs, computeStorageUsage, notifyStorageFull
-} from './storage.js?v=4.63.3';
+} from './storage.js?v=4.63.4';
 
 import {
   mediaExportTranscripts, mediaImportTranscripts, mediaClearAll, trRefresh, openConfirm, mediaHasTranscript, mediaHasRecording
-} from './media.js?v=4.63.3';
+} from './media.js?v=4.63.4';
 
 import {
   ttsToggleAI, ttsToggleField, ttsToggleScr, ttsToggleRead, ttsPlayReadFrom,
   loadTTSSett, initTTSVoices, ttsRestart, setTTSVoice,
   setTTSRate, adjustTTSRate, updateTTSRateUI, ttsTestVoice, saveTTSSett, ttsPause,
   _ttsSource, _ttsIdx, _ttsActive
-} from './tts.js?v=4.63.3';
+} from './tts.js?v=4.63.4';
 
 import {
   syncToGist, syncFromGist, syncFromGistForce, confirmForcePull,
   gistSetStatus, markDeleted, gistFilename, updateGistStatusDot
-} from './sync.js?v=4.63.3';
+} from './sync.js?v=4.63.4';
 
 import {
   fetchScr, getESV, getApiBible, getBollsBible, getBibleAPI, renderScrText,
@@ -72,12 +72,12 @@ import {
   resDeleteResource, resRetryOCR, resToggleText, resViewFull,
   resEditTitle, confirmRenameRes, renderResources, renderFieldTiles, resInsertText,
   aiActiveTab, aiPanelResults, buildWordStudyExportRows
-} from './studyTools.js?v=4.63.3';
+} from './studyTools.js?v=4.63.4';
 
 import {
   memAddWithToast, memBuildVerseRef, memRangeLabel, memJoinVerses, renderMemoryList, memExportStore, memHasData, memMergeRemote
-} from './memory.js?v=4.63.3';
-import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.3';
+} from './memory.js?v=4.63.4';
+import { rpStatsSummary, rpExportStore, rpHasData, rpMergeRemote, rpRenderCard, rpWireRead, rpSessionActive, rpSessionRef, rpEndSession, rpOnPassageEnd } from './readingplan.js?v=4.63.4';
 
 // ── Module-local state (only used within ui.js) ─────────────────────────────
 // These were global vars in the monolith; narrowed to module scope here since
@@ -932,7 +932,7 @@ function renderLib(){
     var usedTags=TAGS.filter(function(t){return usedTagIds[t.id];});
     if(usedTags.length){
       filterBar.innerHTML='<button class="tag-filter-btn'+(activeTagFilter===null?' on':'')+'" onclick="setTagFilter(null)">All</button>'+
-        usedTags.map(function(t){return '<button class="tag-filter-btn'+(activeTagFilter===t.id?' on':'')+'" onclick="setTagFilter(\''+t.id+'\')" style="'+(activeTagFilter===t.id?'border-color:'+t.color+';color:'+t.color:'')+'"><span class="tag-dot" style="background:'+t.color+'"></span>'+t.label+'</button>';}).join('');
+        usedTags.map(function(t){return '<button class="tag-filter-btn'+(activeTagFilter===t.id?' on':'')+'" onclick="setTagFilter(\''+t.id+'\')" style="'+(activeTagFilter===t.id?'border-color:'+t.color+';color:'+t.color:'')+'"><span class="tag-dot" style="background:'+t.color+'"></span>'+escHtml(t.label)+'</button>';}).join('');
     } else {filterBar.innerHTML='';}
   }
 
@@ -971,7 +971,7 @@ function renderLib(){
   }
   var newCard='<div class="studycard-new" onclick="newStudy()"><div class="studycard-new-icon">+</div><div class="studycard-new-label">New Study</div></div>';
   el.innerHTML=newCard+f.map(function(s){
-    var tagChips=(s.tags||[]).map(function(tid){var t=tagById(tid);if(!t)return '';return '<span style="display:inline-flex;align-items:center;gap:3px;border-radius:50px;padding:2px 7px;font-size:10px;font-weight:600;background:'+(t.bg||(t.color?hexToRgba(t.color,.18):'transparent'))+';color:'+t.color+';border:1px solid '+t.color+'40"><span style="width:5px;height:5px;border-radius:50%;background:'+t.color+';flex-shrink:0;display:inline-block"></span>'+t.label+'</span>';}).join('');
+    var tagChips=(s.tags||[]).map(function(tid){var t=tagById(tid);if(!t)return '';return '<span style="display:inline-flex;align-items:center;gap:3px;border-radius:50px;padding:2px 7px;font-size:10px;font-weight:600;background:'+(t.bg||(t.color?hexToRgba(t.color,.18):'transparent'))+';color:'+t.color+';border:1px solid '+t.color+'40"><span style="width:5px;height:5px;border-radius:50%;background:'+t.color+';flex-shrink:0;display:inline-block"></span>'+escHtml(t.label)+'</span>';}).join('');
     var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';
     var trans0=(s.refs&&s.refs[0]&&(s.refs[0].pastedTranslation||s.refs[0].translation))||(s.pastedTranslation||s.translation||'ESV');
     // Attachment badge (v4.58.1): resources (photos/docs) + transcript + recording; sync lookups only
@@ -981,8 +981,8 @@ function renderLib(){
     return '<div class="studycard" onclick="openStudy(\''+s.id+'\')">'+
       '<div class="sc-date">'+fmtDate(s.date)+attBadge+'</div>'+
       (s.series?'<div style="font-size:10px;color:var(--txt4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px">'+escHtml(s.series)+'</div>':'')+
-      '<div class="sc-title">'+(s.title||'Untitled Study')+'</div>'+
-      '<div class="sc-ref">'+(ref0||'No reference')+' <span class="ttag">'+trans0.toUpperCase()+'</span>'+extraRefs+'</div>'+
+      '<div class="sc-title">'+escHtml(s.title||'Untitled Study')+'</div>'+
+      '<div class="sc-ref">'+escHtml(ref0||'No reference')+' <span class="ttag">'+trans0.toUpperCase()+'</span>'+extraRefs+'</div>'+
       (s.teacher?'<div class="sc-teacher">'+escHtml(s.teacher)+'</div>':'')+
       (tagChips?'<div class="sc-tags" style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">'+tagChips+'</div>':'')+
       '<div class="sc-card-actions">'+
@@ -1070,7 +1070,7 @@ function renderTagPicker(){
   el.innerHTML=TAGS.map(function(t){
     var sel=(cur.tags||[]).indexOf(t.id)>=0;
     var bg=t.bg||hexToRgba(t.color,.18)||'rgba(150,150,150,.18)';
-    return '<span class="tag-chip'+(sel?' selected':'')+'" onclick="toggleTag(\''+t.id+'\')" style="background:'+bg+';color:'+t.color+';border-color:'+(sel?t.color:t.color+'40')+'"><span class="tag-dot" style="background:'+t.color+'"></span>'+t.label+'</span>';
+    return '<span class="tag-chip'+(sel?' selected':'')+'" onclick="toggleTag(\''+t.id+'\')" style="background:'+bg+';color:'+t.color+';border-color:'+(sel?t.color:t.color+'40')+'"><span class="tag-dot" style="background:'+t.color+'"></span>'+escHtml(t.label)+'</span>';
   }).join('');
 }
 /**
@@ -3073,7 +3073,7 @@ function renderStats(){
   if(recent.length){
     recentEl.innerHTML=recent.map(function(s){
       var ref0=(s.refs&&s.refs[0]&&s.refs[0].reference)||s.reference||'';
-      return '<div onclick="openStudy(\''+s.id+'\')" style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="width:3px;align-self:stretch;background:linear-gradient(180deg,var(--gold),var(--golddim));border-radius:2px;flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-family:\'EB Garamond\',serif;font-size:15px;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(s.title||'Untitled Study')+'</div><div style="font-size:11px;color:var(--gold)">'+(ref0||'No reference')+'</div></div><div style="font-size:10px;color:var(--txt4);flex-shrink:0">'+fmtDate(s.lastOpened||s.date||'')+'</div></div>';
+      return '<div onclick="openStudy(\''+s.id+'\')" style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer"><div style="width:3px;align-self:stretch;background:linear-gradient(180deg,var(--gold),var(--golddim));border-radius:2px;flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-family:\'EB Garamond\',serif;font-size:15px;color:var(--txt1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(s.title||'Untitled Study')+'</div><div style="font-size:11px;color:var(--gold)">'+escHtml(ref0||'No reference')+'</div></div><div style="font-size:10px;color:var(--txt4);flex-shrink:0">'+fmtDate(s.lastOpened||s.date||'')+'</div></div>';
     }).join('');
   } else {recentEl.innerHTML='<p style="font-size:13px;color:var(--txt4);font-style:italic">No activity yet.</p>';}
   rpRenderCard(); // Reading Plan card (v4.58.0)

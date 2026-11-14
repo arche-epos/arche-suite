@@ -57,7 +57,7 @@ async function ready(page) {
 }
 
 /** Seeds two studies (the first with a tricky title and tag) and a returning-user state, then reloads. */
-async function seedStudies(page, firstTitle) {
+async function seedStudies(page, firstTitle, tagLabel0) {
   await page.evaluate(([title, tagLabel]) => {
     const U = '_qa-local';
     const study = (id, t, tags) => ({
@@ -69,7 +69,7 @@ async function seedStudies(page, firstTitle) {
     localStorage.setItem('bsn_tags_v1' + U, JSON.stringify([{ id: 'tag_q', label: tagLabel, color: '#c9a84c', bg: 'rgba(201,168,76,.18)' }]));
     localStorage.setItem('bsn_ob_done' + U, '1');
     localStorage.setItem('bsn_tab_hints_shown' + U, '1');
-  }, [firstTitle, TAG_LABEL]);
+  }, [firstTitle, tagLabel0 || TAG_LABEL]);
   await page.reload();
   await ready(page);
 }
@@ -176,18 +176,23 @@ test.describe('Library cards with a tricky study title', () => {
     expect(app.errors, app.errors.join('\n')).toEqual([]);
   });
 
-  // FOUND Nov 10, 2026 (probing this suite): renderLib() writes s.title (and the reference) into the card with NO escHtml,
-  // so a title that contains HTML is run as markup. A title of <img src=x onerror="window.__pwned=1">Hi sets window.__pwned
-  // the moment the Library draws. Titles can arrive from a shared study link (checkImportHash / confirmImportLink), so this is
-  // a script-injection path from another person's link (the link path itself is not tested here). The same raw title is
-  // used in the Progress recent list. Not fixed (Boss to decide). Remove .fixme once the title is escaped.
-  test.fixme('a study title that contains HTML is shown as text and never runs', async ({ browser, baseURL }) => {
+  // FOUND Nov 10, 2026 (probing this suite), FIXED v4.63.4: renderLib() and the Progress recent list wrote s.title, the reference and
+  // the tag label into the page with no escHtml, so a title like <img src=x onerror="window.__pwned=1">Hi ran as markup (titles can
+  // arrive from a shared study link). They are now escaped; this test keeps it that way. (The share-link import path is not tested here.)
+  test('a study title, reference and tag label that contain HTML are shown as text and never run (Library, filter row, Progress)', async ({ browser, baseURL }) => {
+    const BAD = '<img src=x onerror="window.__pwned=1">Hi';
+    const BAD_TAG = '<img src=x onerror="window.__pwned=2">Tag';
     app = await openApp(browser, baseURL);
     const page = app.page;
-    await seedStudies(page, '<img src=x onerror="window.__pwned=1">Hi');
+    await seedStudies(page, BAD, BAD_TAG);
     await page.waitForTimeout(300);
-    expect(await page.evaluate(() => window.__pwned), 'script from a title ran').toBeUndefined();
-    await expect(card(page, 'Hi').locator('.sc-title')).toHaveText('<img src=x onerror="window.__pwned=1">Hi');
+    expect(await page.evaluate(() => window.__pwned), 'script from a title or tag ran in the Library').toBeUndefined();
+    await expect(page.locator('.studycard .sc-title', { hasText: 'onerror' })).toHaveText(BAD);
+    await expect(page.locator('.studycard .sc-tags').first()).toContainText(BAD_TAG);
+    await page.click('#nav-stats');
+    await expect(page.locator('#stats-recent')).toContainText(BAD);
+    expect(await page.evaluate(() => window.__pwned), 'script from a title ran in Progress').toBeUndefined();
+    expect(await page.locator('.studycard img, #stats-recent img').count()).toBe(0);
   });
 });
 

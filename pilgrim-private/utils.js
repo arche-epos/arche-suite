@@ -585,7 +585,15 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.63.3',date:'Nov 10, 2026',label:'Latest \u2014 untested',
+    version:'4.63.4',date:'Nov 13, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "fix: a study title, passage reference or tag name that contains code-like text (for example text in angle brackets) is now shown as plain text on the Library cards and the Progress recent list, instead of being run as part of the page. This matters most for studies that arrive from a shared link.",
+      "note: nothing is stored or changed in your data. Cache-buster bumped to 4.63.4."
+    ]
+  },
+  {
+    version:'4.63.3',date:'Nov 10, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: on the Study > Notes screen of a phone, the floating Guide button no longer covers the right edge of the Listen button. The row of buttons above the notes (Look Up Word, Listen, A\u2212 and A+) now stops short of the Guide button, so each is a little narrower.",
