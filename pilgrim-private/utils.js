@@ -585,7 +585,16 @@ function clearErrorLog(){try{localStorage.removeItem(SK_ERROR_LOG);}catch(e){}}
 // ════════════════════════════════════════════════════════
 var CHANGELOG=[
   {
-    version:'4.67.1',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    version:'4.68.0',date:'Nov 14, 2026',label:'Latest \u2014 untested',
+    _clSectionOpen:false,_clOpen:false,
+    items:[
+      "new: in Settings > Offline Downloads you can tap Download on several rows without waiting. Two download at a time; the others show Queued and start by themselves.",
+      "new: a Download all button saves every download you do not have yet (it skips what is already saved).",
+      "improved: if the download server refuses or drops a file, Pilgrim now tries again up to three times before giving up, and a failed download names the file that failed (for example crossrefs/37.json) so it is easier to report. Nothing from a failed download is kept. No study, tag or setting data is changed. Cache-buster bumped to 4.68.0."
+    ]
+  },
+  {
+    version:'4.67.1',date:'Nov 14, 2026',label:'',
     _clSectionOpen:false,_clOpen:false,
     items:[
       "fix: if Pilgrim is opened with no connection, downloaded Bible versions now still load in the Read tab, in a study's scripture panel and in Memory, and Bible Tools (Cross-References and Interlinear) opens when the cross-reference download is installed. Before this, those screens refused to run offline even with the downloads saved. ESV, versions you have not downloaded, AI tools and Pilgrim Guide still need internet.",

@@ -18,6 +18,8 @@
 //   9. (v4.67.1) The app OPENED with no connection (navigator.onLine false at boot, as when Phase 5 lets it open offline):
 //      Read tab, study scripture, Memory auto-fill and Bible Tools (Cross-References, Interlinear) still use downloaded packs;
 //      and the app notices when the connection comes back.
+//  10. (v4.68.0) Several packs can be tapped at once: two download at a time and the rest show Queued; "Download all" queues
+//      every pack not yet saved; a refused file (403) is retried and a file that keeps failing is named in the error.
 //
 // Only behavior that is verified good is asserted. The fake pack uses made-up text on purpose, so a test can never be
 // satisfied by real network text. Seeds qa-local in a throwaway context, blocks all non-local network, localhost only.
@@ -485,5 +487,78 @@ test.describe('Pilgrim Private: offline downloads (qa-local, localhost only)', (
     await expect(page.locator('#offbadge'), 'the offline badge must clear after a reconnect').not.toHaveClass(/show/);
     await page.evaluate(() => { window.__offline = true; window.dispatchEvent(new Event('offline')); });
     await expect(page.locator('#offbadge')).toHaveClass(/show/);
+  });
+
+  // ───────── v4.68.0: queued downloads, Download all, retries (fake small files, any CDN path) ─────────
+  const ANY_CDN = /cdn\.jsdelivr\.net\/gh\/arche-epos\/arche-suite@main\/data\//;
+  const fakeBible = () => { const o = {}; for (let i = 0; i < 1189; i++) o['k' + i] = [{ verse: 1, text: 'zz' }]; return JSON.stringify(o); };
+  /** Answers every data request with a tiny fake file (a fake whole Bible for bibles/), after `delayMs`. */
+  async function fakeAll(page, delayMs) {
+    await page.route(ANY_CDN, async r => {
+      if (delayMs) await new Promise(res => setTimeout(res, delayMs));
+      const bible = /\/bibles\//.test(r.request().url());
+      r.fulfill({ status: 200, headers: cors, body: bible ? fakeBible() : '{"ok":1}' });
+    });
+  }
+
+  test('tapping several packs queues them: two download at once, the rest wait and then finish', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await fakeAll(page, 700);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.evaluate(() => ['bible-kjv', 'bible-asv', 'bible-web'].forEach(id => window.offlineDownloadPack(id)));
+    await expect(page.locator('#offline-list')).toContainText('Queued');
+    expect(await page.locator('#offline-list button:has-text("Queued")').count(), 'two run, one waits').toBe(1);
+    expect(await page.locator('#offline-list button:has-text("Please wait")').count()).toBe(2);
+    await expect(page.locator('#offline-list [data-pack="bible-web"]')).toContainText('Delete', { timeout: 20000 });
+    expect((await page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id).sort())))).toEqual(['bible-asv', 'bible-kjv', 'bible-web']);
+    expect(app.errors).toEqual([]);
+  });
+
+  test('Download all queues every pack that is not saved yet, and goes away when all are saved', async ({ browser, baseURL }) => {
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await fakeAll(page, 0);
+    await page.evaluate(() => window.navTo('settings'));
+    await installFake(page, 'bible-kjv');               // one pack already saved: Download all must skip it
+    await page.evaluate(() => window.renderOfflineSection());
+    const all = page.locator('#offline-list button:has-text("Download all")');
+    await expect(all).toContainText('8 not saved yet');
+    await all.click();
+    await expect.poll(() => page.evaluate(() => window.offlineListPacks().then(p => p.length)), { timeout: 30000 }).toBe(9);
+    await expect(all).toHaveCount(0);
+    expect(await page.evaluate(() => window.offlineGet('bible-kjv', '43:3').then(x => x && x[0].text)), 'the saved KJV was not replaced').toBe('zz-john-1');
+  });
+
+  test('a refused file (403) is retried and the download then succeeds', async ({ browser, baseURL }) => {
+    test.setTimeout(60000);
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    let hits = 0;
+    await page.route(ANY_CDN, r => {
+      if (r.request().url().includes('crossrefs/01.json') && hits++ < 2) return r.fulfill({ status: 403, headers: cors, body: 'no' });
+      r.fulfill({ status: 200, headers: cors, body: '{"ok":1}' });
+    });
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="crossrefs"]').click();
+    await expect(page.locator('#offline-list [data-pack="crossrefs"]')).toContainText('Delete', { timeout: 30000 });
+    expect(hits).toBe(3);
+    expect(await page.evaluate(() => window.offlineListPacks().then(p => p.map(x => x.id + ':' + x.count)))).toEqual(['crossrefs:66']);
+  });
+
+  test('a file that keeps being refused fails the pack, names the file, installs nothing and can be retried', async ({ browser, baseURL }) => {
+    test.setTimeout(60000);
+    app = await openApp(browser, baseURL);
+    const { page } = app;
+    await page.route(ANY_CDN, r => r.request().url().includes('crossrefs/37.json')
+      ? r.fulfill({ status: 403, headers: cors, body: 'no' })
+      : r.fulfill({ status: 200, headers: cors, body: '{"ok":1}' }));
+    await page.evaluate(() => window.navTo('settings'));
+    await page.locator('#offline-list [data-pack="crossrefs"]').click();
+    await expect(page.locator('#offline-list')).toContainText('crossrefs/37.json', { timeout: 30000 });
+    await expect(page.locator('#offline-list')).toContainText('code 403');
+    expect(await page.evaluate(() => window.offlineListPacks().then(p => p.length))).toBe(0);
+    expect(await page.evaluate(() => window.offlineGet('crossrefs', 'crossrefs/01.json')), 'files saved before the failure are removed').toBeNull();
+    await expect(page.locator('#offline-list [data-pack="crossrefs"]')).toContainText('Download');
   });
 });

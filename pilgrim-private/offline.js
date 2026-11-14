@@ -13,7 +13,7 @@
 //
 // `format` is 'json' today. It exists so compressed storage can be added later without a rewrite.
 
-import { parseRef, escHtml, toast, logError } from './utils.js?v=4.67.1';
+import { parseRef, escHtml, toast, logError } from './utils.js?v=4.68.0';
 
 /** Where the static study data lives (jsDelivr mirror of arche-suite/data/). studyTools.js reuses this as GROUND_CDN. */
 export var OFFLINE_DATA_CDN = 'https://cdn.jsdelivr.net/gh/arche-epos/arche-suite@main/data/';
@@ -64,7 +64,12 @@ var DB_VERSION = 1;
 var BATCH = 40;            // entries written per transaction while installing a pack
 var _db = null;
 var _armed = {};           // pack id -> true while its Delete button waits for a second tap
-var _dl = null;            // { id, done, total } while a download runs
+var MAX_ACTIVE = 2;        // packs downloading at the same time; the rest wait in _queue
+var RETRY_TRIES = 3;       // attempts per file before a download gives up
+var RETRY_PAUSE_MS = 1000; // pause before retry n is n times this
+var _dls = {};             // pack id -> { done, total } while that pack is downloading
+var _queue = [];           // pack ids waiting for a free slot, in tap order
+var _waiters = {};         // pack id -> [resolve, ...] callers waiting for that pack's download to finish
 var _dlErr = {};           // pack id -> last download error text
 var _persisted = null;     // result of the last navigator.storage.persist()/persisted() check
 
@@ -298,48 +303,113 @@ export function offlineGroundData(path) {
 }
 
 /**
- * Downloads a catalog pack: fetches each file (no partial installs: a failure keeps nothing), then stores them all.
+ * Starts (or queues) a catalog pack download. Up to MAX_ACTIVE packs download at once; the others wait their turn.
+ * Tapping a pack that is already downloading or queued does nothing new and resolves when that download ends.
  * Updates the Settings section as it goes. Never throws; failures are shown on the pack row.
  * @param {string} packId - A catalog id, e.g. "words-core".
  * @returns {Promise<boolean>} true when installed.
  */
 export function offlineDownloadPack(packId) {
-  var def = OFFLINE_CATALOG.filter(function (c) { return c.id === packId; })[0];
-  if (!def || _dl) return Promise.resolve(false);
+  var def = catalogDef(packId);
+  if (!def) return Promise.resolve(false);
   if (navigator.onLine === false) { _dlErr[packId] = 'You are offline. Connect to the internet to download.'; renderOfflineSection(); return Promise.resolve(false); }
   delete _dlErr[packId];
-  var paths = def.kind === 'bible' ? [def.file] : def.files;
-  _dl = { id: packId, done: 0, total: paths.length };
+  return new Promise(function (resolve) {
+    (_waiters[packId] = _waiters[packId] || []).push(resolve);
+    if (!_dls[packId] && _queue.indexOf(packId) < 0) _queue.push(packId);
+    renderOfflineSection();
+    pumpQueue();
+  });
+}
+
+/** Catalog row for an id, or undefined. */
+function catalogDef(packId) { return OFFLINE_CATALOG.filter(function (c) { return c.id === packId; })[0]; }
+
+/** Starts queued downloads while fewer than MAX_ACTIVE are running. */
+function pumpQueue() {
+  while (_queue.length && Object.keys(_dls).length < MAX_ACTIVE) {
+    var id = _queue.shift();
+    runDownload(id); // its result goes to the waiters inside runDownload
+  }
+}
+
+/**
+ * Fetches one URL as JSON, retrying a refused or flaky request (403, 429, server errors, a dropped connection) with a
+ * growing pause. A missing file (404) or any other client error is not retried. The final error names the file.
+ * @param {string} path - File path under OFFLINE_DATA_CDN.
+ * @param {string} v - Cache-buster query, e.g. "?v=1".
+ * @returns {Promise<*>} Parsed JSON.
+ */
+function fetchWithRetry(path, v) {
+  var attempt = 0;
+  function go() {
+    attempt++;
+    return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
+      if (r.ok) return r.json();
+      var err = new Error('A file could not be downloaded (code ' + r.status + ', ' + path + ').');
+      err.retry = r.status === 403 || r.status === 429 || r.status >= 500;
+      throw err;
+    }, function () {
+      var err = new Error('Download failed. Check your connection and try again.'); err.retry = true; throw err;
+    }).catch(function (err) {
+      if (err && err.retry && attempt < RETRY_TRIES) {
+        return new Promise(function (res) { setTimeout(res, RETRY_PAUSE_MS * attempt); }).then(go);
+      }
+      throw err;
+    });
+  }
+  return go();
+}
+
+/**
+ * Runs one pack download to the end (the slot was already granted by pumpQueue), then wakes its waiters and the queue.
+ * @param {string} packId
+ * @returns {Promise<boolean>} true when installed.
+ */
+function runDownload(packId) {
+  var def = catalogDef(packId);
+  _dls[packId] = { done: 0, total: def.kind === 'bible' ? 1 : def.files.length };
   renderOfflineSection();
   var v = '?v=' + encodeURIComponent(def.version);
   var meta = { id: def.id, name: def.name, version: def.version, license: def.license };
-  function fetchJson(path) {
-    return fetch(OFFLINE_DATA_CDN + path + v).then(function (r) {
-      if (!r.ok) throw new Error('A file could not be downloaded (code ' + r.status + ').');
-      return r.json();
-    });
-  }
   var done;
   if (def.kind === 'bible') {
     // one file holds every chapter: store one entry per "book:chapter"; refuse a file that is not a whole Bible
-    done = fetchJson(def.file).then(function (data) {
+    done = fetchWithRetry(def.file, v).then(function (data) {
       var keys = Object.keys(data);
       if (keys.length < 1100) throw new Error('A file could not be downloaded (it looks incomplete).');
-      _dl.done++; renderOfflineSection();
+      _dls[packId].done++; renderOfflineSection();
       return offlineInstallPack(meta, keys.map(function (k) { return [k, data[k]]; }));
     });
   } else {
     // study data, many files: fetch and store one at a time; nothing is kept if any file fails
     done = offlineInstallStreamed(meta, def.files, function (path) {
-      return fetchJson(path).then(function (data) { _dl.done++; renderOfflineSection(); return data; });
+      return fetchWithRetry(path, v).then(function (data) { _dls[packId].done++; renderOfflineSection(); return data; });
     });
   }
   return done.then(function () { toast(def.name + ' downloaded'); return true; })
     .catch(function (e) {
       logError('offlineDownloadPack', e);
-      _dlErr[packId] = (e && e.name === 'QuotaExceededError') ? 'Not enough space on this device.' : (e && e.message && /^A file/.test(e.message)) ? e.message : 'Download failed. Check your connection and try again.';
+      _dlErr[packId] = (e && e.name === 'QuotaExceededError') ? 'Not enough space on this device.' : (e && e.message && /^(A file|Download failed)/.test(e.message)) ? e.message : 'Download failed. Check your connection and try again.';
       return false;
-    }).then(function (ok) { _dl = null; renderOfflineSection(); return ok; });
+    }).then(function (ok) {
+      delete _dls[packId];
+      var ws = _waiters[packId] || []; delete _waiters[packId];
+      ws.forEach(function (w) { w(ok); });
+      renderOfflineSection();
+      pumpQueue();
+      return ok;
+    });
+}
+
+/** Click handler for the "Download all" button: queues every pack that is not saved yet (or has an update). */
+export function offlineDownloadAll() {
+  return offlineListPacks().then(function (packs) {
+    var byId = {}; packs.forEach(function (p) { byId[p.id] = p; });
+    var todo = OFFLINE_CATALOG.filter(function (c) { return !byId[c.id] || byId[c.id].version !== c.version; })
+      .map(function (c) { return c.id; });
+    return Promise.all(todo.map(offlineDownloadPack));
+  });
 }
 
 /** Click handler for a catalog pack's Download / Update button (data-pack holds the id). */
@@ -364,6 +434,11 @@ export function renderOfflineSection() {
   return offlineListPacks().then(function (packs) {
     var byId = {}, total = 0, html = '', lastGroup = '';
     packs.forEach(function (p) { byId[p.id] = p; total += p.size || 0; });
+    var pending = OFFLINE_CATALOG.filter(function (c) { return (!byId[c.id] || byId[c.id].version !== c.version) && !_dls[c.id] && _queue.indexOf(c.id) < 0; });
+    if (pending.length) {
+      var pmb = pending.reduce(function (n, c) { return n + c.approxMB; }, 0);
+      html += '<button class="btn btn-sec" style="width:100%;margin-top:10px" onclick="offlineDownloadAll()">Download all (' + pending.length + ' not saved yet, about ' + Math.round(pmb) + ' MB)</button>';
+    }
     var rowStart = '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
     OFFLINE_CATALOG.forEach(function (c) {
       var group = c.kind === 'bible' ? 'bible' : 'study';
@@ -372,8 +447,9 @@ export function renderOfflineSection() {
         html += '<div style="font-size:12px;color:var(--gold);margin-top:12px;letter-spacing:.04em">' + (group === 'bible'
           ? 'BIBLE TEXT (read and pull into studies with no internet)' : 'STUDY DATA (word tools, cross-references and interlinear)') + '</div>';
       }
-      var p = byId[c.id], busy = _dl && _dl.id === c.id, err = _dlErr[c.id];
-      var sub = busy ? (c.kind === 'bible' ? 'Downloading and saving\u2026' : 'Downloading file ' + Math.min(_dl.done + 1, _dl.total) + ' of ' + _dl.total + '\u2026')
+      var p = byId[c.id], busy = !!_dls[c.id], queued = _queue.indexOf(c.id) >= 0, err = _dlErr[c.id];
+      var sub = busy ? (c.kind === 'bible' ? 'Downloading and saving\u2026' : 'Downloading file ' + Math.min(_dls[c.id].done + 1, _dls[c.id].total) + ' of ' + _dls[c.id].total + '\u2026')
+        : queued ? 'Waiting for another download to finish\u2026'
         : p ? mb(p.size) + ' MB &middot; saved ' + escHtml(new Date(p.installedAt).toLocaleDateString()) + (p.version !== c.version ? ' &middot; <span style="color:var(--gold)">update available</span>' : '')
         : 'about ' + c.approxMB + ' MB &middot; ' + escHtml(c.about);
       html += rowStart + '<div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--txt1)">' + escHtml(c.name) + '</div>'
@@ -381,6 +457,7 @@ export function renderOfflineSection() {
         + (err ? '<div style="font-size:12px;color:var(--crimsonbright)">' + escHtml(err) + '</div>' : '')
         + '<div style="font-size:11px;color:var(--txt4)">' + escHtml(c.license) + '</div></div>';
       if (busy) html += '<button class="btn btn-ghost" style="padding:8px 12px" disabled>Please wait</button>';
+      else if (queued) html += '<button class="btn btn-ghost" style="padding:8px 12px" disabled>Queued</button>';
       else if (p && p.version === c.version) html += deleteButton(p.id);
       else html += '<button class="btn btn-sec" style="padding:8px 12px" data-pack="' + escHtml(c.id) + '" onclick="offlineDownloadClick(this)">' + (p ? 'Update' : 'Download') + '</button>';
       html += '</div>';
