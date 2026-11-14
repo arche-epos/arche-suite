@@ -19,7 +19,7 @@ import {
   // Section 03 — utilities
   toast, toastSuccess, closeOverlay, escHtml, mdToHtml, htmlToText, plainNotesToHtml, imgFitSize,
   fmtDate, todayStr, localDateStr, pdfSafe, pdfTablesToText, setAppHeight, updateOffline, bookOrder,
-  mfBlob, prevDay,
+  prevDay,
   // Section 07 — data model
   makeRef, migrateStudy, activeRef, TEMPLATES, TAG_PALETTE, DEFAULT_TAGS,
   TOOL_LABELS, TOOL_DESCS, FONT_OPTIONS, FONT_SCALE_STEPS,
@@ -31,6 +31,7 @@ import {
   // Section 29 — changelog
   CHANGELOG
 } from './utils.js?v=4.68.3';
+import { cleanupLegacyWorkers } from './shell.js?v=4.68.3';
 
 import {
   wireCallbacks, loadStudies, persist, openStudy, saveStudy, autoSave,
@@ -4386,8 +4387,9 @@ function checkAboutUpdate(){
     });
 }
 /**
- * "Force refresh" — unregisters service workers, deletes every CacheStorage
- * cache, then reloads via ?fresh=<timestamp>. Touches NO localStorage or
+ * "Force refresh" — removes leftover Pilgrim Private workers/caches (scoped, see shell.js), asks the app's
+ * own service worker to check for a newer release, then reloads via ?fresh=<timestamp>. Keeps the offline
+ * app shell and never touches other apps' caches. Touches NO localStorage or
  * IndexedDB data (studies, settings, sync, backups, transcripts all stay).
  */
 function forceRefreshApp(){
@@ -4397,17 +4399,15 @@ function forceRefreshApp(){
   if(b1)b1.disabled=true;
   if(b2)b2.disabled=true;
   _aboutSetStatus('','Clearing cached app files…');
-  var swP=('serviceWorker' in navigator)
-    ?navigator.serviceWorker.getRegistrations().then(function(regs){
-        return Promise.all(regs.map(function(r){return r.unregister();}));
-      })
-    :Promise.resolve();
-  var cacheP=('caches' in window)
-    ?caches.keys().then(function(names){
-        return Promise.all(names.map(function(n){return caches.delete(n);}));
-      })
-    :Promise.resolve();
-  Promise.all([swP,cacheP])
+  // v4.69.0: scoped cleanup. Removes only leftover Pilgrim Private workers/caches (shell.js) and asks OUR worker
+  // to check for a newer release. It no longer wipes every cache on the origin, so the offline app shell,
+  // Scribe and Pilgrim Public keep theirs. The ?fresh= reload is answered network-first by sw.js.
+  var swP=cleanupLegacyWorkers().then(function(){
+    return ('serviceWorker' in navigator)
+      ?navigator.serviceWorker.getRegistration().then(function(r){return r?r.update():null;})
+      :null;
+  });
+  Promise.all([swP])
     .catch(function(){/* still reload — the ?fresh= URL alone bypasses most stale copies */})
     .then(function(){_aboutGoFresh();});
 }

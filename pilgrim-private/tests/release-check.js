@@ -5,6 +5,7 @@
 //   1. every `?v=X` cache-buster in the app's .js and index.html equals CHANGELOG[0].version (utils.js)
 //   2. exactly one CHANGELOG entry carries a "untested" label, and it is the newest one
 //   3. the newest CHANGELOG entry has items
+//   4. sw.js VERSION + PRECACHE are in step with the shell (tests/gen-precache.js)
 // Run from pilgrim-private/ (or anywhere): node tests/release-check.js
 
 'use strict';
@@ -37,6 +38,14 @@ files.forEach(f => {
 });
 console.log('Cache-busters checked: ' + checked);
 if (checked === 0) fail('no ?v= cache-busters found (index.html or imports changed shape?)');
+
+// 4. Offline Phase 5: sw.js VERSION + PRECACHE must match the shell (every module at its exact ?v= URL, vendor files, icons)
+try {
+  const gen = require('./gen-precache.js');
+  const swText = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  if (gen.render(swText) !== swText) fail('sw.js VERSION/PRECACHE is out of date: run node tests/gen-precache.js');
+  else console.log('sw.js precache matches the shell (v' + gen.latestVersion() + ')');
+} catch (e) { fail('sw.js precache check: ' + e.message); }
 
 console.log(bad ? bad + ' problem(s)' : 'release-check passed');
 process.exit(bad ? 1 : 0);

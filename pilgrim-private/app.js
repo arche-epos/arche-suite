@@ -23,6 +23,7 @@ import { mediaInit } from './media.js?v=4.68.3';
 
 import { memWireSync } from './memory.js?v=4.68.3';
 import { rpWireSync } from './readingplan.js?v=4.68.3';
+import { cleanupLegacyWorkers } from './shell.js?v=4.68.3';
 
 // Namespace imports give live bindings for all exports of each module
 import * as Utils from './utils.js?v=4.68.3';
@@ -121,33 +122,15 @@ setInterval(autoSave, 30000);
   });
 });
 
-// ── Service Worker (Section 30) ──────────────────────────────────────────────
-// On version bump: unregister any leftover Service Worker AND purge Cache Storage.
-// Unregistering alone is not enough — a controlled page's in-flight/next-reload
-// requests can still be served stale cached responses from CacheStorage even
-// after unregister(), requiring a manual hard-refresh to fully clear. See
-// session-handoff-aug26-2026-studies-not-loading-false-alarm.md.
+// ── Service Worker cleanup (Section 30) ──────────────────────────────────────
+// v4.69.0 (Option B): the old code unregistered EVERY service worker and deleted EVERY cache on the whole
+// origin each version bump, which also wiped Scribe's and Pilgrim Public's workers/caches and would delete the
+// new offline app shell. It now removes only leftover Pilgrim Private workers and the known legacy cache names
+// (see shell.js). Idempotent: runs each boot, reloads once only if something old was actually found.
 (function() {
-  var APP_VER = (CHANGELOG && CHANGELOG[0]) ? CHANGELOG[0].version : '0';
-  if (localStorage.getItem('_sw_ver') !== APP_VER) {
-    localStorage.setItem('_sw_ver', APP_VER);
-    var swP = ('serviceWorker' in navigator)
-      ? navigator.serviceWorker.getRegistrations().then(function(regs) {
-          var found = regs.length > 0;
-          regs.forEach(function(r) { r.unregister(); });
-          return found;
-        })
-      : Promise.resolve(false);
-    var cacheP = ('caches' in window)
-      ? caches.keys().then(function(names) {
-          var found = names.length > 0;
-          return Promise.all(names.map(function(n) { return caches.delete(n); })).then(function() { return found; });
-        })
-      : Promise.resolve(false);
-    Promise.all([swP, cacheP]).then(function(results) {
-      if (results[0] || results[1]) { window.location.reload(); }
-    });
-  }
+  cleanupLegacyWorkers().then(function(found) {
+    if (found) { window.location.reload(); }
+  });
 })();
 
 // ── startPilgrim ─────────────────────────────────────────────────────────────
